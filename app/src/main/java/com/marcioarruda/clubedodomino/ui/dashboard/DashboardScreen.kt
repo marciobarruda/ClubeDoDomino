@@ -1,0 +1,423 @@
+package com.marcioarruda.clubedodomino.ui.dashboard
+
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.marcioarruda.clubedodomino.data.BestPlayer
+import com.marcioarruda.clubedodomino.data.Match
+import com.marcioarruda.clubedodomino.data.User
+import com.marcioarruda.clubedodomino.ui.theme.DominoGold
+import com.marcioarruda.clubedodomino.ui.theme.GlassyColor
+import com.marcioarruda.clubedodomino.ui.util.AvatarImage
+import java.io.ByteArrayOutputStream
+
+@Composable
+fun DashboardScreen(
+    navController: NavController,
+    userId: String,
+    viewModel: DashboardViewModel
+) {
+    LaunchedEffect(key1 = userId) {
+        viewModel.loadDashboardData(userId)
+    }
+
+    val uiState by viewModel.uiState.collectAsState()
+
+    var showProfileDialog by remember { mutableStateOf(false) }
+
+    if (showProfileDialog && uiState.user != null) {
+        ProfileDialog(
+            user = uiState.user!!,
+            onDismiss = { showProfileDialog = false },
+            onImageSelected = { base64 -> 
+                viewModel.updateProfileImage(userId, base64) {
+                    showProfileDialog = false
+                }
+            },
+            onLogout = {
+                // viewModel.logout()
+                navController.navigate("login") {
+                    popUpTo(navController.graph.id) {
+                        inclusive = true
+                    }
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(
+                navController = navController,
+                currentUserId = userId,
+                isNewMatchVisible = uiState.isNewMatchVisible
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(padding)
+        ) {
+            when {
+                uiState.isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = DominoGold
+                    )
+                }
+                uiState.error != null -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = uiState.error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = { viewModel.loadDashboardData(userId) }) {
+                            Text("Tentar novamente")
+                        }
+                    }
+                }
+                uiState.user != null -> {
+                    DashboardContent(
+                        state = uiState,
+                        navController = navController,
+                        onAvatarClick = { showProfileDialog = true },
+                        onMatchClick = { /* No action */ }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileDialog(
+    user: User,
+    onDismiss: () -> Unit,
+    onImageSelected: (String) -> Unit,
+    onLogout: () -> Unit
+) {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                val outputStream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+                onImageSelected(Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Perfil do Jogador") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Box {
+                    AvatarImage(
+                        url = user.photoUrl,
+                        size = 120.dp,
+                        borderWidth = 2.dp
+                    )
+                    IconButton(
+                        onClick = { launcher.launch("image/*") },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .background(DominoGold, CircleShape)
+                            .size(32.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar Foto", tint = Color.Black, modifier = Modifier.size(16.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(user.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text(user.id, fontSize = 14.sp, color = Color.Gray)
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = DominoGold)) {
+                Text("Fechar", color = Color.Black)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onLogout) {
+                Text("Sair", color = Color.Red)
+            }
+        }
+    )
+}
+
+@Composable
+private fun DashboardContent(
+    state: DashboardUiState,
+    navController: NavController,
+    onAvatarClick: () -> Unit,
+    onMatchClick: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        TopBar(state.user!!, onAvatarClick)
+        
+        // Admin Access
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = { navController.navigate("admin") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("ÁREA ADMINISTRATIVA", color = Color.White)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        state.bestPlayer?.let { bestPlayer ->
+            BestPlayerCard(bestPlayer)
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+        Text("ÚLTIMAS PARTIDAS", style = MaterialTheme.typography.titleMedium, color = Color.White)
+        Spacer(modifier = Modifier.height(16.dp))
+        RecentMatchesList(groupedMatches = state.groupedMatches, onMatchClick = onMatchClick)
+    }
+}
+
+@Composable
+private fun TopBar(user: User, onAvatarClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Olá, ${user.name}", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+        IconButton(onClick = onAvatarClick) {
+             AvatarImage(
+                url = user.photoUrl,
+                size = 70.dp,
+                borderWidth = 2.dp
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomNavigationBar(
+    navController: NavController,
+    currentUserId: String,
+    isNewMatchVisible: Boolean
+) {
+    val baseItems = listOf(
+        BottomNavItem("Início", Icons.Default.Home, "dashboard/$currentUserId"),
+        BottomNavItem("Financeiro", Icons.Default.MonetizationOn, "finance/$currentUserId"),
+        BottomNavItem("Ranking", Icons.Default.BarChart, "ranking")
+    )
+
+    val allItems = remember(isNewMatchVisible) {
+        if (isNewMatchVisible) {
+            baseItems + BottomNavItem("Nova Partida", Icons.Default.Add, "register_match")
+        } else {
+            baseItems
+        }
+    }
+
+    NavigationBar(containerColor = GlassyColor.copy(alpha = 0.2f)) {
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+
+        allItems.forEach { item ->
+            val isSelected = currentRoute?.startsWith(item.route.substringBefore('/')) == true
+
+            NavigationBarItem(
+                icon = { Icon(item.icon, contentDescription = item.title, tint = Color.White) },
+                label = { Text(item.title, color = Color.White, fontSize = 10.sp) },
+                selected = isSelected,
+                onClick = {
+                    if (!isSelected) {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = DominoGold,
+                    unselectedIconColor = Color.Gray,
+                    selectedTextColor = DominoGold,
+                    unselectedTextColor = Color.Gray,
+                    indicatorColor = GlassyColor
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun BestPlayerCard(bestPlayer: BestPlayer) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = GlassyColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.EmojiEvents, contentDescription = "Melhor Jogador", tint = DominoGold, modifier = Modifier.size(50.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("CRAQUE DO DIA", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                AvatarImage(
+                    url = bestPlayer.player.photoUrl,
+                    size = 80.dp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(bestPlayer.player.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Row(modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    StatItem("Pontos hoje", bestPlayer.points.toString())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = Color.Gray, fontSize = 12.sp)
+        Text(value, color = Color.White, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun RecentMatchesList(groupedMatches: Map<String, List<Match>>, onMatchClick: (String) -> Unit) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        groupedMatches.forEach { (date, matches) ->
+            item {
+                Text(
+                    text = date,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = DominoGold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+            items(matches) {
+                MatchItem(it, onMatchClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
+    // Ordena os nomes da dupla 1 alfabeticamente
+    val team1Names = listOf(match.team1Player1.name, match.team1Player2.name).sorted()
+    val team1Display = "${team1Names[0]} / ${team1Names[1]}"
+    
+    // Ordena os nomes da dupla 2 alfabeticamente
+    val team2Names = listOf(match.team2Player1.name, match.team2Player2.name).sorted()
+    val team2Display = "${team2Names[0]} / ${team2Names[1]}"
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onMatchClick(match.id) },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = GlassyColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                Text(team1Display, fontSize = 12.sp, color = Color.LightGray, textAlign = TextAlign.Center)
+            }
+            Text("${match.score1} x ${match.score2}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp))
+             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                Text(team2Display, fontSize = 12.sp, color = Color.LightGray, textAlign = TextAlign.Center)
+            }
+        }
+    }
+}
+
+data class BottomNavItem(val title: String, val icon: ImageVector, val route: String)

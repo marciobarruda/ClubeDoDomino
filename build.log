@@ -1,0 +1,140 @@
+
+> Configure project :app
+WARNING: The option setting 'android.usesSdkInManifest.disallowed=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.sdk.defaultTargetSdkToCompileSdkIfUnset=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.enableAppCompileTimeRClass=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.r8.optimizedResourceShrinking=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.defaults.buildfeatures.resvalues=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+
+> Task :app:compileDebugKotlin FAILED
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:63:17 Property delegate must have a 'getValue(Nothing?, KProperty0<ERROR CLASS: Cannot infer argument for type parameter T>)' method. None of the following functions is applicable:
+fun <T> State<T>.getValue(thisObj: Any?, property: KProperty<*>): T
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:63:20 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:63:30 Unresolved reference 'uiState'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:63:38 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:74:23 Unresolved reference 'uploadComprovante'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:78:17 Unresolved reference 'uploadStatus'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:84:46 Unresolved reference 'dismissUploadStatus'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:91:28 Unresolved reference 'navigateToHome'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:92:21 Unresolved reference 'navigateToHome'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:100:23 Unresolved reference 'onNavigateToHomeComplete'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:130:42 Unresolved reference 'debts'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:131:17 Unresolved reference 'it'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:131:63 Unresolved reference 'it'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:131:94 Unresolved reference 'it'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:134:43 Unresolved reference 'uploadStatus'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:141:32 Unresolved reference 'uploadStatus'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:159:25 Unresolved reference 'isLoading'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:164:25 Unresolved reference 'error'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:166:43 Unresolved reference 'error'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:170:25 Unresolved reference 'uploadStatus'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:172:56 Unresolved reference 'dismissUploadStatus'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:174:47 Unresolved reference 'uploadError'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:176:58 Unresolved reference 'dismissUploadStatus'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:182:25 Unresolved reference 'debts'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:182:53 Unresolved reference 'isLoading'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:193:46 Unresolved reference 'totalDue'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:196:33 Unresolved reference 'globalStats'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:196:46 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:196:52 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:207:74 Unresolved reference 'avgMatches'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:211:74 Unresolved reference 'avgBuchos'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:229:49 Unresolved reference 'debts'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:230:41 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:230:56 Unresolved reference 'id'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:231:33 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:232:33 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:61:13 Unresolved reference 'mutex'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:62:17 Unresolved reference '_uiState'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:62:26 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:62:33 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:62:38 Unresolved reference 'copy'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:68:25 Unresolved reference '_uiState'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:68:34 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:68:41 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:68:46 Unresolved reference 'copy'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:152:55 Unresolved reference 'currentYear'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:152:97 Unresolved reference 'currentMonth'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:173:21 Unresolved reference '_uiState'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:173:30 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:173:37 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:173:42 Unresolved reference 'copy'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:206:9 Unresolved reference '_uiState'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:206:18 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:206:25 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceViewModel.kt:207:16 Unresolved reference 'copy'.
+e: file:///C:/Users/NETRA/AndroidStudioProjects/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/register/RegisterMatchScreen.kt:37:23 Unresolved reference 'loadMatch'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to generate a Build Scan (Powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 4s
+29 actionable tasks: 1 executed, 28 up-to-date
