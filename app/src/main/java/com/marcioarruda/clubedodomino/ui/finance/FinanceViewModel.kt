@@ -192,6 +192,29 @@ class FinanceViewModel(
                         val deficit = taxaBase - myBuchosValue
 
                         if (deficit > 0) {
+                            // Data: dia 10 do mês anterior
+                            val dataCal = Calendar.getInstance()
+                            dataCal.add(Calendar.MONTH, -1)
+                            dataCal.set(Calendar.DAY_OF_MONTH, 10)
+                            val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                            val dataString = dateFormat.format(dataCal.time)
+                            
+                            // Chama endpoint para registrar taxa extra
+                            viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    Log.d("FinanceViewModel", "Enviando taxa extra: jogador=${currentUser.name}, data=$dataString, valor=$deficit")
+                                    val response = com.marcioarruda.clubedodomino.data.network.RetrofitClient.instance
+                                        .registerTaxaExtra(currentUser.name, dataString, deficit)
+                                    if (response.isSuccessful) {
+                                        Log.d("FinanceViewModel", "Taxa extra registrada com sucesso")
+                                    } else {
+                                        Log.e("FinanceViewModel", "Falha ao registrar taxa extra: ${response.code()} - ${response.message()}")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("FinanceViewModel", "Falha ao registrar taxa extra no backend", e)
+                                }
+                            }
+                            
                             val dueDate = Calendar.getInstance().time
                             allDebts.add(FinancialEntry(
                                 id = UUID.randomUUID().toString(),
