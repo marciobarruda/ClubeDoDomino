@@ -24,7 +24,8 @@ data class DashboardUiState(
     val totalDebt: Double = 0.0,
     val isNewMatchVisible: Boolean = false,
     val groupedMatches: Map<String, List<Match>> = emptyMap(),
-    val bestPlayer: BestPlayer? = null
+    val bestPlayers: List<BestPlayer> = emptyList(),
+    val worstPlayers: List<BestPlayer> = emptyList()
 )
 
 class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
@@ -59,13 +60,25 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 val groupedMatches = matches.groupBy { dateFormatter.format(it.date) }
 
 
-                // Calculate Best Player of the Day
+                // Calculate Best and Worst Players of the Day
                 val todayStr = dateFormatter.format(java.util.Date())
                 val todayMatches = groupedMatches[todayStr] ?: emptyList()
                 
-                var bestPlayer: BestPlayer? = null
+                var topPlayers = emptyList<BestPlayer>()
+                var bottomPlayers = emptyList<BestPlayer>()
+
                 if (todayMatches.isNotEmpty()) {
                     val playerPoints = mutableMapOf<User, Int>()
+                    
+                    // Initialize all players who played today with 0 points
+                    todayMatches.forEach { match ->
+                        listOf(match.team1Player1, match.team1Player2, match.team2Player1, match.team2Player2).forEach { p ->
+                            if (!playerPoints.containsKey(p)) {
+                                playerPoints[p] = 0
+                            }
+                        }
+                    }
+
                     todayMatches.forEach { match ->
                         val winnerScore = if (match.score1 > match.score2) match.score1 else match.score2
                         val loserScore = if (match.score1 > match.score2) match.score2 else match.score1
@@ -80,9 +93,16 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                         }
                     }
                     
-                    val maxEntry = playerPoints.maxByOrNull { it.value }
-                    if (maxEntry != null && maxEntry.value > 0) {
-                        bestPlayer = BestPlayer(maxEntry.key, maxEntry.value)
+                    if (playerPoints.isNotEmpty()) {
+                        val maxPoints = playerPoints.values.maxOrNull() ?: 0
+                        val minPoints = playerPoints.values.minOrNull() ?: 0
+
+                        if (maxPoints > 0) {
+                            topPlayers = playerPoints.filterValues { it == maxPoints }.map { BestPlayer(it.key, it.value) }
+                        }
+                        
+                        // Worst players are those with minimum points (could be 0)
+                        bottomPlayers = playerPoints.filterValues { it == minPoints }.map { BestPlayer(it.key, it.value) }
                     }
                 }
 
@@ -94,7 +114,8 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                         totalMatchesToday = totalMatchesToday,
                         totalDebt = totalDebt,
                         groupedMatches = groupedMatches,
-                        bestPlayer = bestPlayer
+                        bestPlayers = topPlayers,
+                        worstPlayers = bottomPlayers
                     )
                 }
             } catch (e: Exception) {

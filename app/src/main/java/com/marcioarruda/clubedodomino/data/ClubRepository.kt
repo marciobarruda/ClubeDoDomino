@@ -234,14 +234,16 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
             this.data?.let { dateFormat.parse(it) } ?: Date()
         } catch (e: Exception) { Date() }
 
+        val isTaxaExtra = this.obs?.contains("Taxa extra", ignoreCase = true) == true
+
         return FinancialEntry(
             id = UUID.randomUUID().toString(), // UI Key
             userId = userId,
-            type = FinancialEntryType.BUCHO,
+            type = if (isTaxaExtra) FinancialEntryType.EXTRA_TAX else FinancialEntryType.BUCHO,
             amount = this.valor ?: 0.0,
             status = if (this.pago == true) FinancialEntryStatus.PAID else FinancialEntryStatus.PENDING,
             dueDate = parsedDate,
-            description = this.placar ?: "N/A",
+            description = if (isTaxaExtra) "Taxa Extra (Déficit Mês Anterior)" else (this.placar ?: "N/A"),
             winningPair = this.dupla_vencedora,
             losingPair = this.dupla_perdedora,
             originalRemoteId = this.id,

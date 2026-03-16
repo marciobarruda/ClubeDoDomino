@@ -42,7 +42,8 @@ data class BuchoDto(
     val pago: Boolean? = false,
     val placar: String? = null,
     val dupla_vencedora: String? = null,
-    val dupla_perdedora: String? = null
+    val dupla_perdedora: String? = null,
+    val obs: String? = null
 )
 
 // DTO para Status de Mensalidade (buscar-info-mensalidade)
@@ -59,9 +60,10 @@ data class DebitRequest(
     val jogador: String,
     val valor: Double,
     val pago: Boolean,
-    val placar: String,
-    val dupla_vencedora: String,
-    val dupla_perdedora: String
+    val placar: String? = null,
+    val dupla_vencedora: String? = null,
+    val dupla_perdedora: String? = null,
+    val obs: String? = null
 )
 
 data class LoginRequest(

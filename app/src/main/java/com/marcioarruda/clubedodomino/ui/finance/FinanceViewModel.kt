@@ -199,34 +199,64 @@ class FinanceViewModel(
                             val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                             val dataString = dateFormat.format(dataCal.time)
                             
-                            // Chama endpoint para registrar taxa extra
-                            viewModelScope.launch(Dispatchers.IO) {
-                                try {
-                                    Log.d("FinanceViewModel", "Enviando taxa extra: jogador=${currentUser.name}, data=$dataString, valor=$deficit")
-                                    val response = com.marcioarruda.clubedodomino.data.network.RetrofitClient.instance
-                                        .registerTaxaExtra(currentUser.name, dataString, deficit)
-                                    if (response.isSuccessful) {
-                                        Log.d("FinanceViewModel", "Taxa extra registrada com sucesso")
-                                    } else {
-                                        Log.e("FinanceViewModel", "Falha ao registrar taxa extra: ${response.code()} - ${response.message()}")
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e("FinanceViewModel", "Falha ao registrar taxa extra no backend", e)
+                            // Verifica se já existe uma Taxa Extra no payload para a mesma data exata (10 do mês anterior)
+                            val taxaExtraDay = dataCal.get(Calendar.DAY_OF_MONTH)
+                            val taxaExtraMonth = dataCal.get(Calendar.MONTH)
+                            val taxaExtraYear = dataCal.get(Calendar.YEAR)
+                            
+                            val alreadyExists = allDebts.any { entry ->
+                                entry.userId == userId &&
+                                (entry.type == FinancialEntryType.EXTRA_TAX || entry.description.contains("Taxa extra", ignoreCase = true)) &&
+                                run {
+                                    val cal = Calendar.getInstance()
+                                    cal.time = entry.dueDate
+                                    cal.get(Calendar.DAY_OF_MONTH) == taxaExtraDay &&
+                                    cal.get(Calendar.MONTH) == taxaExtraMonth && 
+                                    cal.get(Calendar.YEAR) == taxaExtraYear
                                 }
                             }
                             
-                            val dueDate = Calendar.getInstance().time
-                            allDebts.add(FinancialEntry(
-                                id = UUID.randomUUID().toString(),
-                                userId = userId,
-                                type = FinancialEntryType.EXTRA_TAX,
-                                amount = deficit,
-                                status = FinancialEntryStatus.PENDING,
-                                dueDate = dueDate,
-                                description = "Taxa Extra (Déficit Mês Anterior)",
-                                originalRemoteId = null,
-                                originalReference = null
-                            ))
+                            if (!alreadyExists) {
+                                // Chama endpoint para registrar taxa extra
+                                viewModelScope.launch(Dispatchers.IO) {
+                                    try {
+                                        Log.d("FinanceViewModel", "Enviando taxa extra: jogador=${currentUser.name}, data=$dataString, valor=$deficit")
+                                        val response = com.marcioarruda.clubedodomino.data.network.RetrofitClient.instance
+                                            .registerDebit(com.marcioarruda.clubedodomino.data.network.DebitRequest(
+                                                data = dataString,
+                                                jogador = currentUser.name,
+                                                valor = deficit,
+                                                pago = false,
+                                                placar = null,
+                                                dupla_vencedora = null,
+                                                dupla_perdedora = null,
+                                                obs = "Taxa extra"
+                                            ))
+                                        if (response.isSuccessful) {
+                                            Log.d("FinanceViewModel", "Taxa extra registrada com sucesso")
+                                        } else {
+                                            Log.e("FinanceViewModel", "Falha ao registrar taxa extra: ${response.code()} - ${response.message()}")
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("FinanceViewModel", "Falha ao registrar taxa extra no backend", e)
+                                    }
+                                }
+                                
+                                val dueDate = dataCal.time
+                                allDebts.add(FinancialEntry(
+                                    id = UUID.randomUUID().toString(),
+                                    userId = userId,
+                                    type = FinancialEntryType.EXTRA_TAX,
+                                    amount = deficit,
+                                    status = FinancialEntryStatus.PENDING,
+                                    dueDate = dueDate,
+                                    description = "Taxa Extra (Déficit Mês Anterior)",
+                                    originalRemoteId = null,
+                                    originalReference = null
+                                ))
+                            } else {
+                                Log.d("FinanceViewModel", "Taxa Extra já existe no backend para ${currentUser.name} em $dataString")
+                            }
                         }
                     }
 
@@ -243,7 +273,9 @@ class FinanceViewModel(
                         } else false
                     }
 
-                    if (!exists) {
+                    val isPast10th = Calendar.getInstance().get(Calendar.DAY_OF_MONTH) >= 10
+
+                    if (!exists && isPast10th) {
                         try {
                             repository.createMensalidade(currentUser.name)
                             mensalidadesResult = repository.getMensalidadesResult()
@@ -268,7 +300,10 @@ class FinanceViewModel(
 
     private fun updateUiState(allDebts: List<FinancialEntry>, userId: String, globalStats: GlobalStats? = null) {
         val userDebts = allDebts.filter { it.userId == userId }
-        val pendingDebts = userDebts.filter { it.status != FinancialEntryStatus.PAID }
+        val pendingDebts = userDebts.filter { 
+            val isPaidExtraTax = it.type == FinancialEntryType.EXTRA_TAX && it.status == FinancialEntryStatus.PAID
+            it.status != FinancialEntryStatus.PAID && !isPaidExtraTax
+        }
         val sortedDebts = pendingDebts.sortedByDescending { it.dueDate }
 
         val cal = Calendar.getInstance()

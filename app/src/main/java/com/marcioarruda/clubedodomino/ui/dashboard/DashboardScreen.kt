@@ -246,9 +246,24 @@ private fun DashboardContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        state.bestPlayer?.let { bestPlayer ->
-            BestPlayerCard(bestPlayer)
-            Spacer(modifier = Modifier.height(24.dp))
+        if (state.bestPlayers.isNotEmpty()) {
+            PlayersOfTheDayCard(
+                title = "CRAQUE DO DIA",
+                players = state.bestPlayers,
+                icon = Icons.Default.EmojiEvents,
+                iconColor = DominoGold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        if (state.worstPlayers.isNotEmpty()) {
+            PlayersOfTheDayCard(
+                title = "PIOR DO DIA",
+                players = state.worstPlayers,
+                icon = androidx.compose.material.icons.Icons.Default.EmojiEvents,
+                iconColor = Color.Red
+            )
+            Spacer(modifier = Modifier.height(16.dp))
         }
         Text("ÚLTIMAS PARTIDAS", style = MaterialTheme.typography.titleMedium, color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
@@ -329,7 +344,7 @@ private fun BottomNavigationBar(
 }
 
 @Composable
-private fun BestPlayerCard(bestPlayer: BestPlayer) {
+private fun PlayersOfTheDayCard(title: String, players: List<BestPlayer>, icon: ImageVector, iconColor: Color) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -340,20 +355,24 @@ private fun BestPlayerCard(bestPlayer: BestPlayer) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.EmojiEvents, contentDescription = "Melhor Jogador", tint = DominoGold, modifier = Modifier.size(50.dp))
+                Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(50.dp))
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("CRAQUE DO DIA", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
+                Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                AvatarImage(
-                    url = bestPlayer.player.photoUrl,
-                    size = 80.dp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(bestPlayer.player.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Row(modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatItem("Pontos hoje", bestPlayer.points.toString())
+                players.forEach { p ->
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                        AvatarImage(
+                            url = p.player.photoUrl,
+                            size = 50.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(p.player.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            StatItem("Pontos hoje", p.points.toString())
+                        }
+                    }
                 }
             }
         }

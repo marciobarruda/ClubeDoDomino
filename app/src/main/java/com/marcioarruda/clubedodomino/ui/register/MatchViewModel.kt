@@ -86,7 +86,21 @@ class MatchViewModel(
                                     // ... Reset time parts
                                     entryCal.set(Calendar.HOUR_OF_DAY, 0); entryCal.set(Calendar.MINUTE, 0); entryCal.set(Calendar.SECOND, 0); entryCal.set(Calendar.MILLISECOND, 0)
                                     
-                                    if (entryCal.time.before(startOfCurrentMonth)) {
+                                    val todayCal = Calendar.getInstance()
+                                    val isPast10th = todayCal.get(Calendar.DAY_OF_MONTH) >= 10
+                                    
+                                    val prevMonthCal = Calendar.getInstance().apply {
+                                        add(Calendar.MONTH, -1)
+                                        set(Calendar.DAY_OF_MONTH, 1)
+                                        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                                    }
+
+                                    val isDebtFromBeforePreviousMonth = entryCal.time.before(prevMonthCal.time)
+                                    val isDebtFromPreviousMonthOrOlder = entryCal.time.before(startOfCurrentMonth)
+
+                                    if (isDebtFromBeforePreviousMonth) {
+                                        blockedUserIds.add(entry.userId)
+                                    } else if (isDebtFromPreviousMonthOrOlder && isPast10th) {
                                         blockedUserIds.add(entry.userId)
                                     }
                                 }
@@ -109,7 +123,21 @@ class MatchViewModel(
                                     // ... Reset time parts
                                     entryCal.set(Calendar.HOUR_OF_DAY, 0); entryCal.set(Calendar.MINUTE, 0); entryCal.set(Calendar.SECOND, 0); entryCal.set(Calendar.MILLISECOND, 0)
 
-                                    if (entryCal.time.before(startOfCurrentMonth)) {
+                                    val todayCal = Calendar.getInstance()
+                                    val isPast10th = todayCal.get(Calendar.DAY_OF_MONTH) >= 10
+                                    
+                                    val prevMonthCal = Calendar.getInstance().apply {
+                                        add(Calendar.MONTH, -1)
+                                        set(Calendar.DAY_OF_MONTH, 1)
+                                        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                                    }
+
+                                    val isDebtFromBeforePreviousMonth = entryCal.time.before(prevMonthCal.time)
+                                    val isDebtFromPreviousMonthOrOlder = entryCal.time.before(startOfCurrentMonth)
+
+                                    if (isDebtFromBeforePreviousMonth) {
+                                        blockedUserIds.add(entry.userId)
+                                    } else if (isDebtFromPreviousMonthOrOlder && isPast10th) {
                                         blockedUserIds.add(entry.userId)
                                     }
                                 }
@@ -118,7 +146,20 @@ class MatchViewModel(
                     }
                 }
 
-                val eligiblePlayers = users
+                val allUsers = users.toMutableList()
+                val hasNonMember = allUsers.any { it.name.contains("NÃO MEMBRO", ignoreCase = true) || it.name.contains("NAO MEMBRO", ignoreCase = true) || it.id == "7" }
+                if (!hasNonMember) {
+                    allUsers.add(User(
+                        id = "7", 
+                        name = "JOGADOR NÃO MEMBRO", 
+                        displayName = "NÃO MEMBRO", 
+                        photoUrl = "", 
+                        clubId = "", 
+                        isMember = false
+                    ))
+                }
+
+                val eligiblePlayers = allUsers
                     .filter { user ->
                         // Rule: "Ativo/Inativo" - Only show active OR Non-Member
                         val isNonMember = user.name.contains("NÃO MEMBRO", ignoreCase = true) || user.name.contains("NAO MEMBRO", ignoreCase = true) || user.id == "7"
@@ -212,10 +253,10 @@ class MatchViewModel(
                 val duplaVencedora = "${winners[0].displayName}/${winners[1].displayName}"
                 val duplaPerdedora = "${losers[0].displayName}/${losers[1].displayName}"
 
-                // Regra 2: Bucho Simples (6x0)
-                val isBuchoSimple = (loserScore == 0 && winnerScore == 6)
-                // Regra 5: Bucho de Ré (6x5) - Automático se perdedor fez 5 pontos
-                val isBuchoRe = (loserScore == 5 && winnerScore == 6)
+                // Regra 2: Bucho Simples (qualquer placar x 0)
+                val isBuchoSimple = (loserScore == 0)
+                // Regra 5: Bucho de Ré - Apenas se marcado no checkbox (UI State)
+                val isBuchoRe = state.isBuchoRe
 
                 // Regra 4: Cálculo de Pontos e Valor
                 var points = 0
