@@ -305,7 +305,7 @@ class MatchViewModel(
 
                     // Logica de pagamento
                     if (loser1IsNonMember && loser2IsNonMember) {
-                        // Ninguém paga (ou regra não especificada, assumindo 0)
+                        // Ninguém paga
                     } else if (loser1IsNonMember) {
                         // Loser 2 paga dobro
                         repository.registerDebit(DebitRequest(
@@ -319,13 +319,10 @@ class MatchViewModel(
                             pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora
                         ))
                     } else {
-                        // Ambos pagam normal
+                        // Ambos pagam normal - Chamada Única para evitar duplicidade
+                        val combinedNames = "${losers[0].name} / ${losers[1].name}"
                         repository.registerDebit(DebitRequest(
-                            data = dateStr, jogador = losers[0].name, valor = debitValue,
-                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora
-                        ))
-                        repository.registerDebit(DebitRequest(
-                            data = dateStr, jogador = losers[1].name, valor = debitValue,
+                            data = dateStr, jogador = combinedNames, valor = debitValue,
                             pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora
                         ))
                     }

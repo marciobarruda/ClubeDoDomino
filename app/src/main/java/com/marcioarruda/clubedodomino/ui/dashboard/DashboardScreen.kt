@@ -227,47 +227,57 @@ private fun DashboardContent(
     onAvatarClick: () -> Unit,
     onMatchClick: (String) -> Unit
 ) {
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        TopBar(state.user!!, onAvatarClick)
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            TopBar(state.user!!, onAvatarClick)
+        }
         
-        // Admin Access
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(
-            onClick = { navController.navigate("admin") },
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("ÁREA ADMINISTRATIVA", color = Color.White)
+        item {
+            Button(
+                onClick = { navController.navigate("admin") },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("ÁREA ADMINISTRATIVA", color = Color.White)
+            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-        if (state.bestPlayers.isNotEmpty()) {
-            PlayersOfTheDayCard(
-                title = "CRAQUE DO DIA",
-                players = state.bestPlayers,
-                icon = Icons.Default.EmojiEvents,
-                iconColor = DominoGold
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+        if (state.bestPlayers.isNotEmpty() || state.worstPlayers.isNotEmpty()) {
+            item {
+                DailyAwardsCard(
+                    bestPlayers = state.bestPlayers,
+                    worstPlayers = state.worstPlayers
+                )
+            }
         }
 
-        if (state.worstPlayers.isNotEmpty()) {
-            PlayersOfTheDayCard(
-                title = "PIOR DO DIA",
-                players = state.worstPlayers,
-                icon = androidx.compose.material.icons.Icons.Default.EmojiEvents,
-                iconColor = Color.Red
-            )
+        item {
+            Text("ÚLTIMAS PARTIDAS", style = MaterialTheme.typography.titleMedium, color = Color.White)
+        }
+
+        state.groupedMatches.forEach { (date, matches) ->
+            item {
+                Text(
+                    text = date,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = DominoGold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+            items(matches) {
+                MatchItem(it, onMatchClick)
+            }
+        }
+        
+        item {
             Spacer(modifier = Modifier.height(16.dp))
         }
-        Text("ÚLTIMAS PARTIDAS", style = MaterialTheme.typography.titleMedium, color = Color.White)
-        Spacer(modifier = Modifier.height(16.dp))
-        RecentMatchesList(groupedMatches = state.groupedMatches, onMatchClick = onMatchClick)
     }
 }
 
@@ -344,63 +354,51 @@ private fun BottomNavigationBar(
 }
 
 @Composable
-private fun PlayersOfTheDayCard(title: String, players: List<BestPlayer>, icon: ImageVector, iconColor: Color) {
+private fun DailyAwardsCard(bestPlayers: List<BestPlayer>, worstPlayers: List<BestPlayer>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = GlassyColor)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(50.dp))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
+        Column(modifier = Modifier.padding(16.dp)) {
+            if (bestPlayers.isNotEmpty()) {
+                AwardSection(
+                    title = "CRAQUE DO DIA",
+                    players = bestPlayers,
+                    icon = Icons.Default.EmojiEvents,
+                    iconColor = DominoGold
+                )
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                players.forEach { p ->
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-                        AvatarImage(
-                            url = p.player.photoUrl,
-                            size = 50.dp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(p.player.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            StatItem("Pontos hoje", p.points.toString())
-                        }
-                    }
-                }
+            
+            if (bestPlayers.isNotEmpty() && worstPlayers.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            if (worstPlayers.isNotEmpty()) {
+                AwardSection(
+                    title = "PIOR DO DIA",
+                    players = worstPlayers,
+                    icon = Icons.Default.EmojiEvents,
+                    iconColor = Color.Red
+                )
             }
         }
     }
 }
 
 @Composable
-private fun StatItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = Color.Gray, fontSize = 12.sp)
-        Text(value, color = Color.White, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun RecentMatchesList(groupedMatches: Map<String, List<Match>>, onMatchClick: (String) -> Unit) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        groupedMatches.forEach { (date, matches) ->
-            item {
-                Text(
-                    text = date,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = DominoGold,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-            items(matches) {
-                MatchItem(it, onMatchClick)
+private fun AwardSection(title: String, players: List<BestPlayer>, icon: ImageVector, iconColor: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(32.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(title, color = Color.Gray, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            val names = players.joinToString(", ") { it.player.name }
+            Text(names, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            if (players.isNotEmpty()) {
+                Text("${players[0].points} pontos hoje", color = DominoGold, fontSize = 12.sp)
             }
         }
     }
