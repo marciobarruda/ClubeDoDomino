@@ -187,11 +187,14 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         return safeApiCall { apiService.getMensalidades() }
     }
 
-    suspend fun createMensalidade(playerName: String) {
-        val today = Calendar.getInstance()
-        today.set(Calendar.DAY_OF_MONTH, 10)
+    suspend fun createMensalidade(playerName: String, month: Int? = null, year: Int? = null) {
+        val cal = Calendar.getInstance()
+        if (year != null) cal.set(Calendar.YEAR, year)
+        if (month != null) cal.set(Calendar.MONTH, month)
+        cal.set(Calendar.DAY_OF_MONTH, 10)
+        
         val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val dateString = simpleDateFormat.format(today.time)
+        val dateString = simpleDateFormat.format(cal.time)
         
         apiService.createMensalidade(CreateMensalidadeRequest(playerName, dateString))
     }

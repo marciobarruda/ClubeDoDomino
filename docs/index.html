@@ -558,12 +558,13 @@
                         fetch(`${API_BASE}webhook/buscar-info-mensalidade`).then(r => r.json())
                     ]);
 
-                    this.state.players = Array.isArray(players) ? players : [];
-                    this.state.matches = Array.isArray(matches) ? matches : [];
+                    this.state.players = Array.isArray(data[0]) ? data[0] : [];
+                    this.state.matches = Array.isArray(data[1]) ? data[1] : [];
                     
                     // Unified debts list
-                    this.processDebts(this.state.players, buchos || [], mensalidades || []);
-                    this.checkMonthlyFee(mensalidades || []);
+                    this.processDebts(this.state.players, data[2] || [], data[3] || []);
+                    this.checkMonthlyFee(data[3], data[0]);
+                    this.checkExtraFee(data[1], data[2], data[0]);
                     this.renderAll();
                 } catch (e) {
                     console.error("Data load error:", e);
@@ -636,29 +637,111 @@
                 this.state.debts = results;
             },
 
-            async checkMonthlyFee(mensalidadesArray) {
+            getLastBusinessDay(year, month) {
+                const date = new Date(year, month + 1, 0); // Last day of month
+                while (date.getDay() === 0 || date.getDay() === 6) {
+                    date.setDate(date.getDate() - 1);
+                }
+                return date;
+            },
+
+            async checkMonthlyFee(mensalidadesArray, players) {
                 if (!this.state.user) return;
                 
                 const now = new Date();
-                const month = now.getMonth();
-                const year = now.getFullYear();
-                
-                const hasFee = Array.isArray(mensalidadesArray) && mensalidadesArray.some(m => {
-                    const d = new Date(m.mensalidade);
-                    return m.jogador === this.state.user.name && d.getMonth() === month && d.getFullYear() === year;
-                });
+                // Loop last 4 months (0 to 3)
+                for (let i = 0; i < 4; i++) {
+                    const checkDate = new Date(now.getFullYear(), now.getMonth() - i, 10);
+                    const month = checkDate.getMonth();
+                    const year = checkDate.getFullYear();
 
-                if (!hasFee && this.state.user) {
-                    try {
-                        await fetch(`${API_BASE}webhook/buscar-info-mensalidade`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                jogador: this.state.user.name, 
-                                data_vencimento: `${year}-${String(month+1).padStart(2,'0')}-10` 
-                            })
+                    const hasFee = Array.isArray(mensalidadesArray) && mensalidadesArray.some(m => {
+                        const d = new Date(m.mensalidade);
+                        return m.jogador === this.state.user.name && d.getMonth() === month && d.getFullYear() === year;
+                    });
+
+                    if (!hasFee) {
+                        try {
+                            await fetch(`${API_BASE}webhook/buscar-info-mensalidade`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    jogador: this.state.user.name, 
+                                    data_vencimento: `${year}-${String(month+1).padStart(2,'0')}-10` 
+                                })
+                            });
+                        } catch(e) { console.error("Monthly fee recovery error:", e); }
+                    }
+                }
+            },
+
+            async checkExtraFee(matches, buchos, players) {
+                if (!this.state.user) return;
+
+                const now = new Date();
+                const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const prevMonth = prevMonthDate.getMonth();
+                const prevYear = prevMonthDate.getFullYear();
+
+                // 1. Calculate Club Base (Denominator = Active Members)
+                // Since flags are not synced, we assume all members in the list are active
+                const activeMembers = players.filter(p => !p.jogador.includes('NÃO MEMBRO'));
+                const activeCount = activeMembers.length || 1;
+
+                // 2. Club Average Matches
+                const clubMatchesPrevMonth = matches.filter(m => {
+                    const d = new Date(m.data);
+                    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+                });
+                const clubAvgMatches = clubMatchesPrevMonth.length / activeCount;
+
+                // 3. Club Base Fee (Total Buchos / Active Members)
+                const clubBuchosPrevMonth = buchos.filter(b => {
+                    const d = new Date(b.data);
+                    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+                });
+                const totalBuchosValue = clubBuchosPrevMonth.reduce((acc, b) => acc + (b.valor || 0), 0);
+                const baseFee = totalBuchosValue / activeCount;
+
+                // 4. Check Logged User
+                const myMatchesPrevMonth = clubMatchesPrevMonth.filter(m => 
+                    [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name)
+                ).length;
+
+                if (myMatchesPrevMonth < clubAvgMatches) {
+                    const myBuchosValue = clubBuchosPrevMonth
+                        .filter(b => b.jogador === this.state.user.name)
+                        .reduce((acc, b) => acc + (b.valor || 0), 0);
+                    
+                    const deficit = baseFee - myBuchosValue;
+
+                    if (deficit > 0.01) {
+                        const alreadyExists = buchos.some(b => {
+                            const d = new Date(b.data);
+                            return b.jogador === this.state.user.name && 
+                                   (b.obs?.includes('Taxa extra') || b.type === 'TAX') &&
+                                   d.getMonth() === prevMonth && d.getFullYear() === prevYear;
                         });
-                    } catch(e) { console.error("Monthly fee trigger error:", e); }
+
+                        if (!alreadyExists) {
+                            const lastBizDay = this.getLastBusinessDay(prevYear, prevMonth);
+                            const dateStr = lastBizDay.toISOString().split('T')[0];
+
+                            try {
+                                await fetch(`${API_BASE}webhook/gravar-buchos`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        data: dateStr,
+                                        jogador: this.state.user.name,
+                                        valor: deficit,
+                                        pago: false,
+                                        obs: "Taxa extra"
+                                    })
+                                });
+                            } catch(e) { console.error("Taxa extra error:", e); }
+                        }
+                    }
                 }
             },
 

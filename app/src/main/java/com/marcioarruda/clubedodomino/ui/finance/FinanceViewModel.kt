@@ -199,8 +199,9 @@ class FinanceViewModel(
 
                     val buchosList = buchosResult.getOrNull() ?: emptyList()
                     val globalStats = adminRepository.calculateStats(matches, buchosList, users, prevMonth, prevYear)
-
+                    
                     val isOnVacation = adminRepository.isPlayerOnVacation(userId)
+                    val isActive = adminRepository.isPlayerActive(userId)
 
                     val myMatches = matches.filter {
                         val cal = Calendar.getInstance()
@@ -210,22 +211,13 @@ class FinanceViewModel(
                         isMyMatch && cal.get(Calendar.MONTH) == prevMonth && cal.get(Calendar.YEAR) == prevYear
                     }.size
 
-                    if (!isOnVacation && myMatches < globalStats.avgMatches) {
-                        val taxaBase = 10.0
-                        val deficit = taxaBase - myBuchosValue
+                    if (isActive && !isOnVacation && myMatches < globalStats.avgMatches) {
+                        val deficit = globalStats.avgBuchos - myBuchosValue
 
-                        if (deficit > 0) {
-                            // Data: dia 10 do mês anterior
-                            val dataCal = Calendar.getInstance()
-                            dataCal.add(Calendar.MONTH, -1)
-                            dataCal.set(Calendar.DAY_OF_MONTH, 10)
+                        if (deficit > 0.01) {
+                            val lastBusinessDay = adminRepository.getLastBusinessDayOfMonth(prevYear, prevMonth)
                             val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                            val dataString = dateFormat.format(dataCal.time)
-                            
-                            // Verifica se já existe uma Taxa Extra no payload para a mesma data exata (10 do mês anterior)
-                            val taxaExtraDay = dataCal.get(Calendar.DAY_OF_MONTH)
-                            val taxaExtraMonth = dataCal.get(Calendar.MONTH)
-                            val taxaExtraYear = dataCal.get(Calendar.YEAR)
+                            val dataString = dateFormat.format(lastBusinessDay)
                             
                             val alreadyExists = allDebts.any { entry ->
                                 entry.userId == userId &&
@@ -233,92 +225,86 @@ class FinanceViewModel(
                                 run {
                                     val cal = Calendar.getInstance()
                                     cal.time = entry.dueDate
-                                    cal.get(Calendar.DAY_OF_MONTH) == taxaExtraDay &&
-                                    cal.get(Calendar.MONTH) == taxaExtraMonth && 
-                                    cal.get(Calendar.YEAR) == taxaExtraYear
+                                    cal.get(Calendar.MONTH) == prevMonth && cal.get(Calendar.YEAR) == prevYear
                                 }
                             }
                             
                             if (!alreadyExists) {
-                                // Chama endpoint para registrar taxa extra
                                 viewModelScope.launch(Dispatchers.IO) {
                                     try {
-                                        Log.d("FinanceViewModel", "Enviando taxa extra: jogador=${currentUser.name}, data=$dataString, valor=$deficit")
-                                        val response = com.marcioarruda.clubedodomino.data.network.RetrofitClient.instance
+                                        com.marcioarruda.clubedodomino.data.network.RetrofitClient.instance
                                             .registerDebit(com.marcioarruda.clubedodomino.data.network.DebitRequest(
                                                 data = dataString,
                                                 jogador = currentUser.name,
                                                 valor = deficit,
                                                 pago = false,
-                                                placar = null,
-                                                dupla_vencedora = null,
-                                                dupla_perdedora = null,
                                                 obs = "Taxa extra"
                                             ))
-                                        if (response.isSuccessful) {
-                                            Log.d("FinanceViewModel", "Taxa extra registrada com sucesso")
-                                        } else {
-                                            Log.e("FinanceViewModel", "Falha ao registrar taxa extra: ${response.code()} - ${response.message()}")
-                                        }
                                     } catch (e: Exception) {
-                                        Log.e("FinanceViewModel", "Falha ao registrar taxa extra no backend", e)
+                                        Log.e("FinanceViewModel", "Falha ao registrar taxa extra", e)
                                     }
                                 }
                                 
-                                val dueDate = dataCal.time
                                 allDebts.add(FinancialEntry(
                                     id = UUID.randomUUID().toString(),
                                     userId = userId,
                                     type = FinancialEntryType.EXTRA_TAX,
                                     amount = deficit,
                                     status = FinancialEntryStatus.PENDING,
-                                    dueDate = dueDate,
-                                    description = "Taxa Extra (Déficit Mês Anterior)",
+                                    dueDate = lastBusinessDay,
+                                    description = "Taxa Extra (Assiduidade)",
                                     originalRemoteId = null,
                                     originalReference = null
                                 ))
-                            } else {
-                                Log.d("FinanceViewModel", "Taxa Extra já existe no backend para ${currentUser.name} em $dataString")
                             }
                         }
                     }
 
                     updateUiState(allDebts, currentUser.id, globalStats)
                     
-                    val currentMonth = Calendar.getInstance().get(Calendar.MONTH)
-                    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-                    
-                    // Checa se o usuário atual já tem cobrança gerada para este mês no payload atual
-                    val userHasCurrentMonthFee = currentMensalidades.any { entry ->
-                        if (entry.userId == currentUser.id) {
-                            val cal = Calendar.getInstance()
-                            cal.time = entry.dueDate
-                            cal.get(Calendar.YEAR) == currentYear && cal.get(Calendar.MONTH) == currentMonth
-                        } else false
-                    }
+                    // --- RECOVERY OF MISSING MONTHLY FEES (Last 4 Months) ---
+                    val curYear = cal.get(Calendar.YEAR)
+                    val curMonth = cal.get(Calendar.MONTH)
 
-                    if (!userHasCurrentMonthFee) {
-                        try {
-                            Log.d("FinanceViewModel", "Nenhuma mensalidade encontrada no GET para ${currentUser.name} neste mês. Acionando POST.")
-                            // Freqüenta a chamada POST passando o nome do usuário para gerar a cobrança DELE
-                            repository.createMensalidade(currentUser.name)
-                            
-                            // Atualiza a lista chamando o GET novamente para capturar a nova cobrança
-                            mensalidadesResult = repository.getMensalidadesResult()
-                            var currentMensalidadesRefresh = mensalidadesResult.getOrNull()?.mapNotNull {
-                                with(repository) { it.toFinancialEntry(users) }
-                            } ?: emptyList()
-                            
-                            // Adiciona as novas mensalidades à lista allDebts, evitando duplicatas por originalRemoteId
-                            val existingRemoteIds = allDebts.mapNotNull { it.originalRemoteId }.toSet()
-                            val newUniqueMensalidades = currentMensalidadesRefresh.filter { it.originalRemoteId !in existingRemoteIds }
-                            allDebts.addAll(newUniqueMensalidades)
+                    for (i in 0..3) {
+                        val checkCal = Calendar.getInstance()
+                        checkCal.add(Calendar.MONTH, -i)
+                        val checkMonth = checkCal.get(Calendar.MONTH)
+                        val checkYear = checkCal.get(Calendar.YEAR)
 
-                            updateUiState(allDebts, currentUser.id, globalStats)
-                        } catch (e: Exception) {
-                            Log.e("FinanceViewModel", "Falha ao acionar POST para gerar mensalidade", e)
+                        val hasFee = currentMensalidades.any { entry ->
+                            if (entry.userId == currentUser.id) {
+                                val mCal = Calendar.getInstance()
+                                mCal.time = entry.dueDate
+                                mCal.get(Calendar.YEAR) == checkYear && mCal.get(Calendar.MONTH) == checkMonth
+                            } else false
+                        }
+
+                        if (!hasFee && !adminRepository.isPlayerOnVacation(userId)) {
+                            try {
+                                Log.d("FinanceViewModel", "Mensalidade faltando para ${currentUser.name} em ${checkMonth + 1}/$checkYear. Gerando...")
+                                repository.createMensalidade(currentUser.name, checkMonth, checkYear)
+                                // We refresh the list inside the loop or after? 
+                                // Better to refetch once after loop if any were created.
+                            } catch (e: Exception) {
+                                Log.e("FinanceViewModel", "Falha ao gerar mensalidade retroativa", e)
+                            }
                         }
                     }
+
+                    // Refetch all to show new ones
+                    val refreshedMensalidades = repository.getMensalidadesResult().getOrNull()?.mapNotNull {
+                        with(repository) { it.toFinancialEntry(users) }
+                    } ?: emptyList()
+                    
+                    // Update allDebts with unique items
+                    val existingRemoteIds = allDebts.mapNotNull { it.originalRemoteId }.toSet()
+                    val newUniqueMensalidades = refreshedMensalidades.filter { it.originalRemoteId !in existingRemoteIds }
+                    allDebts.addAll(newUniqueMensalidades)
+
+                    updateUiState(allDebts, currentUser.id, globalStats)
+
+                } catch (e: Exception) {
 
                 } catch (e: Exception) {
                     Log.e("FinanceViewModel", "Erro desconhecido", e)

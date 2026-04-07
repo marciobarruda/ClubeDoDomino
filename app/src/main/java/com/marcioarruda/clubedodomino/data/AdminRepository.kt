@@ -60,7 +60,7 @@ class AdminRepository(context: Context) {
         val currentMonth = targetMonth
         val currentYear = targetYear
 
-        // 1. Filter Data (Month Current)
+        // 1. Filter Data (Target Month)
         val matchesThisMonth = matches.filter {
             val cal = Calendar.getInstance()
             cal.time = it.date
@@ -71,8 +71,7 @@ class AdminRepository(context: Context) {
             try {
                 val dateStr = dto.data
                 if (!dateStr.isNullOrBlank()) {
-                    // Fix: Use correct format matching API (ISO 8601)
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault())
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                     val date = sdf.parse(dateStr)
                     if (date != null) {
                         val cal = Calendar.getInstance()
@@ -80,45 +79,39 @@ class AdminRepository(context: Context) {
                         cal.get(Calendar.MONTH) == currentMonth && cal.get(Calendar.YEAR) == currentYear
                     } else false
                 } else false
-            } catch (e: Exception) {
-                // Fallback for debugging - logs error but keeps app running
-                // android.util.Log.e("AdminRepo", "Date parse error", e) 
-                false
-            }
+            } catch (e: Exception) { false }
         }
 
-        // 2. Determine Denominators based on Distinct Activity
-        
-        // Distinct players who played matches in this month
-        val distinctMatchPlayers = matchesThisMonth.flatMap { match ->
-            listOf(
-                match.team1Player1.id,
-                match.team1Player2.id,
-                match.team2Player1.id,
-                match.team2Player2.id
-            )
-        }.distinct().count()
+        // 2. Determine Denominator based on 'Ativo' switch (as per new requirement)
+        // Note: Non-members and special accounts are excluded
+        val activeMembers = allUsers.filter { user ->
+            !user.name.contains("NÃO MEMBRO", ignoreCase = true) && 
+            user.id != "7" && 
+            isPlayerActive(user.id)
+        }
+        val activeCount = if (activeMembers.isNotEmpty()) activeMembers.size else 1 // Avoid div by zero
 
-        // Distinct players who suffered buchos in this month
-        // BuchoDto uses 'jogador' name string, so we count distinct names
-        val distinctBuchoPlayers = buchosThisMonth.mapNotNull { it.jogador }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .count()
-
-        val avgMatches = if (distinctMatchPlayers > 0) matchesThisMonth.size.toDouble() / distinctMatchPlayers else 0.0
-        val avgBuchos = if (distinctBuchoPlayers > 0) buchosThisMonth.size.toDouble() / distinctBuchoPlayers else 0.0
+        val avgMatches = if (activeCount > 0) matchesThisMonth.size.toDouble() / activeCount else 0.0
+        val avgBuchosValue = if (activeCount > 0) buchosThisMonth.sumOf { it.valor ?: 0.0 } / activeCount else 0.0
 
         return GlobalStats(
             avgMatches = avgMatches,
-            avgBuchos = avgBuchos,
+            avgBuchos = avgBuchosValue,
             totalMatchesMonth = matchesThisMonth.size,
             totalBuchosMonth = buchosThisMonth.size,
-            activeMembersCount = distinctMatchPlayers // Updating this field semantics to match participants or keep as legacy? 
-                                                      // The requested change is about averages. I'll keep activeMembersCount as denominator proxy 
-                                                      // or just return 0 if not used elsewhere prominently. 
-                                                      // To be safe, I'll return the match participants count as it's the "active" count for the month.
+            activeMembersCount = activeCount
         )
+    }
+
+    fun getLastBusinessDayOfMonth(year: Int, month: Int): Date {
+        val cal = Calendar.getInstance()
+        cal.set(year, month, 1)
+        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
+
+        while (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY || cal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+            cal.add(Calendar.DAY_OF_MONTH, -1)
+        }
+        return cal.time
     }
 }
 
