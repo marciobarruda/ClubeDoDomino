@@ -656,8 +656,15 @@
                     const year = checkDate.getFullYear();
 
                     const hasFee = Array.isArray(mensalidadesArray) && mensalidadesArray.some(m => {
-                        const d = new Date(m.mensalidade);
-                        return m.jogador === this.state.user.name && d.getMonth() === month && d.getFullYear() === year;
+                        // Extract year/month safely from various formats
+                        const dateStr = m.mensalidade || "";
+                        let d;
+                        if (dateStr.length >= 10) d = new Date(dateStr);
+                        else d = new Date(m.ano || new Date().getFullYear(), m.mes || 0, 10);
+
+                        return m.jogador === this.state.user.name && 
+                               d.getMonth() === month && 
+                               d.getFullYear() === year;
                     });
 
                     if (!hasFee) {
@@ -679,67 +686,70 @@
                 if (!this.state.user) return;
 
                 const now = new Date();
-                const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                const prevMonth = prevMonthDate.getMonth();
-                const prevYear = prevMonthDate.getFullYear();
+                
+                // Scan last 3 months for missing Extra Fees (Retroactive)
+                for (let i = 1; i <= 3; i++) {
+                    const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    const targetMonth = targetDate.getMonth();
+                    const targetYear = targetDate.getFullYear();
 
-                // 1. Calculate Club Base (Denominator = Active Members)
-                // Since flags are not synced, we assume all members in the list are active
-                const activeMembers = players.filter(p => !p.jogador.includes('NÃO MEMBRO'));
-                const activeCount = activeMembers.length || 1;
+                    // 1. Calculate Club Base (Denominator = Active Members)
+                    const activeMembers = players.filter(p => !p.jogador.includes('NÃO MEMBRO'));
+                    const activeCount = activeMembers.length || 1;
 
-                // 2. Club Average Matches
-                const clubMatchesPrevMonth = matches.filter(m => {
-                    const d = new Date(m.data);
-                    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
-                });
-                const clubAvgMatches = clubMatchesPrevMonth.length / activeCount;
+                    // 2. Club Stats for THIS SPECIFIC target month
+                    const clubMatchesTargetMonth = matches.filter(m => {
+                        const d = new Date(m.data);
+                        return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+                    });
+                    const clubAvgMatches = clubMatchesTargetMonth.length / activeCount;
 
-                // 3. Club Base Fee (Total Buchos / Active Members)
-                const clubBuchosPrevMonth = buchos.filter(b => {
-                    const d = new Date(b.data);
-                    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
-                });
-                const totalBuchosValue = clubBuchosPrevMonth.reduce((acc, b) => acc + (b.valor || 0), 0);
-                const baseFee = totalBuchosValue / activeCount;
+                    const clubBuchosTargetMonth = buchos.filter(b => {
+                        const d = new Date(b.data);
+                        return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+                    });
+                    const totalBuchosValue = clubBuchosTargetMonth.reduce((acc, b) => acc + (b.valor || 0), 0);
+                    const baseFee = totalBuchosValue / activeCount;
 
-                // 4. Check Logged User
-                const myMatchesPrevMonth = clubMatchesPrevMonth.filter(m => 
-                    [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name)
-                ).length;
+                    // 3. User Performance for TARGET month
+                    const myMatchesTargetMonth = clubMatchesTargetMonth.filter(m => 
+                        [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name)
+                    ).length;
 
-                if (myMatchesPrevMonth < clubAvgMatches) {
-                    const myBuchosValue = clubBuchosPrevMonth
-                        .filter(b => b.jogador === this.state.user.name)
-                        .reduce((acc, b) => acc + (b.valor || 0), 0);
-                    
-                    const deficit = baseFee - myBuchosValue;
+                    if (myMatchesTargetMonth < clubAvgMatches) {
+                        const myBuchosValue = clubBuchosTargetMonth
+                            .filter(b => b.jogador === this.state.user.name)
+                            .reduce((acc, b) => acc + (b.valor || 0), 0);
+                        
+                        const deficit = baseFee - myBuchosValue;
 
-                    if (deficit > 0.01) {
-                        const alreadyExists = buchos.some(b => {
-                            const d = new Date(b.data);
-                            return b.jogador === this.state.user.name && 
-                                   (b.obs?.includes('Taxa extra') || b.type === 'TAX') &&
-                                   d.getMonth() === prevMonth && d.getFullYear() === prevYear;
-                        });
+                        if (deficit > 0.01) {
+                            // Robust check for existing record
+                            const alreadyExists = buchos.some(b => {
+                                const d = new Date(b.data);
+                                return b.jogador === this.state.user.name && 
+                                       (b.obs?.includes('Taxa extra') || b.type === 'TAX') &&
+                                       d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+                            });
 
-                        if (!alreadyExists) {
-                            const lastBizDay = this.getLastBusinessDay(prevYear, prevMonth);
-                            const dateStr = lastBizDay.toISOString().split('T')[0];
+                            if (!alreadyExists) {
+                                const lastBizDay = this.getLastBusinessDay(targetYear, targetMonth);
+                                const dateStr = lastBizDay.toISOString().split('T')[0];
 
-                            try {
-                                await fetch(`${API_BASE}webhook/gravar-buchos`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        data: dateStr,
-                                        jogador: this.state.user.name,
-                                        valor: deficit,
-                                        pago: false,
-                                        obs: "Taxa extra"
-                                    })
-                                });
-                            } catch(e) { console.error("Taxa extra error:", e); }
+                                try {
+                                    await fetch(`${API_BASE}webhook/gravar-buchos`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            data: dateStr,
+                                            jogador: this.state.user.name,
+                                            valor: deficit,
+                                            pago: false,
+                                            obs: "Taxa extra"
+                                        })
+                                    });
+                                } catch(e) { console.error(`Taxa extra error for ${targetMonth+1}/${targetYear}:`, e); }
+                            }
                         }
                     }
                 }
