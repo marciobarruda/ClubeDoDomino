@@ -1,0 +1,573 @@
+﻿Initialized native services in: C:\Users\NETRA\.gradle\native
+Initialized jansi services in: C:\Users\NETRA\.gradle\native
+Found daemon DaemonInfo{pid=35736, address=[bf79fc16-fb38-4644-8e2b-26182aeb7dfa port:54133, addresses:[/127.0.0.1]], state=Idle, lastBusy=1773680811262, context=DefaultDaemonContext[uid=84492d39-779d-4deb-b828-efd96080f27b,javaHome=C:\Program Files\Android\Android Studio\jbr,javaVersion=21,javaVendor=JetBrains s.r.o.,daemonRegistryDir=C:\Users\NETRA\.gradle\daemon,pid=35736,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-Xmx2048m,-Dfile.encoding=UTF-8,-Duser.country=BR,-Duser.language=pt,-Duser.variant]} however its context does not match the desired criteria.
+JVM is incompatible.
+Wanted: DaemonRequestContext{jvmCriteria=C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot (no JDK specified, using current Java home), daemonOpts=[-Xmx2048m, -Dfile.encoding=UTF-8, -Duser.country=BR, -Duser.language=pt, -Duser.variant], applyInstrumentationAgent=true, nativeServicesMode=ENABLED, priority=NORMAL}
+Actual: DefaultDaemonContext[uid=84492d39-779d-4deb-b828-efd96080f27b,javaHome=C:\Program Files\Android\Android Studio\jbr,javaVersion=21,javaVendor=JetBrains s.r.o.,daemonRegistryDir=C:\Users\NETRA\.gradle\daemon,pid=35736,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-Xmx2048m,-Dfile.encoding=UTF-8,-Duser.country=BR,-Duser.language=pt,-Duser.variant]
+
+  Looking for a different daemon...
+Found daemon DaemonInfo{pid=69528, address=[73bc7e80-fac2-4fa1-8ed8-c26bdfc95d9b port:54684, addresses:[/127.0.0.1]], state=Idle, lastBusy=1773686686666, context=DefaultDaemonContext[uid=63299fe1-7910-4eb3-8e6f-ef4b3fdeeb9e,javaHome=C:\Users\NETRA\.antigravity\extensions\redhat.java-1.53.0-win32-x64\jre\21.0.10-win32-x86_64,javaVersion=21,javaVendor=Eclipse Adoptium,daemonRegistryDir=C:\Users\NETRA\.gradle\daemon,pid=69528,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-Xmx2048m,-Dfile.encoding=UTF-8,-Duser.country=BR,-Duser.language=pt,-Duser.variant]} however its context does not match the desired criteria.
+JVM is incompatible.
+Wanted: DaemonRequestContext{jvmCriteria=C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot (no JDK specified, using current Java home), daemonOpts=[-Xmx2048m, -Dfile.encoding=UTF-8, -Duser.country=BR, -Duser.language=pt, -Duser.variant], applyInstrumentationAgent=true, nativeServicesMode=ENABLED, priority=NORMAL}
+Actual: DefaultDaemonContext[uid=63299fe1-7910-4eb3-8e6f-ef4b3fdeeb9e,javaHome=C:\Users\NETRA\.antigravity\extensions\redhat.java-1.53.0-win32-x64\jre\21.0.10-win32-x86_64,javaVersion=21,javaVendor=Eclipse Adoptium,daemonRegistryDir=C:\Users\NETRA\.gradle\daemon,pid=69528,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-Xmx2048m,-Dfile.encoding=UTF-8,-Duser.country=BR,-Duser.language=pt,-Duser.variant]
+
+  Looking for a different daemon...
+Removing 1 daemon stop events from registry
+Previous Daemon (32532) stopped at Mon Mar 16 15:44:27 BRT 2026 after being idle for 67 minutes and not recently used and to reclaim system physical memory
+Starting a Gradle Daemon, 2 incompatible and 1 stopped Daemons could not be reused, use --status for details
+Starting process 'Gradle build daemon'. Working directory: C:\Users\NETRA\.gradle\daemon\9.1.0 Command: C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot\bin\java.exe --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED -Xmx2048m -Dfile.encoding=UTF-8 -Duser.country=BR -Duser.language=pt -Duser.variant -cp C:\Users\NETRA\.gradle\wrapper\dists\gradle-9.1.0-bin\9agqghryom9wkf8r80qlhnts3\gradle-9.1.0\lib\gradle-daemon-main-9.1.0.jar -javaagent:C:\Users\NETRA\.gradle\wrapper\dists\gradle-9.1.0-bin\9agqghryom9wkf8r80qlhnts3\gradle-9.1.0\lib\agents\gradle-instrumentation-agent-9.1.0.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 9.1.0
+Successfully started process 'Gradle build daemon'
+An attempt to start the daemon took 1.407 secs.
+The client will now receive all logging from the daemon (pid: 68804). The daemon log file: C:\Users\NETRA\.gradle\daemon\9.1.0\daemon-68804.out.log
+Starting build in new daemon [memory: 2 GiB]
+Using 12 worker leases.
+Received JVM installation metadata from 'C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot': {JAVA_HOME=C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot, JAVA_VERSION=17.0.18, JAVA_VENDOR=Microsoft, RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=17.0.18+8-LTS, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=17.0.18+8-LTS, VM_VENDOR=Microsoft, OS_ARCH=amd64}
+Watching the file system is configured to be enabled if available
+Not watching G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino since the file system is not supported
+File system watching is active
+Starting Build
+Settings evaluated using settings file 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\settings.gradle.kts'.
+Projects loaded. Root project using build file 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\build.gradle.kts'.
+Included projects: [root project 'ClubeDoDomino', project ':app']
+
+> Configure project :
+Evaluating root project 'ClubeDoDomino' using build file 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '9.0.0', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '2.2.10', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.compose', version: '2.0.21', apply: false]
+
+> Configure project :app
+Evaluating project ':app' using build file 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build.gradle.kts'.
+Resolved plugin [id: 'com.android.application']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.compose', version: '2.0.21']
+WARNING: The option setting 'android.overridePathCheck=true' is experimental.
+The current default is 'false'.
+WARNING: The option setting 'android.usesSdkInManifest.disallowed=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.sdk.defaultTargetSdkToCompileSdkIfUnset=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.enableAppCompileTimeRClass=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.r8.optimizedResourceShrinking=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.defaults.buildfeatures.resvalues=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+Using default execution profile
+Build 60670285-84c3-4f65-9126-8d963d25ad9f is started
+Using Kotlin Gradle Plugin gradle813 variant
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+Detected Android Gradle Plugin compose compiler configuration
+Detected Android Gradle Plugin compose compiler configuration
+Detected Android Gradle Plugin compose compiler configuration
+Detected Android Gradle Plugin compose compiler configuration
+All projects evaluated.
+Task name matched 'assembleDebug'
+Selected primary task 'assembleDebug' from project :
+Adding -Xuse-inline-scopes-numbers Kotlin compiler flag for task :app:compileDebugKotlin
+Tasks to be executed: [task ':app:preBuild', task ':app:preDebugBuild', task ':app:mergeDebugNativeDebugMetadata', task ':app:checkKotlinGradlePluginConfigurationErrors', task ':app:generateDebugBuildConfig', task ':app:checkDebugAarMetadata', task ':app:processDebugNavigationResources', task ':app:compileDebugNavigationResources', task ':app:generateDebugResValues', task ':app:mapDebugSourceSetPaths', task ':app:generateDebugResources', task ':app:mergeDebugResources', task ':app:packageDebugResources', task ':app:parseDebugLocalResources', task ':app:createDebugCompatibleScreenManifests', task ':app:extractDeepLinksDebug', task ':app:processDebugMainManifest', task ':app:processDebugManifest', task ':app:processDebugManifestForPackage', task ':app:processDebugResources', task ':app:compileDebugKotlin', task ':app:javaPreCompileDebug', task ':app:compileDebugJavaWithJavac', task ':app:generateDebugAssets', task ':app:mergeDebugAssets', task ':app:compressDebugAssets', task ':app:processDebugJavaRes', task ':app:mergeDebugJavaResource', task ':app:checkDebugDuplicateClasses', task ':app:desugarDebugFileDependencies', task ':app:mergeExtDexDebug', task ':app:mergeLibDexDebug', task ':app:dexBuilderDebug', task ':app:mergeProjectDexDebug', task ':app:mergeDebugJniLibFolders', task ':app:mergeDebugNativeLibs', task ':app:stripDebugDebugSymbols', task ':app:validateSigningDebug', task ':app:writeDebugAppMetadata', task ':app:writeDebugSigningConfigVersions', task ':app:packageDebug', task ':app:createDebugApkListingFileRedirect', task ':app:assembleDebug', task ':app:copyApkDebug']
+Tasks that were excluded: []
+Resolve mutations for :app:preBuild (Thread[Execution worker Thread 4,5,main]) started.
+:app:preBuild (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app:preBuild UP-TO-DATE
+Skipping task ':app:preBuild' as it has no actions.
+Resolve mutations for :app:preDebugBuild (Thread[Execution worker Thread 4,5,main]) started.
+:app:preDebugBuild (Thread[included builds,5,main]) started.
+
+> Task :app:preDebugBuild UP-TO-DATE
+Skipping task ':app:preDebugBuild' as it has no actions.
+Resolve mutations for :app:mergeDebugNativeDebugMetadata (Thread[included builds,5,main]) started.
+:app:mergeDebugNativeDebugMetadata (Thread[included builds,5,main]) started.
+
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+Skipping task ':app:mergeDebugNativeDebugMetadata' as it has no source files and no previous output files.
+Resolve mutations for :app:checkKotlinGradlePluginConfigurationErrors (Thread[included builds,5,main]) started.
+:app:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+Skipping task ':app:checkKotlinGradlePluginConfigurationErrors' as task onlyIf 'errorDiagnostics are present' is false.
+Resolve mutations for :app:generateDebugBuildConfig (Thread[Execution worker Thread 4,5,main]) started.
+:app:generateDebugBuildConfig (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+Caching disabled for task ':app:generateDebugBuildConfig' because:
+  Build cache is disabled
+Skipping task ':app:generateDebugBuildConfig' as it is up-to-date.
+Resolve mutations for :app:checkDebugAarMetadata (Thread[Execution worker Thread 4,5,main]) started.
+:app:checkDebugAarMetadata (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':app:checkDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:checkDebugAarMetadata' as it is up-to-date.
+Resolve mutations for :app:processDebugNavigationResources (Thread[Execution worker Thread 4,5,main]) started.
+:app:processDebugNavigationResources (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':app:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':app:processDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :app:compileDebugNavigationResources (Thread[Execution worker Thread 4,5,main]) started.
+:app:compileDebugNavigationResources (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':app:compileDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':app:compileDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :app:generateDebugResValues (Thread[Execution worker Thread 4,5,main]) started.
+:app:generateDebugResValues (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':app:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':app:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :app:mapDebugSourceSetPaths (Thread[Execution worker Thread 4,5,main]) started.
+:app:mapDebugSourceSetPaths (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+Caching disabled for task ':app:mapDebugSourceSetPaths' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:mapDebugSourceSetPaths' as it is up-to-date.
+Resolve mutations for :app:generateDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+:app:generateDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:generateDebugResources UP-TO-DATE
+Caching disabled for task ':app:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':app:generateDebugResources' as it is up-to-date.
+Resolve mutations for :app:mergeDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+:app:mergeDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:mergeDebugResources UP-TO-DATE
+Caching disabled for task ':app:mergeDebugResources' because:
+  Build cache is disabled
+Skipping task ':app:mergeDebugResources' as it is up-to-date.
+Resolve mutations for :app:packageDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+:app:packageDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:packageDebugResources UP-TO-DATE
+Caching disabled for task ':app:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':app:packageDebugResources' as it is up-to-date.
+Resolve mutations for :app:parseDebugLocalResources (Thread[Execution worker Thread 11,5,main]) started.
+:app:parseDebugLocalResources (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':app:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':app:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :app:createDebugCompatibleScreenManifests (Thread[Execution worker Thread 11,5,main]) started.
+:app:createDebugCompatibleScreenManifests (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+Caching disabled for task ':app:createDebugCompatibleScreenManifests' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:createDebugCompatibleScreenManifests' as it is up-to-date.
+Resolve mutations for :app:extractDeepLinksDebug (Thread[Execution worker Thread 11,5,main]) started.
+:app:extractDeepLinksDebug (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':app:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':app:extractDeepLinksDebug' as it is up-to-date.
+Resolve mutations for :app:processDebugMainManifest (Thread[Execution worker Thread 11,5,main]) started.
+:app:processDebugMainManifest (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:processDebugMainManifest UP-TO-DATE
+Caching disabled for task ':app:processDebugMainManifest' because:
+  Build cache is disabled
+Skipping task ':app:processDebugMainManifest' as it is up-to-date.
+Resolve mutations for :app:processDebugManifest (Thread[Execution worker Thread 11,5,main]) started.
+:app:processDebugManifest (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:processDebugManifest UP-TO-DATE
+Caching disabled for task ':app:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':app:processDebugManifest' as it is up-to-date.
+Resolve mutations for :app:processDebugManifestForPackage (Thread[Execution worker Thread 11,5,main]) started.
+:app:processDebugManifestForPackage (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+Custom actions are attached to task ':app:processDebugManifestForPackage'.
+Caching disabled for task ':app:processDebugManifestForPackage' because:
+  Build cache is disabled
+Skipping task ':app:processDebugManifestForPackage' as it is up-to-date.
+Resolve mutations for :app:processDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+:app:processDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:processDebugResources UP-TO-DATE
+Caching disabled for task ':app:processDebugResources' because:
+  Build cache is disabled
+Skipping task ':app:processDebugResources' as it is up-to-date.
+Resolve mutations for :app:compileDebugKotlin (Thread[Execution worker Thread 11,5,main]) started.
+:app:compileDebugKotlin (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:compileDebugKotlin
+Adding -Xuse-inline-scopes-numbers Kotlin compiler flag for task :app:compileDebugAndroidTestKotlin
+GradleBuildProject.Builder should not be accessed through AnalyticsConfiguratorService after AnalyticsService is created. Analytics information of this build might be incomplete.
+Caching disabled for task ':app:compileDebugKotlin' because:
+  Build cache is disabled
+Task ':app:compileDebugKotlin' is not up-to-date because:
+  Task has failed previously.
+The input changes require a full rebuild for incremental task ':app:compileDebugKotlin'.
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\kotlin', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\kotlin', not found
+Kotlin source files: G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\MainActivity.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\DominoClubApplication.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\domain\MatchAvailabilityManager.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\MainViewModel.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\ViewModelFactory.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\AppNavigation.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\util\AvatarImage.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\util\LifecycleEffect.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\util\UpdateManager.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\theme\Color.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\theme\Theme.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\theme\Type.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\register\RegisterMatchScreen.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\register\MatchViewModel.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\register\RegisterMatchViewModel.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\ranking\RankingModels.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\ranking\RankingScreen.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\ranking\RankingViewModel.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\login\LoginScreen.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\login\LoginViewModel.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\finance\FinanceViewModel.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\finance\FinanceScreen.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\dashboard\MatchDetailsViewModel.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\dashboard\MatchDetailsScreen.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\dashboard\DashboardScreen.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\dashboard\DashboardViewModel.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\admin\AdminScreen.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\ui\admin\AdminViewModel.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\Models.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\BestPlayer.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\Debit.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\AdminRepository.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\UserSessionManager.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\UserRepository.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\HolidayRepository.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\ClubRepository.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\remote\ApiService.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\remote\Debit.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\network\ApiService.kt, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\java\com\marcioarruda\clubedodomino\data\local\SessionManager.kt
+Java source files: G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\generated\source\buildConfig\debug\com\marcioarruda\clubedodomino\BuildConfig.java
+Script source files: 
+Script file extensions: 
+Using Kotlin/JVM incremental compilation
+[KOTLIN] Kotlin compilation 'jdkHome' argument: null
+
+Resolve mutations for :app:javaPreCompileDebug (Thread[Execution worker Thread 8,5,main]) started.
+:app:javaPreCompileDebug (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':app:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':app:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :app:generateDebugAssets (Thread[Execution worker Thread 8,5,main]) started.
+:app:generateDebugAssets (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:generateDebugAssets UP-TO-DATE
+Skipping task ':app:generateDebugAssets' as it has no actions.
+Resolve mutations for :app:mergeDebugAssets (Thread[Execution worker Thread 8,5,main]) started.
+:app:mergeDebugAssets (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:mergeDebugAssets UP-TO-DATE
+Caching disabled for task ':app:mergeDebugAssets' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':app:mergeDebugAssets' as it is up-to-date.
+Resolve mutations for :app:compressDebugAssets (Thread[Execution worker Thread 8,5,main]) started.
+:app:compressDebugAssets (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:compressDebugAssets UP-TO-DATE
+Caching disabled for task ':app:compressDebugAssets' because:
+  Build cache is disabled
+Skipping task ':app:compressDebugAssets' as it is up-to-date.
+Resolve mutations for :app:checkDebugDuplicateClasses (Thread[Execution worker Thread 8,5,main]) started.
+:app:checkDebugDuplicateClasses (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+Caching disabled for task ':app:checkDebugDuplicateClasses' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:checkDebugDuplicateClasses' as it is up-to-date.
+Resolve mutations for :app:desugarDebugFileDependencies (Thread[Execution worker Thread 8,5,main]) started.
+:app:desugarDebugFileDependencies (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+Caching disabled for task ':app:desugarDebugFileDependencies' because:
+  Build cache is disabled
+Skipping task ':app:desugarDebugFileDependencies' as it is up-to-date.
+Resolve mutations for :app:mergeExtDexDebug (Thread[Execution worker Thread 8,5,main]) started.
+:app:mergeExtDexDebug (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:mergeExtDexDebug UP-TO-DATE
+Caching disabled for task ':app:mergeExtDexDebug' because:
+  Build cache is disabled
+Skipping task ':app:mergeExtDexDebug' as it is up-to-date.
+Resolve mutations for :app:mergeLibDexDebug (Thread[Execution worker Thread 8,5,main]) started.
+:app:mergeLibDexDebug (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:mergeLibDexDebug UP-TO-DATE
+Caching disabled for task ':app:mergeLibDexDebug' because:
+  Build cache is disabled
+Skipping task ':app:mergeLibDexDebug' as it is up-to-date.
+Resolve mutations for :app:mergeDebugJniLibFolders (Thread[Execution worker Thread 8,5,main]) started.
+:app:mergeDebugJniLibFolders (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+Caching disabled for task ':app:mergeDebugJniLibFolders' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':app:mergeDebugJniLibFolders' as it is up-to-date.
+Resolve mutations for :app:mergeDebugNativeLibs (Thread[Execution worker Thread 8,5,main]) started.
+:app:mergeDebugNativeLibs (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+Caching disabled for task ':app:mergeDebugNativeLibs' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:mergeDebugNativeLibs' as it is up-to-date.
+Resolve mutations for :app:stripDebugDebugSymbols (Thread[Execution worker Thread 8,5,main]) started.
+:app:stripDebugDebugSymbols (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+Caching disabled for task ':app:stripDebugDebugSymbols' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:stripDebugDebugSymbols' as it is up-to-date.
+Resolve mutations for :app:validateSigningDebug (Thread[Execution worker Thread 8,5,main]) started.
+:app:validateSigningDebug (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:validateSigningDebug UP-TO-DATE
+Caching disabled for task ':app:validateSigningDebug' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:validateSigningDebug' as it is up-to-date.
+Resolve mutations for :app:writeDebugAppMetadata (Thread[Execution worker Thread 8,5,main]) started.
+:app:writeDebugAppMetadata (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+Caching disabled for task ':app:writeDebugAppMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:writeDebugAppMetadata' as it is up-to-date.
+Resolve mutations for :app:writeDebugSigningConfigVersions (Thread[Execution worker Thread 8,5,main]) started.
+:app:writeDebugSigningConfigVersions (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+Caching disabled for task ':app:writeDebugSigningConfigVersions' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:writeDebugSigningConfigVersions' as it is up-to-date.
+
+> Task :app:compileDebugKotlin
+i: starting the daemon as: C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot\bin\java -cp C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-compiler-embeddable\2.2.10\6882d39ef03b18879c1a5d2a83c2212361bed5fe\kotlin-compiler-embeddable-2.2.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-stdlib\2.2.10\30de6faa127a4a012db8e71bf1b9c0a99b1402b2\kotlin-stdlib-2.2.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-script-runtime\2.2.10\712f9bc08f378c13a4a00f0bbb28c76e59183e83\kotlin-script-runtime-2.2.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-reflect\1.6.10\1cbe9c92c12a94eea200d23c2bbaedaf3daf5132\kotlin-reflect-1.6.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-daemon-embeddable\2.2.10\212fd3c2c6e4e5d0f4db3c4191233e2b622380cc\kotlin-daemon-embeddable-2.2.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlinx\kotlinx-coroutines-core-jvm\1.8.0\ac1dc37a30a93150b704022f8d895ee1bd3a36b3\kotlinx-coroutines-core-jvm-1.8.0.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains\annotations\13.0\919f0dfe192fb4e063e7dacadee7f8bb9a2672a9\annotations-13.0.jar -Djava.awt.headless=true -Djava.rmi.server.hostname=127.0.0.1 -Xmx2048m -XX:ReservedCodeCacheSize=320m -Dkotlin.environment.keepalive -ea -XX:+UseCodeCacheFlushing -XX:+UseParallelGC -Dkotlin.daemon.initiator.marker.file=C:\Users\NETRA\AppData\Local\Temp\kotlin-compiler-in-lubeoomino-16134749826431511121.alive --add-exports java.base/sun.nio.ch=ALL-UNNAMED org.jetbrains.kotlin.daemon.KotlinCompileDaemon --daemon-runFilesPath C:\Users\NETRA\AppData\Local\kotlin\daemon --daemon-autoshutdownIdleSeconds=7200 --daemon-compilerClasspath C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-compiler-embeddable\2.2.10\6882d39ef03b18879c1a5d2a83c2212361bed5fe\kotlin-compiler-embeddable-2.2.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-stdlib\2.2.10\30de6faa127a4a012db8e71bf1b9c0a99b1402b2\kotlin-stdlib-2.2.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-script-runtime\2.2.10\712f9bc08f378c13a4a00f0bbb28c76e59183e83\kotlin-script-runtime-2.2.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-reflect\1.6.10\1cbe9c92c12a94eea200d23c2bbaedaf3daf5132\kotlin-reflect-1.6.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlin\kotlin-daemon-embeddable\2.2.10\212fd3c2c6e4e5d0f4db3c4191233e2b622380cc\kotlin-daemon-embeddable-2.2.10.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains.kotlinx\kotlinx-coroutines-core-jvm\1.8.0\ac1dc37a30a93150b704022f8d895ee1bd3a36b3\kotlinx-coroutines-core-jvm-1.8.0.jar;C:\Users\NETRA\.gradle\caches\modules-2\files-2.1\org.jetbrains\annotations\13.0\919f0dfe192fb4e063e7dacadee7f8bb9a2672a9\annotations-13.0.jar
+i: #1 retrying connecting to the daemon 
+Options for KOTLIN DAEMON: IncrementalCompilationOptions(super=CompilationOptions(compilerMode=INCREMENTAL_COMPILER, targetPlatform=JVM, reportCategories=[0, 3], reportSeverity=2, requestedCompilationResults=[0], kotlinScriptExtensions=[]), sourceChanges=org.jetbrains.kotlin.buildtools.api.SourcesChanges$Unknown@1b5993d8, classpathChanges=NotAvailableForNonIncrementalRun, workingDir=G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\kotlin\compileDebugKotlin\cacheable, multiModuleICSettings=MultiModuleICSettings(buildHistoryFile=G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\kotlin\compileDebugKotlin\local-state\build-history.bin, useModuleDetection=true), icFeatures=IncrementalCompilationFeatures(usePreciseJavaTracking=true, withAbiSnapshot=false, preciseCompilationResultsBackup=true, keepIncrementalCompilationCachesInMemory=true, enableUnsafeIncrementalCompilationForMultiplatform=false, enableMonotonousIncrementalCompileSetExpansion=true), outputFiles=[G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\tmp\kotlin-classes\debug, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\kotlin\compileDebugKotlin\cacheable, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\kotlin\compileDebugKotlin\local-state])
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/ViewModelFactory.kt:20:47 Unchecked cast of 'MainViewModel' to 'T (of fun <T : ViewModel> create)'.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/ViewModelFactory.kt:22:60 Unchecked cast of 'LoginViewModel' to 'T (of fun <T : ViewModel> create)'.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/ViewModelFactory.kt:24:48 Unchecked cast of 'DashboardViewModel' to 'T (of fun <T : ViewModel> create)'.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/ViewModelFactory.kt:29:19 Unchecked cast of 'MatchViewModel' to 'T (of fun <T : ViewModel> create)'.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/ViewModelFactory.kt:31:46 Unchecked cast of 'RankingViewModel' to 'T (of fun <T : ViewModel> create)'.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/ViewModelFactory.kt:36:19 Unchecked cast of 'FinanceViewModel' to 'T (of fun <T : ViewModel> create)'.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/ViewModelFactory.kt:41:19 Unchecked cast of 'AdminViewModel' to 'T (of fun <T : ViewModel> create)'.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/admin/AdminScreen.kt:55:76 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/dashboard/MatchDetailsScreen.kt:49:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/dashboard/MatchDetailsScreen.kt:132:17 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:119:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/finance/FinanceScreen.kt:136:40 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/ranking/RankingScreen.kt:108:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///G:/Outros%20computadores/Meu%20laptop%20(Emprel)/Desktop/AutomaþÒo/GitHub/ClubeDoDomino/app/src/main/java/com/marcioarruda/clubedodomino/ui/register/RegisterMatchScreen.kt:73:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+Finished executing kotlin compiler using DAEMON strategy
+Resolve mutations for :app:compileDebugJavaWithJavac (Thread[Execution worker Thread 11,5,main]) started.
+:app:compileDebugJavaWithJavac (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:compileDebugJavaWithJavac
+Custom actions are attached to task ':app:compileDebugJavaWithJavac'.
+Caching disabled for task ':app:compileDebugJavaWithJavac' because:
+  Build cache is disabled
+Task ':app:compileDebugJavaWithJavac' is not up-to-date because:
+  Value of input property 'javaCompiler.metadata.languageVersion' has changed for task ':app:compileDebugJavaWithJavac'
+  Value of input property 'javaCompiler.metadata.taskInputs.languageVersion' has changed for task ':app:compileDebugJavaWithJavac'
+  Value of input property 'javaVersion' has changed for task ':app:compileDebugJavaWithJavac'
+The input changes require a full rebuild for incremental task ':app:compileDebugJavaWithJavac'.
+Compilation mode: in-process compilation
+Full recompilation is required because no incremental change information is available. This is usually caused by clean builds or changing compiler arguments.
+Compiling with toolchain 'C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot'.
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\java', not found
+Compiling with JDK Java compiler API.
+Class dependency analysis for incremental compilation took 0.155 secs.
+Created classpath snapshot for incremental compilation in 0.849 secs.
+Resolve mutations for :app:processDebugJavaRes (Thread[Execution worker Thread 11,5,main]) started.
+:app:processDebugJavaRes (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app:processDebugJavaRes
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\resources', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\resources', not found
+Caching disabled for task ':app:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Task ':app:processDebugJavaRes' is not up-to-date because:
+  Output property 'destinationDir' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\java_res\debug\processDebugJavaRes\out has been removed.
+  Output property 'destinationDir' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\java_res\debug\processDebugJavaRes\out\com has been removed.
+  Output property 'destinationDir' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\java_res\debug\processDebugJavaRes\out\com\marcioarruda has been removed.
+  and more...
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\resources', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\resources', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\main\resources', not found
+file or directory 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\src\debug\resources', not found
+Resolve mutations for :app:mergeDebugJavaResource (Thread[Execution worker Thread 11,5,main]) started.
+:app:mergeDebugJavaResource (Thread[Execution worker Thread 11,5,main]) started.
+Resolve mutations for :app:dexBuilderDebug (Thread[Execution worker Thread 7,5,main]) started.
+:app:dexBuilderDebug (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app:mergeDebugJavaResource
+Caching disabled for task ':app:mergeDebugJavaResource' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Task ':app:mergeDebugJavaResource' is not up-to-date because:
+  Output property 'cacheDir' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\incremental\debug-mergeJavaRes\zip-cache has been removed.
+  Output property 'cacheDir' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\incremental\debug-mergeJavaRes\zip-cache\+V8LoFONC1dXT7s_J_90cg== has been removed.
+  Output property 'cacheDir' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\incremental\debug-mergeJavaRes\zip-cache\10V+KQZv4pIjGl2V82AGfA== has been removed.
+  and more...
+The input changes require a full rebuild for incremental task ':app:mergeDebugJavaResource'.
+
+> Task :app:dexBuilderDebug
+Caching disabled for task ':app:dexBuilderDebug' because:
+  Build cache is disabled
+Task ':app:dexBuilderDebug' is not up-to-date because:
+  Output property 'externalLibsFromArtifactTransformsOutputs.dex' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\external_libs_dex_archive_with_artifact_transforms\debug\dexBuilderDebug\out has been removed.
+  Output property 'externalLibsOutputs.dex' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\external_libs_dex_archive\debug\dexBuilderDebug\out has been removed.
+  Output property 'mixedScopeOutputs.dex' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\mixed_scope_dex_archive\debug\dexBuilderDebug\out has been removed.
+  and more...
+The input changes require a full rebuild for incremental task ':app:dexBuilderDebug'.
+Dex builder is incremental : false 
+Processing input G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\tmp\kotlin-classes\debug
+Processing input G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\javac\debug\compileDebugJavaWithJavac\classes
+Dexing G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\tmp\kotlin-classes\debug
+Dexing G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\javac\debug\compileDebugJavaWithJavac\classes
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\tmp\kotlin-classes\debug' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\tmp\kotlin-classes\debug' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\tmp\kotlin-classes\debug' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\tmp\kotlin-classes\debug' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\javac\debug\compileDebugJavaWithJavac\classes' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\javac\debug\compileDebugJavaWithJavac\classes' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\javac\debug\compileDebugJavaWithJavac\classes' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\javac\debug\compileDebugJavaWithJavac\classes' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\tmp\kotlin-classes\debug' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\javac\debug\compileDebugJavaWithJavac\classes' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Processing input G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\compile_and_runtime_r_class_jar\debug\processDebugResources\R.jar
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\tmp\kotlin-classes\debug' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\javac\debug\compileDebugJavaWithJavac\classes' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out'
+Dexing G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\compile_and_runtime_r_class_jar\debug\processDebugResources\R.jar
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\compile_and_runtime_r_class_jar\debug\processDebugResources\R.jar' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_0.jar'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\compile_and_runtime_r_class_jar\debug\processDebugResources\R.jar' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_1.jar'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\compile_and_runtime_r_class_jar\debug\processDebugResources\R.jar' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_2.jar'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\compile_and_runtime_r_class_jar\debug\processDebugResources\R.jar' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_3.jar'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\compile_and_runtime_r_class_jar\debug\processDebugResources\R.jar' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_4.jar'
+Dexing 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\compile_and_runtime_r_class_jar\debug\processDebugResources\R.jar' to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_5.jar'
+Done with all dex archive conversions
+Resolve mutations for :app:mergeProjectDexDebug (Thread[Execution worker Thread 7,5,main]) started.
+:app:mergeProjectDexDebug (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app:mergeProjectDexDebug
+Caching disabled for task ':app:mergeProjectDexDebug' because:
+  Build cache is disabled
+Task ':app:mergeProjectDexDebug' is not up-to-date because:
+  Output property 'outputDir' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug has been removed.
+  Output property 'outputDir' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\0 has been removed.
+  Output property 'outputDir' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\0\classes.dex has been removed.
+  and more...
+The input changes require a full rebuild for incremental task ':app:mergeProjectDexDebug'.
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\0' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_0.jar, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_1.jar, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_2.jar, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_3.jar, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_4.jar, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out\9d8d62cfe6e62b680766006bde421f8c5e2edbbac104d6b5263298b426659df2_5.jar, and from all global synthetics files in 
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\4' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, and from all global synthetics files in 
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\13' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, and from all global synthetics files in 
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\5' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, and from all global synthetics files in 
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\1' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, and from all global synthetics files in 
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\6' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, and from all global synthetics files in 
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\10' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, and from all global synthetics files in 
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\11' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, and from all global synthetics files in 
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\9' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, and from all global synthetics files in 
+Merging to 'G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\dex\debug\mergeProjectDexDebug\14' with D8 from all or a subset of dex files in G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\project_dex_archive\debug\dexBuilderDebug\out, and from all global synthetics files in 
+Resolve mutations for :app:packageDebug (Thread[Execution worker Thread 7,5,main]) started.
+:app:packageDebug (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app:packageDebug
+Custom actions are attached to task ':app:packageDebug'.
+Caching disabled for task ':app:packageDebug' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Task ':app:packageDebug' is not up-to-date because:
+  Value of input property 'outputsHandler.variantOutputs.$0.versionCode' has changed for task ':app:packageDebug'
+  Value of input property 'outputsHandler.variantOutputs.$0.versionName' has changed for task ':app:packageDebug'
+The input changes require a full rebuild for incremental task ':app:packageDebug'.
+Resolve mutations for :app:createDebugApkListingFileRedirect (Thread[Execution worker Thread 7,5,main]) started.
+:app:createDebugApkListingFileRedirect (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app:createDebugApkListingFileRedirect
+Caching disabled for task ':app:createDebugApkListingFileRedirect' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Task ':app:createDebugApkListingFileRedirect' is not up-to-date because:
+  Output property 'redirectFile' file G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\app\build\intermediates\apk_ide_redirect_file\debug\createDebugApkListingFileRedirect\redirect.txt has been removed.
+Resolve mutations for :app:assembleDebug (Thread[Execution worker Thread 7,5,main]) started.
+:app:assembleDebug (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app:assembleDebug
+Skipping task ':app:assembleDebug' as it has no actions.
+Resolve mutations for :app:copyApkDebug (Thread[Execution worker Thread 7,5,main]) started.
+:app:copyApkDebug (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app:copyApkDebug
+Caching disabled for task ':app:copyApkDebug' because:
+  Build cache is disabled
+Task ':app:copyApkDebug' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Copying APK to: G:\Outros computadores\Meu laptop (Emprel)\Desktop\AutomaþÒo\GitHub\ClubeDoDomino\apks\clube_v_33.apk
+APK Copied successfully.
+Build 60670285-84c3-4f65-9126-8d963d25ad9f is closed
+
+BUILD SUCCESSFUL in 1m 47s
+38 actionable tasks: 9 executed, 29 up-to-date
+Some of the file system contents retained in the virtual file system are on file systems that Gradle doesn't support watching. The relevant state was discarded to ensure changes to these locations are properly detected. You can override this by explicitly enabling file system watching.
+Watched directory hierarchies: []
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.1.0/userguide/configuration_cache_enabling.html

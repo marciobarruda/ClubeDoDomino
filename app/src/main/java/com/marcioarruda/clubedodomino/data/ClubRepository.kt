@@ -212,6 +212,10 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         apiService.deleteMatch(com.marcioarruda.clubedodomino.data.network.DeleteRequest(id, buttonName))
     }
 
+    suspend fun updateMatch(match: Match) {
+        apiService.updateMatch(match.toDTO(buttonName = "atualizar"))
+    }
+
     suspend fun deleteBucho(id: String, buttonName: String = "Excluir") {
         apiService.deleteBucho(com.marcioarruda.clubedodomino.data.network.DeleteRequest(id, buttonName))
     }
@@ -335,7 +339,7 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         )
     }
 
-    fun Match.toDTO(): MatchDTO {
+    fun Match.toDTO(buttonName: String? = null): MatchDTO {
         val winnerScore = if (this.score1 > this.score2) this.score1 else this.score2
         val loserScore = if (this.score1 > this.score2) this.score2 else this.score1
         val isBuchoSimple = (winnerScore == 6 && loserScore == 0)
@@ -349,11 +353,12 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         }
 
         return MatchDTO(
-            id = null, // ID is managed by server
+            id = this.id.toLongOrNull(),
             data = dateFormat.format(this.date), jogador1 = this.team1Player1.name,
             jogador2 = this.team1Player2.name, jogador3 = this.team2Player1.name, jogador4 = this.team2Player2.name,
             scored1 = this.score1, scored2 = this.score2, buchore = this.wasBuchoRe, pts = points,
-            dupla_vencedora = if (score1 > score2) "${team1Player1.name}/${team1Player2.name}" else "${team2Player1.name}/${team2Player2.name}"
+            dupla_vencedora = if (score1 > score2) "${team1Player1.name}/${team1Player2.name}" else "${team2Player1.name}/${team2Player2.name}",
+            buttonName = buttonName
         )
     }
 }

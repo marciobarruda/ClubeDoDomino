@@ -25,7 +25,8 @@ data class DashboardUiState(
     val isNewMatchVisible: Boolean = false,
     val groupedMatches: Map<String, List<Match>> = emptyMap(),
     val bestPlayers: List<BestPlayer> = emptyList(),
-    val worstPlayers: List<BestPlayer> = emptyList()
+    val worstPlayers: List<BestPlayer> = emptyList(),
+    val isRefreshing: Boolean = false
 )
 
 class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
@@ -42,9 +43,13 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
         startAvailabilityMonitoring()
     }
 
-    fun loadDashboardData(userId: String) {
+    fun loadDashboardData(userId: String, isRefreshing: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            if (isRefreshing) {
+                _uiState.update { it.copy(isRefreshing = true, error = null) }
+            } else {
+                _uiState.update { it.copy(isLoading = true, error = null) }
+            }
 
             try {
                 // Carrega os dados do usuário
@@ -109,6 +114,7 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         user = user,
                         totalPlayers = totalPlayers,
                         totalMatchesToday = totalMatchesToday,
@@ -122,6 +128,7 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         error = e.message ?: "Ocorreu um erro desconhecido."
                     )
                 }

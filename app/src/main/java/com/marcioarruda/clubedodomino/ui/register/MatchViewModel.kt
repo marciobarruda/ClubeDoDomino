@@ -30,7 +30,9 @@ data class MatchRegistrationState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val success: Boolean = false,
-    val editingMatchId: String? = null
+    val editingMatchId: String? = null,
+    val editingMatchDate: java.util.Date? = null,
+    val editingMatchRegisteredBy: User? = null
 )
 
 class MatchViewModel(
@@ -200,8 +202,8 @@ class MatchViewModel(
             val s1 = if (team == 1) score else it.score1
             val s2 = if (team == 2) score else it.score2
             
-            // Regra 5: Bucho de Ré disponível apenas se um dos placares for 5
-            val buchoReEnabled = s1 == 5 || s2 == 5
+            // Regra 5: Bucho de Ré disponível apenas se um dos placares for 5 e o outro for maior
+            val buchoReEnabled = (s1 == 5 && s2 > 5) || (s2 == 5 && s1 > 5)
             // Se desabilitar, desmarca
             val isBuchoRe = if (buchoReEnabled) it.isBuchoRe else false
 
@@ -395,15 +397,17 @@ class MatchViewModel(
                 val match = matches.find { it.id == matchId }
                 
                 if (match != null) {
-                    _uiState.update { 
+                    _uiState.update {
                         it.copy(
                             selectedPlayers = listOf(match.team1Player1, match.team1Player2, match.team2Player1, match.team2Player2),
                             score1 = match.score1,
                             score2 = match.score2,
                             isBuchoRe = match.wasBuchoRe,
-                            isBuchoReEnabled = (match.score1 == 5 || match.score2 == 5),
+                            isBuchoReEnabled = (match.score1 == 5 && match.score2 > 5) || (match.score2 == 5 && match.score1 > 5),
                             isLoading = false,
-                            editingMatchId = match.id
+                            editingMatchId = match.id,
+                            editingMatchDate = match.date,
+                            editingMatchRegisteredBy = match.registeredBy
                         )
                     }
                 } else {
@@ -419,10 +423,28 @@ class MatchViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                // Call deleteMatch with specific "atualizar" flag
-                repository.deleteMatch(matchId, "atualizar")
+                val state = _uiState.value
+                val p1 = state.selectedPlayers[0]!!
+                val p2 = state.selectedPlayers[1]!!
+                val p3 = state.selectedPlayers[2]!!
+                val p4 = state.selectedPlayers[3]!!
+
+                val match = Match(
+                    id = matchId,
+                    date = state.editingMatchDate ?: java.util.Date(),
+                    team1Player1 = p1,
+                    team1Player2 = p2,
+                    team2Player1 = p3,
+                    team2Player2 = p4,
+                    score1 = state.score1,
+                    score2 = state.score2,
+                    wasBuchoRe = state.isBuchoRe,
+                    registeredBy = state.editingMatchRegisteredBy ?: p1,
+                    pts = 0 // Repositório atualizará baseado nos novos placares
+                )
+
+                repository.updateMatch(match)
                 
-                // Success: Notify UI (Reuse showRepeatDialog=false, success=true to close or navigate back)
                 _uiState.update { 
                     it.copy(
                         isLoading = false, 

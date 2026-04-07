@@ -29,7 +29,7 @@ class UpdateManager(private val context: Context) {
                 val updateInfo = RetrofitClient.instance.checkUpdate()
                 
                 withContext(Dispatchers.Main) {
-                     Toast.makeText(context, "Server: v${updateInfo.versionCode}", Toast.LENGTH_SHORT).show()
+                     Toast.makeText(context, "Local v${BuildConfig.VERSION_CODE} | Server v${updateInfo.versionCode}", Toast.LENGTH_SHORT).show()
                 }
 
                 if (updateInfo.versionCode > BuildConfig.VERSION_CODE) {

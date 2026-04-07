@@ -42,6 +42,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -72,6 +75,7 @@ import com.marcioarruda.clubedodomino.ui.theme.GlassyColor
 import com.marcioarruda.clubedodomino.ui.util.AvatarImage
 import java.io.ByteArrayOutputStream
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     navController: NavController,
@@ -147,12 +151,18 @@ fun DashboardScreen(
                     }
                 }
                 uiState.user != null -> {
-                    DashboardContent(
-                        state = uiState,
-                        navController = navController,
-                        onAvatarClick = { showProfileDialog = true },
-                        onMatchClick = { /* No action */ }
-                    )
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = { viewModel.loadDashboardData(userId, isRefreshing = true) },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        DashboardContent(
+                            state = uiState,
+                            navController = navController,
+                            onAvatarClick = { showProfileDialog = true },
+                            onMatchClick = { /* No action */ }
+                        )
+                    }
                 }
             }
         }
@@ -406,14 +416,6 @@ private fun AwardSection(title: String, players: List<BestPlayer>, icon: ImageVe
 
 @Composable
 private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
-    // Ordena os nomes da dupla 1 alfabeticamente
-    val team1Names = listOf(match.team1Player1.name, match.team1Player2.name).sorted()
-    val team1Display = "${team1Names[0]} / ${team1Names[1]}"
-    
-    // Ordena os nomes da dupla 2 alfabeticamente
-    val team2Names = listOf(match.team2Player1.name, match.team2Player2.name).sorted()
-    val team2Display = "${team2Names[0]} / ${team2Names[1]}"
-    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -424,14 +426,41 @@ private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceAround
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // Team 1
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                Text(team1Display, fontSize = 12.sp, color = Color.LightGray, textAlign = TextAlign.Center)
+                Row(horizontalArrangement = Arrangement.Center) {
+                    AvatarImage(url = match.team1Player1.photoUrl, size = 36.dp, borderWidth = 1.dp)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    AvatarImage(url = match.team1Player2.photoUrl, size = 36.dp, borderWidth = 1.dp)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                val t1n1 = match.team1Player1.name.substringBefore(" ")
+                val t1n2 = match.team1Player2.name.substringBefore(" ")
+                Text("$t1n1 / $t1n2", fontSize = 10.sp, color = Color.LightGray, textAlign = TextAlign.Center, maxLines = 1)
             }
-            Text("${match.score1} x ${match.score2}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp))
+            
+            // Score
+            Text(
+                "${match.score1} a ${match.score2}", 
+                style = MaterialTheme.typography.titleLarge, 
+                fontWeight = FontWeight.Bold, 
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+            
+            // Team 2
              Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                Text(team2Display, fontSize = 12.sp, color = Color.LightGray, textAlign = TextAlign.Center)
+                Row(horizontalArrangement = Arrangement.Center) {
+                    AvatarImage(url = match.team2Player1.photoUrl, size = 36.dp, borderWidth = 1.dp)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    AvatarImage(url = match.team2Player2.photoUrl, size = 36.dp, borderWidth = 1.dp)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                val t2n1 = match.team2Player1.name.substringBefore(" ")
+                val t2n2 = match.team2Player2.name.substringBefore(" ")
+                Text("$t2n1 / $t2n2", fontSize = 10.sp, color = Color.LightGray, textAlign = TextAlign.Center, maxLines = 1)
             }
         }
     }

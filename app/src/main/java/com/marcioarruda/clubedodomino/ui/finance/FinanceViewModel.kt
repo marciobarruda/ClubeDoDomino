@@ -41,11 +41,13 @@ data class FinanceUiState(
     val isLoading: Boolean = false,
     val debts: List<FinancialEntry> = emptyList(),
     val totalDue: Double = 0.0,
+    val totalUpcoming: Double = 0.0,
     val error: String? = null,
     val uploadStatus: UploadStatus = UploadStatus.IDLE,
     val uploadError: String? = null,
     val navigateToHome: Boolean = false,
-    val globalStats: GlobalStats? = null
+    val globalStats: GlobalStats? = null,
+    val isRefreshing: Boolean = false
 )
 
 class FinanceViewModel(
@@ -119,10 +121,14 @@ class FinanceViewModel(
         _uiState.update { it.copy(navigateToHome = false) }
     }
 
-    fun loadFinancialData(userId: String) {
+    fun loadFinancialData(userId: String, isRefreshing: Boolean = false) {
         viewModelScope.launch {
             mutex.withLock {
-                _uiState.update { it.copy(isLoading = true, error = null) }
+                if (isRefreshing) {
+                    _uiState.update { it.copy(isRefreshing = true, error = null) }
+                } else {
+                    _uiState.update { it.copy(isLoading = true, error = null) }
+                }
                 try {
                     val users = repository.getPlayers()
                     val currentUser = users.find { it.id == userId }
@@ -265,7 +271,8 @@ class FinanceViewModel(
                     val currentMonth = Calendar.getInstance().get(Calendar.MONTH)
                     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
                     
-                    val exists = currentMensalidades.any { entry ->
+                    // Checa se o usuário atual já tem cobrança gerada para este mês no payload atual
+                    val userHasCurrentMonthFee = currentMensalidades.any { entry ->
                         if (entry.userId == currentUser.id) {
                             val cal = Calendar.getInstance()
                             cal.time = entry.dueDate
@@ -273,26 +280,32 @@ class FinanceViewModel(
                         } else false
                     }
 
-                    val isPast10th = Calendar.getInstance().get(Calendar.DAY_OF_MONTH) >= 10
-
-                    if (!exists && isPast10th) {
+                    if (!userHasCurrentMonthFee) {
                         try {
+                            Log.d("FinanceViewModel", "Nenhuma mensalidade encontrada no GET para ${currentUser.name} neste mês. Acionando POST.")
+                            // Freqüenta a chamada POST passando o nome do usuário para gerar a cobrança DELE
                             repository.createMensalidade(currentUser.name)
+                            
+                            // Atualiza a lista chamando o GET novamente para capturar a nova cobrança
                             mensalidadesResult = repository.getMensalidadesResult()
-                            currentMensalidades = mensalidadesResult.getOrNull()?.mapNotNull {
+                            var currentMensalidadesRefresh = mensalidadesResult.getOrNull()?.mapNotNull {
                                 with(repository) { it.toFinancialEntry(users) }
                             } ?: emptyList()
-                            allDebts.addAll(currentMensalidades.filter { new -> !allDebts.any { old -> old.originalRemoteId == new.originalRemoteId } })
+                            
+                            // Adiciona as novas mensalidades à lista allDebts, evitando duplicatas por originalRemoteId
+                            val existingRemoteIds = allDebts.mapNotNull { it.originalRemoteId }.toSet()
+                            val newUniqueMensalidades = currentMensalidadesRefresh.filter { it.originalRemoteId !in existingRemoteIds }
+                            allDebts.addAll(newUniqueMensalidades)
 
                             updateUiState(allDebts, currentUser.id, globalStats)
                         } catch (e: Exception) {
-                            Log.e("FinanceViewModel", "Falha ao criar mensalidade", e)
+                            Log.e("FinanceViewModel", "Falha ao acionar POST para gerar mensalidade", e)
                         }
                     }
 
                 } catch (e: Exception) {
                     Log.e("FinanceViewModel", "Erro desconhecido", e)
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "Erro desconhecido") }
+                    _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = e.message ?: "Erro desconhecido") }
                 }
             }
         }
@@ -333,11 +346,27 @@ class FinanceViewModel(
             false
         }.sumOf { it.amount }
 
+        val totalUpcoming = pendingDebts.filter { entry ->
+            if (entry.status != FinancialEntryStatus.PENDING) return@filter false
+            if (entry.type != FinancialEntryType.BUCHO) return@filter false
+            
+            val itemCal = Calendar.getInstance()
+            itemCal.time = entry.dueDate
+            val itemYear = itemCal.get(Calendar.YEAR)
+            val itemMonth = itemCal.get(Calendar.MONTH)
+            
+            // Return TRUE (include in upcoming sum) if it is from current or future month/year
+            return@filter if (itemYear > currentYear) true
+            else (itemYear == currentYear && itemMonth >= currentMonth)
+        }.sumOf { it.amount }
+
         _uiState.update {
             it.copy(
                 isLoading = false,
+                isRefreshing = false,
                 debts = sortedDebts,
                 totalDue = totalDue,
+                totalUpcoming = totalUpcoming,
                 globalStats = globalStats
             )
         }

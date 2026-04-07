@@ -30,7 +30,8 @@ data class MatchDTO(
     val scored2: Int?,
     val buchore: Boolean?,
     val pts: Int?,
-    val dupla_vencedora: String?
+    val dupla_vencedora: String?,
+    val buttonName: String? = null
 )
 
 // DTO para Histórico de Buchos (gravar-buchos)
@@ -151,6 +152,9 @@ interface ApiService {
 
     @POST("webhook/apagar-partida")
     suspend fun deleteMatch(@Body request: DeleteRequest): retrofit2.Response<Unit>
+
+    @POST("webhook/apagar-partida")
+    suspend fun updateMatch(@Body match: MatchDTO): retrofit2.Response<Unit>
 
     @POST("webhook/apagar-bucho")
     suspend fun deleteBucho(@Body request: DeleteRequest): retrofit2.Response<Unit>

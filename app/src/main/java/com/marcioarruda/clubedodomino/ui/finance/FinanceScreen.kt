@@ -10,15 +10,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoneyOff
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -177,56 +175,70 @@ fun FinanceScreen(
                     )
                 }
                 else -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        TotalDueCard(uiState.totalDue)
-                        
-                        // Added Global Stats for User Visibility
-                        uiState.globalStats?.let { stats ->
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceAround
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("Média Partidas (Mês Ant.)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                        Text(String.format("%.1f", stats.avgMatches), color = RoyalGold, style = MaterialTheme.typography.titleLarge)
-                                    }
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("Média Buchos (Mês Ant.)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                        Text(String.format("%.1f", stats.avgBuchos), color = RoyalGold, style = MaterialTheme.typography.titleLarge)
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = { viewModel.loadFinancialData(userId, isRefreshing = true) },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            item {
+                                TotalDueCard(uiState.totalDue, uiState.totalUpcoming)
+                            }
+                            
+                            uiState.globalStats?.let { stats ->
+                                item {
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceAround
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("Média Partidas (Mês Ant.)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                                Text(String.format("%.1f", stats.avgMatches), color = RoyalGold, style = MaterialTheme.typography.titleLarge)
+                                            }
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("Média Buchos (Mês Ant.)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                                Text(String.format("%.1f", stats.avgBuchos), color = RoyalGold, style = MaterialTheme.typography.titleLarge)
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        if (uiState.debts.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text(
-                                    "Nenhum débito pendente! \uD83C\uDF89",
-                                    color = Color.Green,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Detalhamento de Débitos",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            LazyColumn(
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
+                            if (uiState.debts.isEmpty()) {
+                                item {
+                                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            "Nenhum débito pendente! \uD83C\uDF89",
+                                            color = Color.Green,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    }
+                                }
+                            } else {
+                                item {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "Detalhamento de Débitos",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    )
+                                }
+                                
                                 items(
                                     items = uiState.debts,
                                     key = { entry -> entry.id }
                                 ) { entry ->
-                                    FinancialEntryItem(entry, onClick = { showDetails(entry) })
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                        FinancialEntryItem(entry, onClick = { showDetails(entry) })
+                                    }
                                 }
                             }
                         }
@@ -454,7 +466,7 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-fun TotalDueCard(total: Double) {
+fun TotalDueCard(total: Double, upcoming: Double) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -463,20 +475,36 @@ fun TotalDueCard(total: Double) {
         shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .padding(24.dp)
                 .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Total Pendente", color = Color.LightGray, fontSize = 16.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "R$ ${String.format("%.2f", total)}",
-                color = if (total > 0) Color(0xFFFF5252) else Color(0xFF4CAF50),
-                fontWeight = FontWeight.Bold,
-                fontSize = 40.sp
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Pendente", color = Color.LightGray, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "R$ ${String.format("%.2f", total)}",
+                    color = if (total > 0) Color(0xFFFF5252) else Color(0xFF4CAF50),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp
+                )
+            }
+            
+            Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.White.copy(alpha = 0.1f)))
+            
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("A Vencer", color = Color.LightGray, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "R$ ${String.format("%.2f", upcoming)}",
+                    color = if (upcoming > 0) Color(0xFFFFA000) else Color(0xFF4CAF50),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp
+                )
+            }
         }
     }
 }
