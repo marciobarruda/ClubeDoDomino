@@ -126,7 +126,9 @@ class AdminRepository(context: Context) {
 data class GlobalStats(
     val avgMatches: Double,
     val avgBuchos: Double,
-    val totalMatchesMonth: Int,
-    val totalBuchosMonth: Int,
-    val activeMembersCount: Int
+    val totalMatchesMonth: Int = 0,
+    val totalBuchosMonth: Int = 0,
+    val activeMembersCount: Int = 0,
+    val playerMatches: Int? = null,
+    val playerBuchosValue: Double? = null
 )

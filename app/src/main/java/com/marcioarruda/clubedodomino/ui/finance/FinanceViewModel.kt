@@ -163,8 +163,10 @@ class FinanceViewModel(
                         }
 
                         if (!alreadyHasExtra && isActive && !isOnVacation) {
-                            val monthStats = adminRepository.calculateStats(matches, buchosList, users, targetMonth, targetYear)
-                            val playerMatches = matches.count { m ->
+                            val monthStats = repository.getGlobalStats(targetMonth, targetYear, currentUser.name) 
+                                ?: adminRepository.calculateStats(matches, buchosList, users, targetMonth, targetYear)
+                            
+                            val playerMatches = monthStats.playerMatches ?: matches.count { m ->
                                 val mCal = Calendar.getInstance().apply { time = m.date }
                                 mCal.get(Calendar.MONTH) == targetMonth && mCal.get(Calendar.YEAR) == targetYear &&
                                 (m.team1Player1.id == userId || m.team1Player2.id == userId || 
@@ -172,7 +174,7 @@ class FinanceViewModel(
                             }
 
                             if (playerMatches < monthStats.avgMatches) {
-                                val playerBuchosValue = allDebts.filter { b ->
+                                val playerBuchosValue = monthStats.playerBuchosValue ?: allDebts.filter { b ->
                                     val bCal = Calendar.getInstance().apply { time = b.dueDate }
                                     b.userId == currentUser.id && b.type == FinancialEntryType.BUCHO &&
                                     bCal.get(Calendar.MONTH) == targetMonth && bCal.get(Calendar.YEAR) == targetYear
@@ -182,9 +184,10 @@ class FinanceViewModel(
                                 if (deficit > 0.01) {
                                     val lastBusinessDay = adminRepository.getLastBusinessDayOfMonth(targetYear, targetMonth)
                                     val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                    val obsStr = "Taxa Extra - (Déficit de Buchos) - ref: ${String.format("%02d/%d", targetMonth + 1, targetYear)}. Motivo: Participação inferior à média (Alvo: ${String.format("%.1f", monthStats.avgMatches)} partidas. Realizado: $playerMatches partidas)."
                                     repository.registerDebit(com.marcioarruda.clubedodomino.data.network.DebitRequest(
                                         data = dateFormat.format(lastBusinessDay),
-                                        jogador = currentUser.name, valor = deficit, pago = false, obs = "Taxa extra"
+                                        jogador = currentUser.name, valor = deficit, pago = false, obs = obsStr
                                     ))
                                 }
                             }
@@ -210,7 +213,8 @@ class FinanceViewModel(
                     val finalBuchos = repository.getBuchosResult().getOrNull()?.mapNotNull { with(repository) { it.toFinancialEntry(users) } } ?: emptyList()
                     val finalMensalidades = repository.getMensalidadesResult().getOrNull()?.mapNotNull { with(repository) { it.toFinancialEntry(users) } } ?: emptyList()
                     val prevMonthCal = Calendar.getInstance().apply { add(Calendar.MONTH, -1) }
-                    val globalStats = adminRepository.calculateStats(matches, buchosList, users, prevMonthCal.get(Calendar.MONTH), prevMonthCal.get(Calendar.YEAR))
+                    val globalStats = repository.getGlobalStats(prevMonthCal.get(Calendar.MONTH), prevMonthCal.get(Calendar.YEAR), currentUser.name)
+                        ?: adminRepository.calculateStats(matches, buchosList, users, prevMonthCal.get(Calendar.MONTH), prevMonthCal.get(Calendar.YEAR))
                     
                     updateUiState(finalBuchos + finalMensalidades, currentUser.id, globalStats)
 

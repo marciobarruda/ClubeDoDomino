@@ -203,6 +203,17 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         apiService.uploadComprovante(request)
     }
 
+    suspend fun getGlobalStats(month: Int, year: Int, playerName: String? = null): GlobalStats? {
+        return try {
+            val list = apiService.getGlobalStats(GlobalStatsRequest(month + 1, year))
+            val targetMes = String.format("%02d/%d", month + 1, year)
+            val monthData = list.find { it.mes == targetMes } ?: return null
+            monthData.toGlobalStats(playerName)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun registerMatch(match: Match) {
         apiService.registerMatch(match.toDTO())
     }
@@ -322,6 +333,26 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         )
     }
 
+    private fun GlobalStatsMonthDto.toGlobalStats(playerName: String?): GlobalStats {
+        val detail = playerName?.let { name ->
+            val normalizedSearch = name.normalize()
+            this.detalhado?.find { 
+                val normalizedTarget = it.nome?.normalize() ?: ""
+                normalizedTarget == normalizedSearch || normalizedSearch.contains(normalizedTarget)
+            }
+        }
+        
+        return GlobalStats(
+            avgMatches = this.resumo?.mediaPartidas ?: 0.0,
+            avgBuchos = this.resumo?.valorMedioBuchos ?: 0.0,
+            totalMatchesMonth = 0, 
+            totalBuchosMonth = 0,
+            activeMembersCount = this.resumo?.totalMembros ?: 0,
+            playerMatches = detail?.partidas,
+            playerBuchosValue = detail?.valorTotal
+        )
+    }
+
     private fun PlayerDTO.toUser(): User? {
         if (this.email.isNullOrBlank() || this.jogador.isNullOrBlank()) {
             return null
@@ -376,5 +407,9 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
             dupla_vencedora = if (score1 > score2) "${team1Player1.name}/${team1Player2.name}" else "${team2Player1.name}/${team2Player2.name}",
             buttonName = buttonName
         )
+    private fun String.normalize(): String {
+        return java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
+            .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
+            .uppercase()
     }
 }

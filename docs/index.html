@@ -456,7 +456,8 @@
                 score1: 0,
                 score2: 0,
                 activePicker: -1,
-                blockedIds: new Set()
+                blockedIds: new Set(),
+                globalStats: null
             },
 
             async init() {
@@ -574,16 +575,34 @@
                     this.state.players = Array.isArray(players) ? players : [];
                     this.state.matches = Array.isArray(matches) ? matches : [];
                     
+                    // Fetch global stats for current month display
+                    const now = new Date();
+                    const targetMes = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+                    try {
+                        const statsRes = await fetch(`${API_BASE}webhook/estatisticas-globais`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ mes: now.getMonth() + 1, ano: now.getFullYear() })
+                        });
+                        const list = await statsRes.json();
+                        this.state.globalStats = list.find(m => m.mes === targetMes) || null;
+                    } catch (e) { console.warn("Global stats fetch failed", e); }
+
                     // Unified debts list
                     this.processDebts(this.state.players, buchos || [], mensalidades || []);
                     this.checkMonthlyFee(mensalidades || [], players || []);
-                    this.checkExtraFee(matches, buchos, players);
+                    await this.checkExtraFee(matches, buchos, players);
                     this.renderAll();
                 } catch (e) {
                     console.error("Data load error:", e);
                     this.showAlert('Sincronização', 'Erro ao carregar dados do servidor. Verifique sua conexão.');
                 }
                 this.setLoading(false);
+            },
+
+            normalizeName(name) {
+                if (!name) return "";
+                return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
             },
 
             processDebts(players, buchos, mensalidades) {
@@ -702,33 +721,69 @@
                     const targetMonth = targetDate.getMonth();
                     const targetYear = targetDate.getFullYear();
 
-                    // 1. Calculate Club Base (Denominator = Active Members)
-                    const activeMembers = players.filter(p => !p.jogador.includes('NÃO MEMBRO'));
-                    const activeCount = activeMembers.length || 1;
+                    // 1. Fetch Global Stats from API (with local fallback)
+                    let clubAvgMatches = 0;
+                    let baseFee = 0;
+                    let myMatchesTargetMonth = null;
+                    let myBuchosValue = null;
 
-                    // 2. Club Stats for THIS SPECIFIC target month
-                    const clubMatchesTargetMonth = matches.filter(m => {
-                        const d = this.parseDate(m.data);
-                        return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-                    });
-                    const clubAvgMatches = clubMatchesTargetMonth.length / activeCount;
+                    const targetMes = `${(targetMonth + 1).toString().padStart(2, '0')}/${targetYear}`;
+                    try {
+                        const statsRes = await fetch(`${API_BASE}webhook/estatisticas-globais`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ mes: targetMonth + 1, ano: targetYear })
+                        });
+                        const list = await statsRes.json();
+                        const monthData = list.find(m => m.mes === targetMes);
+                        if (!monthData) throw new Error("Mês não encontrado na API");
 
-                    const clubBuchosTargetMonth = buchos.filter(b => {
-                        const d = this.parseDate(b.data);
-                        return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-                    });
-                    const totalBuchosValue = clubBuchosTargetMonth.reduce((acc, b) => acc + (b.valor || 0), 0);
-                    const baseFee = totalBuchosValue / activeCount;
+                        clubAvgMatches = monthData.resumo_membros.media_partidas_por_membro;
+                        baseFee = monthData.resumo_membros.valor_medio_de_buchos;
+                        
+                        const normalizedUser = this.normalizeName(this.state.user.name);
+                        const playerDetail = monthData.detalhado_por_jogador.find(p => {
+                            const normalizedP = this.normalizeName(p.nome);
+                            return normalizedP === normalizedUser || normalizedUser.includes(normalizedP);
+                        });
+                        if (playerDetail) {
+                            myMatchesTargetMonth = playerDetail.partidas;
+                            myBuchosValue = playerDetail.valor_total;
+                        }
+                    } catch (e) {
+                        console.warn("Falling back to local stats calculation", e);
+                        const activeCount = players.filter(p => !p.jogador.includes('NÃO MEMBRO')).length || 1;
+                        const clubMatchesTargetMonth = matches.filter(m => {
+                            const d = this.parseDate(m.data);
+                            return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+                        });
+                        clubAvgMatches = clubMatchesTargetMonth.length / activeCount;
 
-                    // 3. User Performance for TARGET month
-                    const myMatchesTargetMonth = clubMatchesTargetMonth.filter(m => 
-                        [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name)
-                    ).length;
+                        const clubBuchosTargetMonth = buchos.filter(b => {
+                            const d = this.parseDate(b.data);
+                            return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+                        });
+                        baseFee = clubBuchosTargetMonth.reduce((acc, b) => acc + (b.valor || 0), 0) / activeCount;
+                    }
+
+                    // 2. User Performance for TARGET month (use API values or calculate locally)
+                    if (myMatchesTargetMonth === null) {
+                        myMatchesTargetMonth = matches.filter(m => {
+                            const d = this.parseDate(m.data);
+                            return d.getMonth() === targetMonth && d.getFullYear() === targetYear &&
+                                   [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name);
+                        }).length;
+                    }
 
                     if (myMatchesTargetMonth < clubAvgMatches) {
-                        const myBuchosValue = clubBuchosTargetMonth
-                            .filter(b => b.jogador === this.state.user.name)
-                            .reduce((acc, b) => acc + (b.valor || 0), 0);
+                        if (myBuchosValue === null) {
+                            myBuchosValue = buchos
+                                .filter(b => {
+                                    const d = this.parseDate(b.data);
+                                    return b.jogador === this.state.user.name && d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+                                })
+                                .reduce((acc, b) => acc + (b.valor || 0), 0);
+                        }
                         
                         const deficit = baseFee - myBuchosValue;
 
@@ -754,7 +809,7 @@
                                             jogador: this.state.user.name,
                                             valor: deficit,
                                             pago: false,
-                                            obs: "Taxa extra"
+                                            obs: `Taxa Extra - (Déficit de Buchos) - ref: ${targetMes}. Motivo: Participação inferior à média (Alvo: ${clubAvgMatches.toFixed(1)} partidas. Realizado: ${myMatchesTargetMonth} partidas).`
                                         })
                                     });
                                 } catch(e) { console.error(`Taxa extra error for ${targetMonth+1}/${targetYear}:`, e); }
@@ -802,13 +857,25 @@
                 document.getElementById('stats-due').innerText = `R$ ${totalDue.toFixed(2).replace('.', ',')}`;
                 document.getElementById('stats-upcoming').innerText = `R$ ${totalUpcoming.toFixed(2).replace('.', ',')}`;
 
-                // Real Monthly Match Count
-                const myMonthlyMatches = this.state.matches.filter(m => {
-                    const d = new Date(m.data);
-                    const isMyMatch = [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name);
-                    return isMyMatch && d.getMonth() === curMonth && d.getFullYear() === curYear;
-                }).length;
-                document.getElementById('stats-avg').innerText = myMonthlyMatches;
+                // Monthly Average (use API detail if exists)
+                let myMonthlyMatches = 0;
+                const playerDetail = this.state.globalStats?.detalhado_por_jogador?.find(p => 
+                    p.nome.toUpperCase() === this.state.user.name.toUpperCase() || 
+                    this.state.user.name.toUpperCase().includes(p.nome.toUpperCase())
+                );
+
+                if (playerDetail) {
+                    myMonthlyMatches = playerDetail.partidas;
+                } else {
+                    myMonthlyMatches = this.state.matches.filter(m => {
+                        const d = new Date(m.data);
+                        const isMyMatch = [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name);
+                        return isMyMatch && d.getMonth() === curMonth && d.getFullYear() === curYear;
+                    }).length;
+                }
+
+                const globalAvg = this.state.globalStats?.resumo_membros?.media_partidas_por_membro;
+                document.getElementById('stats-avg').innerText = globalAvg ? `${myMonthlyMatches} / ${globalAvg.toFixed(1)}` : myMonthlyMatches;
 
                 // Real Points in the Year
                 let totalPts = 0;

@@ -113,6 +113,29 @@ data class ComprovanteRequest(
     val imagemBase64: String
 )
 
+data class GlobalStatsRequest(
+    val mes: Int,
+    val ano: Int
+)
+
+data class GlobalStatsMonthDto(
+    val mes: String?,
+    @SerializedName("resumo_membros") val resumo: ResumoMembrosDto?,
+    @SerializedName("detalhado_por_jogador") val detalhado: List<JogadorDetalheDto>?
+)
+
+data class ResumoMembrosDto(
+    @SerializedName("media_partidas_por_membro") val mediaPartidas: Double?,
+    @SerializedName("valor_medio_de_buchos") val valorMedioBuchos: Double?,
+    @SerializedName("total_membros_ativos") val totalMembros: Int?
+)
+
+data class JogadorDetalheDto(
+    val nome: String?,
+    val partidas: Int?,
+    @SerializedName("valor_total") val valorTotal: Double?
+)
+
 // --- API Service Interface ---
 
 interface ApiService {
@@ -164,6 +187,9 @@ interface ApiService {
 
     @GET("webhook/checar-atualizacao")
     suspend fun checkUpdate(): UpdateInfo
+
+    @POST("webhook/estatisticas-globais")
+    suspend fun getGlobalStats(@Body request: GlobalStatsRequest): List<GlobalStatsMonthDto>
 }
 
 data class StackTraceRequest(
