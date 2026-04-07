@@ -455,8 +455,11 @@
             },
 
             async login() {
-                const email = document.getElementById('login-email').value;
-                const pass = document.getElementById('login-pass').value;
+                const emailInput = document.getElementById('login-email').value;
+                const passInput = document.getElementById('login-pass').value;
+
+                const email = emailInput.trim();
+                const pass = passInput.trim();
 
                 if (!email || !pass) return alert('Preencha os campos!');
 
@@ -465,15 +468,23 @@
                     const res = await fetch(`${API_BASE}webhook/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, senha: pass })
+                        body: JSON.stringify({ email: email, senha: pass })
                     });
+
+                    if (!res.ok) {
+                        throw new Error(`Servidor retornou erro: ${res.status}`);
+                    }
+
                     const data = await res.json();
                     
                     if (data.status === 'success') {
-                        // After success login, we need to find the user in players list
+                        // Refresh players to find the user details (avatar, full name)
                         const playersRes = await fetch(`${API_BASE}webhook/buscar-jogadores`);
                         const players = await playersRes.json();
-                        const found = players.find(p => p.email?.trim().toLowerCase() === email.trim().toLowerCase());
+                        
+                        const found = players.find(p => 
+                            p.email && p.email.trim().toLowerCase() === email.toLowerCase()
+                        );
                         
                         if (found) {
                             this.state.user = { 
@@ -484,12 +495,15 @@
                             localStorage.setItem('user', JSON.stringify(this.state.user));
                             this.showMain();
                             await this.loadData();
+                        } else {
+                            alert('Login realizado, mas seu e-mail não foi encontrado na lista de jogadores cadastrados. Verifique se o e-mail no cadastro é exatamente: ' + email);
                         }
                     } else {
-                        alert('Credenciais inválidas!');
+                        alert('E-mail ou senha incorretos!');
                     }
                 } catch (e) {
-                    alert('Erro ao tentar entrar.');
+                    console.error('Login error:', e);
+                    alert('Erro de conexão: ' + e.message + '\nVerifique se o servidor N8N permite conexões Web (CORS).');
                 }
                 this.setLoading(false);
             },
