@@ -142,11 +142,14 @@
         /* --- Login Screen --- */
         #login-screen {
             height: 100vh;
-            display: flex;
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             padding-bottom: 0;
+        }
+        #login-screen.active {
+            display: flex;
         }
         .logo-container { margin-bottom: 40px; text-align: center; }
         .logo-container h1 { font-size: 32px; margin: 0; color: white; letter-spacing: -1px; }
@@ -537,15 +540,16 @@
                         fetch(`${API_BASE}webhook/buscar-info-mensalidade`).then(r => r.json())
                     ]);
 
-                    this.state.players = players;
-                    this.state.matches = matches;
+                    this.state.players = Array.isArray(players) ? players : [];
+                    this.state.matches = Array.isArray(matches) ? matches : [];
                     
                     // Unified debts list
-                    this.processDebts(players, buchos, mensalidades);
-                    this.checkMonthlyFee(mensalidades);
+                    this.processDebts(this.state.players, buchos || [], mensalidades || []);
+                    this.checkMonthlyFee(mensalidades || []);
                     this.renderAll();
                 } catch (e) {
-                    console.error(e);
+                    console.error("Data load error:", e);
+                    this.showAlert('Sincronização', 'Erro ao carregar dados do servidor. Verifique sua conexão.');
                 }
                 this.setLoading(false);
             },
@@ -614,25 +618,29 @@
                 this.state.debts = results;
             },
 
-            async checkMonthlyFee(mensalidades) {
+            async checkMonthlyFee(mensalidadesArray) {
+                if (!this.state.user) return;
+                
                 const now = new Date();
                 const month = now.getMonth();
                 const year = now.getFullYear();
                 
-                const hasFee = mensalidades.any(m => {
+                const hasFee = Array.isArray(mensalidadesArray) && mensalidadesArray.some(m => {
                     const d = new Date(m.mensalidade);
                     return m.jogador === this.state.user.name && d.getMonth() === month && d.getFullYear() === year;
                 });
 
                 if (!hasFee && this.state.user) {
-                    await fetch(`${API_BASE}webhook/buscar-info-mensalidade`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            jogador: this.state.user.name, 
-                            data_vencimento: `${year}-${String(month+1).padStart(2,'0')}-10` 
-                        })
-                    });
+                    try {
+                        await fetch(`${API_BASE}webhook/buscar-info-mensalidade`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                jogador: this.state.user.name, 
+                                data_vencimento: `${year}-${String(month+1).padStart(2,'0')}-10` 
+                            })
+                        });
+                    } catch(e) { console.error("Monthly fee trigger error:", e); }
                 }
             },
 
