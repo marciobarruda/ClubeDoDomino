@@ -68,18 +68,12 @@ class AdminRepository(context: Context) {
         }
 
         val buchosThisMonth = buchos.filter { dto ->
-            try {
-                val dateStr = dto.data
-                if (!dateStr.isNullOrBlank()) {
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                    val date = sdf.parse(dateStr)
-                    if (date != null) {
-                        val cal = Calendar.getInstance()
-                        cal.time = date
-                        cal.get(Calendar.MONTH) == currentMonth && cal.get(Calendar.YEAR) == currentYear
-                    } else false
-                } else false
-            } catch (e: Exception) { false }
+            val date = parseAnyDate(dto.data)
+            if (date != null) {
+                val cal = Calendar.getInstance()
+                cal.time = date
+                cal.get(Calendar.MONTH) == currentMonth && cal.get(Calendar.YEAR) == currentYear
+            } else false
         }
 
         // 2. Determine Denominator based on 'Ativo' switch (as per new requirement)
@@ -112,6 +106,20 @@ class AdminRepository(context: Context) {
             cal.add(Calendar.DAY_OF_MONTH, -1)
         }
         return cal.time
+    }
+    fun parseAnyDate(dateStr: String?): Date? {
+        if (dateStr.isNullOrBlank()) return null
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd",
+            "dd/MM/yyyy"
+        )
+        for (format in formats) {
+            try {
+                return java.text.SimpleDateFormat(format, java.util.Locale.getDefault()).apply { isLenient = false }.parse(dateStr)
+            } catch (e: Exception) {}
+        }
+        return null
     }
 }
 

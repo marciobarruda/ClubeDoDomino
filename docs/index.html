@@ -543,9 +543,22 @@
                 }
                 this.setLoading(false);
             },
-
             setLoading(show) {
                 document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+            },
+
+            parseDate(str) {
+                if (!str) return new Date();
+                // 1. Check if ISO (contains - and likely starts with 20)
+                if (str.includes('-') && str.indexOf('-') === 4) return new Date(str);
+                // 2. Check if Brazilian (DD/MM/YYYY)
+                if (str.includes('/')) {
+                    const parts = str.split('/');
+                    if (parts.length === 3) {
+                        return new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+                    }
+                }
+                return new Date(str);
             },
 
             async loadData() {
@@ -656,12 +669,8 @@
                     const year = checkDate.getFullYear();
 
                     const hasFee = Array.isArray(mensalidadesArray) && mensalidadesArray.some(m => {
-                        // Extract year/month safely from various formats
                         const dateStr = m.mensalidade || "";
-                        let d;
-                        if (dateStr.length >= 10) d = new Date(dateStr);
-                        else d = new Date(m.ano || new Date().getFullYear(), m.mes || 0, 10);
-
+                        const d = this.parseDate(dateStr);
                         return m.jogador === this.state.user.name && 
                                d.getMonth() === month && 
                                d.getFullYear() === year;
@@ -699,13 +708,13 @@
 
                     // 2. Club Stats for THIS SPECIFIC target month
                     const clubMatchesTargetMonth = matches.filter(m => {
-                        const d = new Date(m.data);
+                        const d = this.parseDate(m.data);
                         return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
                     });
                     const clubAvgMatches = clubMatchesTargetMonth.length / activeCount;
 
                     const clubBuchosTargetMonth = buchos.filter(b => {
-                        const d = new Date(b.data);
+                        const d = this.parseDate(b.data);
                         return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
                     });
                     const totalBuchosValue = clubBuchosTargetMonth.reduce((acc, b) => acc + (b.valor || 0), 0);
@@ -726,7 +735,7 @@
                         if (deficit > 0.01) {
                             // Robust check for existing record
                             const alreadyExists = buchos.some(b => {
-                                const d = new Date(b.data);
+                                const d = this.parseDate(b.data);
                                 return b.jogador === this.state.user.name && 
                                        (b.obs?.includes('Taxa extra') || b.type === 'TAX') &&
                                        d.getMonth() === targetMonth && d.getFullYear() === targetYear;

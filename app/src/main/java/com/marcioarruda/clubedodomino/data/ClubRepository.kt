@@ -223,6 +223,21 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         apiService.deleteBucho(com.marcioarruda.clubedodomino.data.network.DeleteRequest(id, buttonName))
     }
 
+    fun parseAnyDate(dateStr: String?): Date? {
+        if (dateStr.isNullOrBlank()) return null
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd",
+            "dd/MM/yyyy"
+        )
+        for (format in formats) {
+            try {
+                return SimpleDateFormat(format, Locale.getDefault()).apply { isLenient = false }.parse(dateStr)
+            } catch (e: Exception) {}
+        }
+        return null
+    }
+
     fun BuchoDto.toFinancialEntry(users: List<User>): FinancialEntry? {
         if (this.id == null) return null 
 
@@ -237,9 +252,7 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         
         val userId = user?.id ?: return null
         
-        val parsedDate = try {
-            this.data?.let { dateFormat.parse(it) } ?: Date()
-        } catch (e: Exception) { Date() }
+        val parsedDate = parseAnyDate(this.data) ?: Date()
 
         val isTaxaExtra = this.obs?.contains("Taxa extra", ignoreCase = true) == true
 
@@ -331,7 +344,7 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         val t2p2 = users.find { it.name.equals(this.jogador4?.trim(), ignoreCase = true) } ?: return null
         
         val stableId = "match_${this.data}_${this.jogador1}".hashCode().toString()
-        val date = try { this.data?.let { dateFormat.parse(it) } ?: Date() } catch (e: Exception) { Date() }
+        val date = parseAnyDate(this.data) ?: Date()
 
         return Match(
             id = this.id?.toString() ?: stableId,
