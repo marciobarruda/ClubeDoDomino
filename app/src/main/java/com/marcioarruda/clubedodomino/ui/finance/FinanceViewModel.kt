@@ -83,14 +83,31 @@ class FinanceViewModel(
                 
                 // Re-using current UI state debts might be risky if not loaded.
                 // But generally upload is done after load.
-                val pendingDebts = _uiState.value.debts.filter { it.status == FinancialEntryStatus.PENDING }
+                val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+                val currentMonth = Calendar.getInstance().get(Calendar.MONTH)
+
+                // Filtra enviando apenas buchos "vencidos" (meses anteriores) e mensalidades pendentes
+                val pendingDebts = _uiState.value.debts.filter { entry ->
+                    if (entry.status != FinancialEntryStatus.PENDING) return@filter false
+                    
+                    if (entry.type == FinancialEntryType.MONTHLY_FEE || entry.type == FinancialEntryType.EXTRA_TAX) {
+                        return@filter true
+                    }
+                    
+                    if (entry.type == FinancialEntryType.BUCHO) {
+                        val itemCal = Calendar.getInstance()
+                        itemCal.time = entry.dueDate
+                        val itemYear = itemCal.get(Calendar.YEAR)
+                        val itemMonth = itemCal.get(Calendar.MONTH)
+                        
+                        return@filter if (itemYear < currentYear) true
+                        else (itemYear == currentYear && itemMonth < currentMonth)
+                    }
+                    false
+                }
                 
                 val buchos = pendingDebts.filter { it.type == FinancialEntryType.BUCHO }
                 val mensalidades = pendingDebts.filter { it.type == FinancialEntryType.MONTHLY_FEE }
-                
-                // IMPORTANT: Extra Tax is not explicitly in DTO based on logs. 
-                // We send total value, but IDs might be missing for Taxa. 
-                // Assuming backend handles it or we only send supported types.
                 
                 val valorTotal = pendingDebts.sumOf { it.amount }
                 val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
