@@ -286,7 +286,7 @@
             <div class="card" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center">
                     <div>
-                        <span style="font-size: 14px; opacity: 0.9">Média de Partidas</span>
+                        <span style="font-size: 14px; opacity: 0.9">Partidas no Mês</span>
                         <h3 style="margin: 5px 0" id="stats-avg">0</h3>
                     </div>
                     <div>
@@ -684,6 +684,8 @@
                 const curMonth = now.getMonth();
                 const curYear = now.getFullYear();
 
+                if (!this.state.user) return;
+
                 const myDebts = this.state.debts.filter(d => d.jogador?.includes(this.state.user.name));
                 
                 const totalDue = myDebts.filter(d => {
@@ -698,11 +700,28 @@
                 document.getElementById('stats-due').innerText = `R$ ${totalDue.toFixed(2).replace('.', ',')}`;
                 document.getElementById('stats-upcoming').innerText = `R$ ${totalUpcoming.toFixed(2).replace('.', ',')}`;
 
-                // Average matches (simulated)
-                const myMatchesCount = this.state.matches.filter(m => 
-                    [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name)
-                ).length;
-                document.getElementById('stats-avg').innerText = myMatchesCount;
+                // Real Monthly Match Count
+                const myMonthlyMatches = this.state.matches.filter(m => {
+                    const d = new Date(m.data);
+                    const isMyMatch = [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name);
+                    return isMyMatch && d.getMonth() === curMonth && d.getFullYear() === curYear;
+                }).length;
+                document.getElementById('stats-avg').innerText = myMonthlyMatches;
+
+                // Real Points in the Year
+                let totalPts = 0;
+                this.state.matches.forEach(m => {
+                    const d = new Date(m.data);
+                    if (d.getFullYear() !== curYear) return;
+
+                    const pts = m.pts || 0;
+                    if (m.scored1 > m.scored2) {
+                        if (m.jogador1 === this.state.user.name || m.jogador2 === this.state.user.name) totalPts += pts;
+                    } else if (m.scored2 > m.scored1) {
+                        if (m.jogador3 === this.state.user.name || m.jogador4 === this.state.user.name) totalPts += pts;
+                    }
+                });
+                document.getElementById('stats-points').innerText = totalPts;
             },
 
             renderMatches() {
