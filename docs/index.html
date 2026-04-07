@@ -416,6 +416,15 @@
         </div>
     </div>
 
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <h3 id="alert-title">Aviso</h3>
+            <p id="alert-message" style="color: var(--text-muted); margin: 20px 0;"></p>
+            <button class="btn btn-primary" style="width: 100%" onclick="app.closeAlert()">OK</button>
+        </div>
+    </div>
+
     <script>
         const API_BASE = "https://n8ndev.devlogconsultoria.com.br/";
         
@@ -461,13 +470,16 @@
                 const email = emailInput.trim();
                 const pass = passInput.trim();
 
-                if (!email || !pass) return alert('Preencha os campos!');
+                if (!email || !pass) return this.showAlert('Atenção', 'Preencha os campos!');
 
                 this.setLoading(true);
                 try {
                     const res = await fetch(`${API_BASE}webhook/login`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
                         body: JSON.stringify({ email: email, senha: pass })
                     });
 
@@ -477,7 +489,10 @@
 
                     const data = await res.json();
                     
-                    if (data.status === 'success') {
+                    // Suporte para múltiplos status de sucesso (Android / Web)
+                    const isSuccess = data.status === 'success' || data.status === 'Login bem sucedido';
+
+                    if (isSuccess) {
                         // Refresh players to find the user details (avatar, full name)
                         const playersRes = await fetch(`${API_BASE}webhook/buscar-jogadores`);
                         const players = await playersRes.json();
@@ -496,14 +511,14 @@
                             this.showMain();
                             await this.loadData();
                         } else {
-                            alert('Login realizado, mas seu e-mail não foi encontrado na lista de jogadores cadastrados. Verifique se o e-mail no cadastro é exatamente: ' + email);
+                            this.showAlert('Sincronização', 'Login realizado, mas seu e-mail não foi encontrado na lista de jogadores cadastrados. Verifique se o e-mail no cadastro é exatamente: ' + email);
                         }
                     } else {
-                        alert('E-mail ou senha incorretos!');
+                        this.showAlert('Erro', 'E-mail ou senha incorretos!');
                     }
                 } catch (e) {
                     console.error('Login error:', e);
-                    alert('Erro de conexão: ' + e.message + '\nVerifique se o servidor N8N permite conexões Web (CORS).');
+                    this.showAlert('Conexão', 'Erro de conexão: ' + e.message + '\nVerifique se o servidor N8N permite conexões Web (CORS).');
                 }
                 this.setLoading(false);
             },
@@ -848,7 +863,7 @@
             },
 
             async saveMatch() {
-                if (this.state.selectedPlayers.includes(null)) return alert('Selecione os 4 jogadores!');
+                if (this.state.selectedPlayers.includes(null)) return this.showAlert('Atenção', 'Selecione os 4 jogadores!');
                 
                 this.setLoading(true);
                 try {
@@ -911,10 +926,10 @@
                         }
                     }
 
-                    alert('Partida registrada com sucesso!');
+                    this.showAlert('Sucesso', 'Partida registrada com sucesso!');
                     location.reload(); // Quick reset
                 } catch (e) {
-                    alert('Erro ao salvar.');
+                    this.showAlert('Erro', 'Erro ao salvar.');
                 }
                 this.setLoading(false);
             },
@@ -945,7 +960,7 @@
                 });
 
                 if (filteredDebts.length === 0) {
-                    alert('Nenhuma dívida vencida para pagar no momento!');
+                    this.showAlert('Info', 'Nenhuma dívida vencida para pagar no momento!');
                     this.setLoading(false);
                     return;
                 }
@@ -965,9 +980,9 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    alert('Comprovante enviado com sucesso! 🚀');
+                    this.showAlert('Parabéns', 'Comprovante enviado com sucesso! 🚀');
                 } catch (e) {
-                    alert('Erro ao enviar comprovante.');
+                    this.showAlert('Erro', 'Erro ao enviar comprovante.');
                 }
                 this.setLoading(false);
             },
@@ -977,7 +992,16 @@
                 reader.readAsDataURL(file);
                 reader.onload = () => resolve(reader.result);
                 reader.onerror = error => reject(error);
-            })
+            }),
+
+            showAlert(title, message) {
+                document.getElementById('alert-title').innerText = title;
+                document.getElementById('alert-message').innerText = message;
+                document.getElementById('alert-modal').classList.add('active');
+            },
+            closeAlert() {
+                document.getElementById('alert-modal').classList.remove('active');
+            }
         };
 
         // Polyfill for .any
