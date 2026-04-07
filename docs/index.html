@@ -361,7 +361,7 @@
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px">
                     O app enviará automaticamente apenas os buchos vencidos e mensalidades pendentes.
                 </p>
-                <input type="file" id="receipt-upload" accept="image/*" style="display: none" onchange="app.handleReceipt(this)">
+                <input type="file" id="receipt-upload" accept="image/*,application/pdf" style="display: none" onchange="app.handleReceipt(this)">
                 <button class="btn btn-primary" style="width: 100%" onclick="document.getElementById('receipt-upload').click()">
                     <i data-lucide="upload"></i> Escolher Imagem
                 </button>
@@ -658,8 +658,9 @@
                 document.getElementById('user-name').innerText = this.state.user.name;
                 const avatar = document.getElementById('user-avatar');
                 if (this.state.user.avatar) {
-                    avatar.style.backgroundImage = `url(${this.state.user.avatar})`;
+                    avatar.style.backgroundImage = `url(${this.formatAvatar(this.state.user.avatar)})`;
                     avatar.style.backgroundSize = 'cover';
+                    avatar.style.backgroundPosition = 'center';
                 }
             },
 
@@ -947,9 +948,15 @@
 
             // --- Utils ---
             firstName(name) { return name ? (name.split(' ')[0] || '') : ''; },
+            formatAvatar(avatar) {
+                if (!avatar) return '';
+                if (avatar.startsWith('http') || avatar.startsWith('data:')) return avatar;
+                // Se não tem prefixo, assume que é um base64 de imagem
+                return `data:image/png;base64,${avatar}`;
+            },
             getAvatar(name) { 
                 const p = this.state.players.find(p => p.jogador === name);
-                return p?.avatar || `https://ui-avatars.com/api/?name=${name || '?'}&background=random`; 
+                return this.formatAvatar(p?.avatar) || `https://ui-avatars.com/api/?name=${name || '?'}&background=random`; 
             },
 
             async handleReceipt(input) {
