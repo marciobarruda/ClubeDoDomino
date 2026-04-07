@@ -1,0 +1,17 @@
+{
+  "name": "Clube do Dominó",
+  "short_name": "Domino",
+  "description": "Gestão de partidas e finanças do Clube do Dominó",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3206/3206213.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

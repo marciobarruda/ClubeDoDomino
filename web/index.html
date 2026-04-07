@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Clube do Dominó</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Clube Dominó">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3206/3206213.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --glass: rgba(255, 255, 255, 0.03);
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+        }
+
+        /* --- Global Components --- */
+        .btn {
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:active { transform: scale(0.97); background-color: var(--primary-dark); }
+        
+        .btn-ghost { background: var(--glass); color: white; border: 1px solid rgba(255,255,255,0.1); }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 16px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.2);
+            color: white;
+            font-size: 16px;
+            outline: none;
+            transition: border 0.3s;
+        }
+        input:focus { border-color: var(--primary); }
+
+        /* --- Screens --- */
+        .screen {
+            display: none;
+            padding: 20px;
+            padding-top: calc(20px + var(--safe-top));
+            padding-bottom: calc(80px + var(--safe-bottom));
+            animation: fadeIn 0.3s ease;
+        }
+
+        .screen.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Navigation --- */
+        .navbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0 calc(12px + var(--safe-bottom));
+            border-top: 1px solid rgba(255,255,255,0.05);
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-decoration: none;
+            gap: 4px;
+            transition: color 0.3s;
+        }
+
+        .nav-item.active { color: var(--primary); }
+        .nav-item i { width: 24px; height: 24px; }
+
+        /* --- Login Screen --- */
+        #login-screen {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding-bottom: 0;
+        }
+        .logo-container { margin-bottom: 40px; text-align: center; }
+        .logo-container h1 { font-size: 32px; margin: 0; color: white; letter-spacing: -1px; }
+
+        /* --- Dashboard --- */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .stat-card { text-align: center; }
+        .stat-card .value { font-size: 24px; font-weight: 700; display: block; }
+        .stat-card .label { font-size: 12px; color: var(--text-muted); }
+
+        .match-card { display: flex; align-items: center; justify-content: space-between; }
+        .team { display: flex; flex-direction: column; align-items: center; width: 40%; gap: 4px; }
+        .score { font-size: 22px; font-weight: 800; color: var(--primary); }
+        .match-players { display: flex; gap: -8px; }
+        .avatar-small { 
+            width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--bg);
+            background: #334155; object-fit: cover; 
+            margin-right: -10px;
+        }
+        .team-names { font-size: 11px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+        /* --- Finance --- */
+        .debt-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .debt-info .title { font-weight: 600; display: block; }
+        .debt-info .date { font-size: 12px; color: var(--text-muted); }
+        .debt-amount { font-weight: 700; color: var(--warning); }
+
+        /* --- Match Registration --- */
+        .player-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .player-slot { 
+            background: var(--glass); height: 100px; border-radius: 16px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 2px dashed rgba(255,255,255,0.1); color: var(--text-muted); gap: 8px;
+        }
+        .player-slot.filled { border-style: solid; border-color: var(--primary); color: white; background: rgba(99, 102, 241, 0.1); }
+        .slot-avatar { width: 44px; height: 44px; border-radius: 50%; background: #334155; }
+
+        .score-input { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
+        .score-box { 
+            width: 70px; height: 70px; background: rgba(0,0,0,0.3); border-radius: 16px;
+            display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800;
+        }
+
+        /* --- Modal --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+            display: none; z-index: 2000; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background: var(--bg); width: 100%; max-width: 400px; border-radius: 24px;
+            padding: 24px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .modal.active { display: flex; }
+
+        .player-list { max-height: 300px; overflow-y: auto; margin-top: 16px; }
+        .player-row { 
+            display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px;
+            margin-bottom: 8px; cursor: pointer;
+        }
+        .player-row:hover { background: var(--glass); }
+        .player-row.blocked { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
+        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--error); color: white; }
+
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.9); display: none; z-index: 3000;
+            align-items: center; justify-content: center;
+        }
+        .spinner { 
+            width: 40px; height: 40px; border: 4px solid var(--glass); 
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay"><div class="spinner"></div></div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen">
+        <div class="logo-container">
+            <img src="https://cdn-icons-png.flaticon.com/512/3206/3206213.png" width="80" alt="Logo">
+            <h1>Clube do Dominó</h1>
+            <p style="color: var(--text-muted)">Viva a resenha!</p>
+        </div>
+        <div class="card" style="width: 100%; max-width: 400px">
+            <div style="margin-bottom: 16px">
+                <label style="display:block; margin-bottom: 8px; font-size: 14px; color: var(--text-muted)">E-mail</label>
+                <input type="email" id="login-email" placeholder="seu@email.com">
+            </div>
+            <div style="margin-bottom: 24px">
+                <label style="display:block; margin-bottom: 8px; font-size: 14px; color: var(--text-muted)">Senha</label>
+                <input type="password" id="login-pass" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" style="width: 100%" onclick="app.login()">Entrar</button>
+        </div>
+    </div>
+
+    <!-- Main Screens Viewport -->
+    <div id="main-content" style="display: none;">
+        
+        <!-- Dashboard -->
+        <div id="dashboard-screen" class="screen">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px">
+                <div>
+                    <h2 style="margin: 0">Olá, <span id="user-name">Jogador</span></h2>
+                    <p style="color: var(--text-muted); margin: 0; font-size: 14px">Bem-vindo de volta!</p>
+                </div>
+                <div id="user-avatar" style="width: 48px; height: 48px; border-radius: 50%; background: #334155; border: 2px solid var(--primary);"></div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="card stat-card">
+                    <span class="value" id="stats-due" style="color: var(--error)">R$ 0,00</span>
+                    <span class="label">Total Pendente</span>
+                </div>
+                <div class="card stat-card">
+                    <span class="value" id="stats-upcoming" style="color: var(--primary)">R$ 0,00</span>
+                    <span class="label">A Vencer</span>
+                </div>
+            </div>
+
+            <div class="card" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                    <div>
+                        <span style="font-size: 14px; opacity: 0.9">Média de Partidas</span>
+                        <h3 style="margin: 5px 0" id="stats-avg">0</h3>
+                    </div>
+                    <div>
+                        <span style="font-size: 14px; opacity: 0.9">Pontos no Ano</span>
+                        <h3 style="margin: 5px 0" id="stats-points">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 32px">Últimas Partidas</h3>
+            <div id="matches-list">
+                <!-- Matches injected here -->
+            </div>
+        </div>
+
+        <!-- Match Registration -->
+        <div id="match-screen" class="screen">
+            <h2>Registrar Partida</h2>
+            
+            <div class="player-select-grid">
+                <div class="player-slot" onclick="app.showPlayerPicker(0)" id="slot-0">
+                    <i data-lucide="plus"></i>
+                    <span>T1 - J1</span>
+                </div>
+                <div class="player-slot" onclick="app.showPlayerPicker(1)" id="slot-1">
+                    <i data-lucide="plus"></i>
+                    <span>T1 - J2</span>
+                </div>
+                <div class="player-slot" onclick="app.showPlayerPicker(2)" id="slot-2">
+                    <i data-lucide="plus"></i>
+                    <span>T2 - J1</span>
+                </div>
+                <div class="player-slot" onclick="app.showPlayerPicker(3)" id="slot-3">
+                    <i data-lucide="plus"></i>
+                    <span>T2 - J2</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-around; align-items: center">
+                    <div style="text-align: center">
+                        <span style="font-size: 12px; color: var(--text-muted)">TIME 1</span>
+                        <div class="score-input">
+                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, -1)">-</button>
+                            <div class="score-box" id="score-1">0</div>
+                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, 1)">+</button>
+                        </div>
+                    </div>
+                    <div style="text-align: center">
+                        <span style="font-size: 12px; color: var(--text-muted)">TIME 2</span>
+                        <div class="score-input">
+                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, -1)">-</button>
+                            <div class="score-box" id="score-2">0</div>
+                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="bucho-re-container" style="display: none; align-items: center; justify-content: center; gap: 10px; margin-top: 10px">
+                    <input type="checkbox" id="check-re" style="width: 24px; height: 24px">
+                    <label for="check-re">Fomos Bucho de Ré? 🔥</label>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 20px" onclick="app.saveMatch()">Salvar Partida</button>
+        </div>
+
+        <!-- Finance -->
+        <div id="finance-screen" class="screen">
+            <h2>Financeiro</h2>
+            
+            <div id="debts-list">
+                <!-- Debts injected here -->
+            </div>
+
+            <div class="card" style="margin-top: 32px">
+                <h3>Enviar Comprovante</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px">
+                    O app enviará automaticamente apenas os buchos vencidos e mensalidades pendentes.
+                </p>
+                <input type="file" id="receipt-upload" accept="image/*" style="display: none" onchange="app.handleReceipt(this)">
+                <button class="btn btn-primary" style="width: 100%" onclick="document.getElementById('receipt-upload').click()">
+                    <i data-lucide="upload"></i> Escolher Imagem
+                </button>
+            </div>
+        </div>
+
+        <!-- Ranking -->
+        <div id="ranking-screen" class="screen">
+            <h2>Ranking</h2>
+            <div class="card">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; font-size: 12px; color: var(--text-muted)">
+                            <th style="padding-bottom: 12px">POS</th>
+                            <th style="padding-bottom: 12px">JOGADOR</th>
+                            <th style="padding-bottom: 12px; text-align: right">PONTOS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ranking-table">
+                        <!-- Ranking injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <a href="#" class="nav-item active" onclick="app.navigate('dashboard', event)">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Home</span>
+            </a>
+            <a href="#" class="nav-item" onclick="app.navigate('match', event)">
+                <i data-lucide="plus-square"></i>
+                <span>Jogar</span>
+            </a>
+            <a href="#" class="nav-item" onclick="app.navigate('finance', event)">
+                <i data-lucide="wallet"></i>
+                <span>Finanças</span>
+            </a>
+            <a href="#" class="nav-item" onclick="app.navigate('ranking', event)">
+                <i data-lucide="trophy"></i>
+                <span>Ranking</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Selection Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center">
+                <h3 id="modal-title" style="margin: 0">Selecionar Jogador</h3>
+                <i data-lucide="x" onclick="app.closeModal()" style="cursor: pointer"></i>
+            </div>
+            <div id="player-list" class="player-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "https://n8ndev.devlogconsultoria.com.br/";
+        
+        const app = {
+            state: {
+                user: JSON.parse(localStorage.getItem('user')) || null,
+                players: [],
+                matches: [],
+                debts: [],
+                selectedPlayers: [null, null, null, null],
+                score1: 0,
+                score2: 0,
+                activePicker: -1,
+                blockedIds: new Set()
+            },
+
+            async init() {
+                if (this.state.user) {
+                    this.showMain();
+                    await this.loadData();
+                    lucide.createIcons();
+                } else {
+                    this.showLogin();
+                }
+            },
+
+            showLogin() {
+                document.getElementById('login-screen').classList.add('active');
+                document.getElementById('main-content').style.display = 'none';
+            },
+
+            showMain() {
+                document.getElementById('login-screen').classList.remove('active');
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('dashboard-screen').classList.add('active');
+                this.updateUserUI();
+            },
+
+            async login() {
+                const email = document.getElementById('login-email').value;
+                const pass = document.getElementById('login-pass').value;
+
+                if (!email || !pass) return alert('Preencha os campos!');
+
+                this.setLoading(true);
+                try {
+                    const res = await fetch(`${API_BASE}webhook/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, senha: pass })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.status === 'success') {
+                        // After success login, we need to find the user in players list
+                        const playersRes = await fetch(`${API_BASE}webhook/buscar-jogadores`);
+                        const players = await playersRes.json();
+                        const found = players.find(p => p.email?.trim().toLowerCase() === email.trim().toLowerCase());
+                        
+                        if (found) {
+                            this.state.user = { 
+                                id: found.email.trim(), 
+                                name: found.jogador, 
+                                avatar: found.avatar 
+                            };
+                            localStorage.setItem('user', JSON.stringify(this.state.user));
+                            this.showMain();
+                            await this.loadData();
+                        }
+                    } else {
+                        alert('Credenciais inválidas!');
+                    }
+                } catch (e) {
+                    alert('Erro ao tentar entrar.');
+                }
+                this.setLoading(false);
+            },
+
+            setLoading(show) {
+                document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+            },
+
+            async loadData() {
+                this.setLoading(true);
+                try {
+                    const [players, matches, buchos, mensalidades] = await Promise.all([
+                        fetch(`${API_BASE}webhook/buscar-jogadores`).then(r => r.json()),
+                        fetch(`${API_BASE}webhook/partidas`).then(r => r.json()),
+                        fetch(`${API_BASE}webhook/gravar-buchos`).then(r => r.json()),
+                        fetch(`${API_BASE}webhook/buscar-info-mensalidade`).then(r => r.json())
+                    ]);
+
+                    this.state.players = players;
+                    this.state.matches = matches;
+                    
+                    // Unified debts list
+                    this.processDebts(players, buchos, mensalidades);
+                    this.checkMonthlyFee(mensalidades);
+                    this.renderAll();
+                } catch (e) {
+                    console.error(e);
+                }
+                this.setLoading(false);
+            },
+
+            processDebts(players, buchos, mensalidades) {
+                const results = [];
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+
+                this.state.blockedIds = new Set();
+                const isPast11th = now.getDate() >= 11;
+
+                // Process Buchos
+                buchos.forEach(b => {
+                    if (b.pago) return;
+                    const date = new Date(b.data);
+                    const isExtra = b.obs?.includes('Taxa extra');
+                    
+                    results.push({
+                        id: b.id, type: isExtra ? 'TAX' : 'BUCHO',
+                        jogador: b.jogador, valor: b.valor, data: b.data,
+                        status: 'PENDING', date: date
+                    });
+
+                    // Blocking Logic
+                    const bMonth = date.getMonth();
+                    const bYear = date.getFullYear();
+                    const prevMonthDate = new Date(); prevMonthDate.setMonth(now.getMonth() - 1);
+                    
+                    const isBeforePrev = date < new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth(), 1);
+                    const isPrevOrOlder = date < new Date(currentYear, currentMonth, 1);
+
+                    const user = players.find(p => b.jogador?.includes(p.jogador));
+                    if (user && !user.jogador.includes('NÃO MEMBRO')) {
+                        if (isBeforePrev || (isPrevOrOlder && isPast11th)) {
+                            this.state.blockedIds.add(user.email);
+                        }
+                    }
+                });
+
+                // Process Mensalidades
+                mensalidades.forEach(m => {
+                    if (m.pago) return;
+                    // Format or guess date from m.mensalidade
+                    const date = m.mensalidade?.length >= 10 ? new Date(m.mensalidade) : new Date(m.ano, 0, 10);
+                    
+                    results.push({
+                        id: m.id, type: 'FEE',
+                        jogador: m.jogador, valor: 10, data: m.mensalidade,
+                        status: 'PENDING', date: date
+                    });
+
+                    const user = players.find(p => p.jogador === m.jogador);
+                    if (user && !user.jogador.includes('NÃO MEMBRO')) {
+                        const mDate = date;
+                        const isPrevOrOlder = mDate < new Date(currentYear, currentMonth, 1);
+                        const isBeforePrev = mDate < new Date(currentYear, currentMonth - 1, 1);
+
+                        if (isBeforePrev || (isPrevOrOlder && isPast11th)) {
+                            this.state.blockedIds.add(user.email);
+                        }
+                    }
+                });
+
+                this.state.debts = results;
+            },
+
+            async checkMonthlyFee(mensalidades) {
+                const now = new Date();
+                const month = now.getMonth();
+                const year = now.getFullYear();
+                
+                const hasFee = mensalidades.any(m => {
+                    const d = new Date(m.mensalidade);
+                    return m.jogador === this.state.user.name && d.getMonth() === month && d.getFullYear() === year;
+                });
+
+                if (!hasFee && this.state.user) {
+                    await fetch(`${API_BASE}webhook/buscar-info-mensalidade`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            jogador: this.state.user.name, 
+                            data_vencimento: `${year}-${String(month+1).padStart(2,'0')}-10` 
+                        })
+                    });
+                }
+            },
+
+            renderAll() {
+                this.renderDashboard();
+                this.renderMatches();
+                this.renderFinance();
+                this.renderRanking();
+            },
+
+            updateUserUI() {
+                document.getElementById('user-name').innerText = this.state.user.name;
+                const avatar = document.getElementById('user-avatar');
+                if (this.state.user.avatar) {
+                    avatar.style.backgroundImage = `url(${this.state.user.avatar})`;
+                    avatar.style.backgroundSize = 'cover';
+                }
+            },
+
+            renderDashboard() {
+                const now = new Date();
+                const curMonth = now.getMonth();
+                const curYear = now.getFullYear();
+
+                const myDebts = this.state.debts.filter(d => d.jogador?.includes(this.state.user.name));
+                
+                const totalDue = myDebts.filter(d => {
+                    if (d.type === 'FEE' || d.type === 'TAX') return true;
+                    return d.date < new Date(curYear, curMonth, 1);
+                }).reduce((a, b) => a + b.valor, 0);
+
+                const totalUpcoming = myDebts.filter(d => {
+                    return d.type === 'BUCHO' && d.date >= new Date(curYear, curMonth, 1);
+                }).reduce((a, b) => a + b.valor, 0);
+
+                document.getElementById('stats-due').innerText = `R$ ${totalDue.toFixed(2).replace('.', ',')}`;
+                document.getElementById('stats-upcoming').innerText = `R$ ${totalUpcoming.toFixed(2).replace('.', ',')}`;
+
+                // Average matches (simulated)
+                const myMatchesCount = this.state.matches.filter(m => 
+                    [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name)
+                ).length;
+                document.getElementById('stats-avg').innerText = myMatchesCount;
+            },
+
+            renderMatches() {
+                const list = document.getElementById('matches-list');
+                list.innerHTML = '';
+                
+                [...this.state.matches].reverse().slice(0, 10).forEach(m => {
+                    const row = document.createElement('div');
+                    row.className = 'card match-card';
+                    
+                    const points = m.pts || 0;
+                    const date = new Date(m.data).toLocaleDateString('pt-BR');
+
+                    row.innerHTML = `
+                        <div class="team">
+                            <div class="match-players">
+                                <img src="${this.getAvatar(m.jogador1)}" class="avatar-small">
+                                <img src="${this.getAvatar(m.jogador2)}" class="avatar-small">
+                            </div>
+                            <span class="team-names">${this.firstName(m.jogador1)} / ${this.firstName(m.jogador2)}</span>
+                        </div>
+                        <div style="text-align: center">
+                            <div class="score">${m.scored1} x ${m.scored2}</div>
+                            <div style="font-size: 10px; color: var(--text-muted)">pts: ${points}</div>
+                        </div>
+                        <div class="team">
+                            <div class="match-players">
+                                <img src="${this.getAvatar(m.jogador3)}" class="avatar-small">
+                                <img src="${this.getAvatar(m.jogador4)}" class="avatar-small">
+                            </div>
+                            <span class="team-names">${this.firstName(m.jogador3)} / ${this.firstName(m.jogador4)}</span>
+                        </div>
+                    `;
+                    list.appendChild(row);
+                });
+            },
+
+            renderFinance() {
+                const list = document.getElementById('debts-list');
+                list.innerHTML = '';
+                const myDebts = this.state.debts.filter(d => d.jogador?.includes(this.state.user.name));
+
+                if (myDebts.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: var(--text-muted)">Nenhuma pendência encontrada! 🏆</p>';
+                    return;
+                }
+
+                myDebts.forEach(d => {
+                    const item = document.createElement('div');
+                    item.className = 'debt-item';
+                    const icon = d.type === 'FEE' ? 'calendar' : (d.type === 'TAX' ? 'alert-triangle' : 'dribbble');
+                    const label = d.type === 'FEE' ? 'Mensalidade' : (d.type === 'TAX' ? 'Taxa Extra' : 'Bucho');
+                    
+                    item.innerHTML = `
+                        <div style="display: flex; gap: 12px; align-items: center">
+                            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--glass); display: flex; align-items: center; justify-content: center">
+                                <i data-lucide="${icon}" style="width: 18px; color: var(--primary)"></i>
+                            </div>
+                            <div class="debt-info">
+                                <span class="title">${label}</span>
+                                <span class="date">${new Date(d.data).toLocaleDateString('pt-BR')}</span>
+                            </div>
+                        </div>
+                        <span class="debt-amount">R$ ${d.valor.toFixed(2)}</span>
+                    `;
+                    list.appendChild(item);
+                });
+                lucide.createIcons();
+            },
+
+            renderRanking() {
+                const table = document.getElementById('ranking-table');
+                table.innerHTML = '';
+
+                // Calculate points
+                const scoreboard = {};
+                this.state.players.forEach(p => { scoreboard[p.jogador] = 0; });
+
+                this.state.matches.forEach(m => {
+                    const pts = m.pts || 0;
+                    if (m.scored1 > m.scored2) {
+                        scoreboard[m.jogador1] = (scoreboard[m.jogador1] || 0) + pts;
+                        scoreboard[m.jogador2] = (scoreboard[m.jogador2] || 0) + pts;
+                    } else {
+                        scoreboard[m.jogador3] = (scoreboard[m.jogador3] || 0) + pts;
+                        scoreboard[m.jogador4] = (scoreboard[m.jogador4] || 0) + pts;
+                    }
+                });
+
+                const sorted = Object.entries(scoreboard)
+                    .sort((a, b) => b[1] - a[1])
+                    .filter(entry => entry[0] && !entry[0].includes('NÃO MEMBRO'));
+
+                sorted.forEach((entry, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding: 12px 0; font-weight: 700; color: var(--text-muted)">#${idx + 1}</td>
+                        <td style="padding: 12px 0">
+                            <div style="display: flex; align-items: center; gap: 10px">
+                                <img src="${this.getAvatar(entry[0])}" style="width: 24px; height: 24px; border-radius: 50%">
+                                <span>${entry[0]}</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px 0; text-align: right; font-weight: 700; color: var(--primary)">${entry[1]}</td>
+                    `;
+                    table.appendChild(tr);
+                });
+            },
+
+            // --- Navigation Logic ---
+            navigate(id, e) {
+                if (e) e.preventDefault();
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                
+                document.getElementById(`${id}-screen`).classList.add('active');
+                
+                // Find nav item by icon (not elegant but works for SPA)
+                const items = document.querySelectorAll('.nav-item');
+                const targetIdx = id === 'dashboard' ? 0 : (id === 'match' ? 1 : (id === 'finance' ? 2 : 3));
+                items[targetIdx].classList.add('active');
+            },
+
+            // --- Match Registration Logic ---
+            showPlayerPicker(slotIdx) {
+                this.state.activePicker = slotIdx;
+                const modal = document.getElementById('modal');
+                const list = document.getElementById('player-list');
+                list.innerHTML = '';
+                
+                modal.classList.add('active');
+
+                // Filter out already selected
+                const selectedNames = this.state.selectedPlayers.map(p => p?.jogador);
+
+                this.state.players.forEach(p => {
+                    if (selectedNames.includes(p.jogador)) return;
+
+                    const isBlocked = this.state.blockedIds.has(p.email);
+
+                    const row = document.createElement('div');
+                    row.className = `player-row ${isBlocked ? 'blocked' : ''}`;
+                    row.innerHTML = `
+                        <img src="${p.avatar || 'https://ui-avatars.com/api/?name='+p.jogador}" style="width: 32px; height: 32px; border-radius: 50%">
+                        <div style="flex:1">
+                            <div>${p.jogador}</div>
+                            ${isBlocked ? '<span class="status-badge">BLOQUEADO FINANCEIRO</span>' : ''}
+                        </div>
+                    `;
+                    row.onclick = () => this.selectPlayer(p);
+                    list.appendChild(row);
+                });
+            },
+
+            selectPlayer(player) {
+                this.state.selectedPlayers[this.state.activePicker] = player;
+                const slot = document.getElementById(`slot-${this.state.activePicker}`);
+                slot.innerHTML = `
+                    <div class="slot-avatar" style="background: url(${player.avatar || ''}) center/cover"></div>
+                    <span style="font-size: 11px; text-align: center">${this.firstName(player.jogador)}</span>
+                `;
+                slot.classList.add('filled');
+                this.closeModal();
+            },
+
+            closeModal() { document.getElementById('modal').classList.remove('active'); },
+
+            adjustScore(team, val) {
+                if (team === 1) this.state.score1 = Math.max(0, this.state.score1 + val);
+                else this.state.score2 = Math.max(0, this.state.score2 + val);
+                
+                document.getElementById('score-1').innerText = this.state.score1;
+                document.getElementById('score-2').innerText = this.state.score2;
+
+                // Bucho de Ré logic
+                const container = document.getElementById('bucho-re-container');
+                const s1 = this.state.score1;
+                const s2 = this.state.score2;
+                if ((s1 === 5 && s2 > 5) || (s2 === 5 && s1 > 5)) {
+                    container.style.display = 'flex';
+                } else {
+                    container.style.display = 'none';
+                    document.getElementById('check-re').checked = false;
+                }
+            },
+
+            async saveMatch() {
+                if (this.state.selectedPlayers.includes(null)) return alert('Selecione os 4 jogadores!');
+                
+                this.setLoading(true);
+                try {
+                    const s1 = this.state.score1;
+                    const s2 = this.state.score2;
+                    const isRe = document.getElementById('check-re').checked;
+                    const loserScore = Math.min(s1, s2);
+                    const winnerScore = Math.max(s1, s2);
+                    const isSimple = loserScore === 0;
+
+                    let pts = Math.abs(s1 - s2);
+                    let debit = 0;
+                    if (isRe) { pts = winnerScore + 2; debit = 3; }
+                    else if (isSimple) { pts = winnerScore + 1; debit = 2; }
+
+                    const winners = s1 > s2 ? [this.state.selectedPlayers[0], this.state.selectedPlayers[1]] : [this.state.selectedPlayers[2], this.state.selectedPlayers[3]];
+                    const losers = s1 > s2 ? [this.state.selectedPlayers[2], this.state.selectedPlayers[3]] : [this.state.selectedPlayers[0], this.state.selectedPlayers[1]];
+
+                    const dateStr = new Date().toISOString().split('T')[0];
+
+                    // Register Match
+                    await fetch(`${API_BASE}webhook/partidas`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            data: new Date().toISOString(),
+                            jogador1: this.state.selectedPlayers[0].jogador,
+                            jogador2: this.state.selectedPlayers[1].jogador,
+                            jogador3: this.state.selectedPlayers[2].jogador,
+                            jogador4: this.state.selectedPlayers[3].jogador,
+                            scored1: s1, scored2: s2, buchore: isRe, pts: pts,
+                            dupla_vencedora: `${winners[0].jogador}/${winners[1].jogador}`
+                        })
+                    });
+
+                    // Register Debit
+                    if (debit > 0) {
+                        let finalDebit = debit;
+                        let playerName = `${losers[0].jogador} / ${losers[1].jogador}`;
+                        
+                        // Check non-members
+                        const isNM1 = losers[0].jogador.includes('NÃO MEMBRO');
+                        const isNM2 = losers[1].jogador.includes('NÃO MEMBRO');
+                        
+                        if (isNM1 && isNM2) finalDebit = 0;
+                        else if (isNM1) { playerName = losers[1].jogador; finalDebit *= 2; }
+                        else if (isNM2) { playerName = losers[0].jogador; finalDebit *= 2; }
+
+                        if (finalDebit > 0) {
+                            await fetch(`${API_BASE}webhook/gravar-buchos`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    data: dateStr, jogador: playerName, valor: finalDebit,
+                                    pago: false, placar: `${s1}x${s2}`, 
+                                    dupla_vencedora: `${winners[0].jogador}/${winners[1].jogador}`,
+                                    dupla_perdedora: `${losers[0].jogador}/${losers[1].jogador}`
+                                })
+                            });
+                        }
+                    }
+
+                    alert('Partida registrada com sucesso!');
+                    location.reload(); // Quick reset
+                } catch (e) {
+                    alert('Erro ao salvar.');
+                }
+                this.setLoading(false);
+            },
+
+            // --- Utils ---
+            firstName(name) { return name ? (name.split(' ')[0] || '') : ''; },
+            getAvatar(name) { 
+                const p = this.state.players.find(p => p.jogador === name);
+                return p?.avatar || `https://ui-avatars.com/api/?name=${name || '?'}&background=random`; 
+            },
+
+            async handleReceipt(input) {
+                if (!input.files || !input.files[0]) return;
+                
+                this.setLoading(true);
+                const file = input.files[0];
+                const base64 = await this.toBase64(file);
+                
+                // v40 Logic: send only expired buchos + all mensalidades
+                const now = new Date();
+                const curMonth = now.getMonth();
+                const curYear = now.getFullYear();
+
+                const myDebts = this.state.debts.filter(d => d.jogador?.includes(this.state.user.name));
+                const filteredDebts = myDebts.filter(d => {
+                    if (d.type === 'FEE' || d.type === 'TAX') return true;
+                    return d.date < new Date(curYear, curMonth, 1);
+                });
+
+                if (filteredDebts.length === 0) {
+                    alert('Nenhuma dívida vencida para pagar no momento!');
+                    this.setLoading(false);
+                    return;
+                }
+
+                const payload = {
+                    jogador_nome: this.state.user.name,
+                    valor_total: filteredDebts.reduce((a, b) => a + b.valor, 0),
+                    bucho_ids: filteredDebts.filter(d => d.type === 'BUCHO' || d.type === 'TAX').map(d => d.id),
+                    mensalidade_ids: filteredDebts.filter(d => d.type === 'FEE').map(d => String(d.id)),
+                    mensalidade_vencimentos: filteredDebts.filter(d => d.type === 'FEE').map(d => d.data.split('T')[0]),
+                    imagem_base64: base64.split(',')[1]
+                };
+
+                try {
+                    await fetch(`${API_BASE}webhook/receber-comprovante`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    alert('Comprovante enviado com sucesso! 🚀');
+                } catch (e) {
+                    alert('Erro ao enviar comprovante.');
+                }
+                this.setLoading(false);
+            },
+
+            toBase64: file => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            })
+        };
+
+        // Polyfill for .any
+        if (!Array.prototype.any) { Array.prototype.any = function(p) { return this.some(p); }; }
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').then(() => {
+                console.log('Service Worker Registered');
+            });
+        }
+
+        app.init();
+    </script>
+</body>
+</html>
