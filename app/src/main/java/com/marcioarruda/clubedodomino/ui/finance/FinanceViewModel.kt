@@ -263,6 +263,7 @@ class FinanceViewModel(
                     updateUiState(allDebts, currentUser.id, globalStats)
                     
                     // --- RECOVERY OF MISSING MONTHLY FEES (Last 4 Months) ---
+                    val cal = Calendar.getInstance()
                     val curYear = cal.get(Calendar.YEAR)
                     val curMonth = cal.get(Calendar.MONTH)
 

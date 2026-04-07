@@ -552,19 +552,19 @@
                 this.setLoading(true);
                 try {
                     const [players, matches, buchos, mensalidades] = await Promise.all([
-                        fetch(`${API_BASE}webhook/buscar-jogadores`).then(r => r.json()),
-                        fetch(`${API_BASE}webhook/partidas`).then(r => r.json()),
-                        fetch(`${API_BASE}webhook/gravar-buchos`).then(r => r.json()),
-                        fetch(`${API_BASE}webhook/buscar-info-mensalidade`).then(r => r.json())
+                        fetch(`${API_BASE}webhook/buscar-jogadores`).then(r => r.json()).catch(() => []),
+                        fetch(`${API_BASE}webhook/partidas`).then(r => r.json()).catch(() => []),
+                        fetch(`${API_BASE}webhook/gravar-buchos`).then(r => r.json()).catch(() => []),
+                        fetch(`${API_BASE}webhook/buscar-info-mensalidade`).then(r => r.json()).catch(() => [])
                     ]);
 
-                    this.state.players = Array.isArray(data[0]) ? data[0] : [];
-                    this.state.matches = Array.isArray(data[1]) ? data[1] : [];
+                    this.state.players = Array.isArray(players) ? players : [];
+                    this.state.matches = Array.isArray(matches) ? matches : [];
                     
                     // Unified debts list
-                    this.processDebts(this.state.players, data[2] || [], data[3] || []);
-                    this.checkMonthlyFee(data[3], data[0]);
-                    this.checkExtraFee(data[1], data[2], data[0]);
+                    this.processDebts(this.state.players, buchos || [], mensalidades || []);
+                    this.checkMonthlyFee(mensalidades || [], players || []);
+                    this.checkExtraFee(matches, buchos, players);
                     this.renderAll();
                 } catch (e) {
                     console.error("Data load error:", e);
