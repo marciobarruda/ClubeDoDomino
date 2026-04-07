@@ -493,7 +493,10 @@
                     const data = await res.json();
                     
                     // Suporte para múltiplos status de sucesso (Android / Web)
-                    const isSuccess = data.status === 'success' || data.status === 'Login bem sucedido';
+                    const isSuccess = data.status && (
+                        data.status === 'success' || 
+                        data.status.toLowerCase().includes('sucedido')
+                    );
 
                     if (isSuccess) {
                         // Refresh players to find the user details (avatar, full name)
