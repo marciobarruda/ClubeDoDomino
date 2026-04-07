@@ -89,7 +89,7 @@ class MatchViewModel(
                                     entryCal.set(Calendar.HOUR_OF_DAY, 0); entryCal.set(Calendar.MINUTE, 0); entryCal.set(Calendar.SECOND, 0); entryCal.set(Calendar.MILLISECOND, 0)
                                     
                                     val todayCal = Calendar.getInstance()
-                                    val isPast10th = todayCal.get(Calendar.DAY_OF_MONTH) >= 10
+                                    val isPast10th = todayCal.get(Calendar.DAY_OF_MONTH) >= 11
                                     
                                     val prevMonthCal = Calendar.getInstance().apply {
                                         add(Calendar.MONTH, -1)
@@ -126,7 +126,7 @@ class MatchViewModel(
                                     entryCal.set(Calendar.HOUR_OF_DAY, 0); entryCal.set(Calendar.MINUTE, 0); entryCal.set(Calendar.SECOND, 0); entryCal.set(Calendar.MILLISECOND, 0)
 
                                     val todayCal = Calendar.getInstance()
-                                    val isPast10th = todayCal.get(Calendar.DAY_OF_MONTH) >= 10
+                                    val isPast10th = todayCal.get(Calendar.DAY_OF_MONTH) >= 11
                                     
                                     val prevMonthCal = Calendar.getInstance().apply {
                                         add(Calendar.MONTH, -1)
