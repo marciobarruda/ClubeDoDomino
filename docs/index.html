@@ -304,63 +304,74 @@
 
         <!-- Match Registration -->
         <div id="match-screen" class="screen">
-            <h2>Registrar Partida</h2>
-            
-            <div class="team-group">
-                <span class="team-group-label">TIME 1 (Esquerda)</span>
-                <div class="player-select-grid">
-                    <div class="player-slot" onclick="app.showPlayerPicker(0)" id="slot-0">
-                        <i data-lucide="plus"></i>
-                        <span style="font-size: 12px">Jogador 1</span>
-                    </div>
-                    <div class="player-slot" onclick="app.showPlayerPicker(1)" id="slot-1">
-                        <i data-lucide="plus"></i>
-                        <span style="font-size: 12px">Jogador 2</span>
-                    </div>
-                </div>
+
+            <!-- Tela de bloqueio (fora do horário) -->
+            <div id="match-locked" style="display:none; flex-direction: column; align-items: center; justify-content: center; height: 60vh; gap: 16px; text-align: center; padding: 24px">
+                <i data-lucide="clock" style="width: 56px; height: 56px; color: var(--warning)"></i>
+                <h2 style="margin: 0">Módulo Indisponível</h2>
+                <p style="color: var(--text-muted); margin: 0">O registro de partidas só é permitido de <strong>segunda a sexta</strong>, entre <strong>11h45 e 14h00</strong> (horário de Recife).</p>
             </div>
 
-            <div class="team-group">
-                <span class="team-group-label">TIME 2 (Direita)</span>
-                <div class="player-select-grid">
-                    <div class="player-slot" onclick="app.showPlayerPicker(2)" id="slot-2">
-                        <i data-lucide="plus"></i>
-                        <span style="font-size: 12px">Jogador 3</span>
-                    </div>
-                    <div class="player-slot" onclick="app.showPlayerPicker(3)" id="slot-3">
-                        <i data-lucide="plus"></i>
-                        <span style="font-size: 12px">Jogador 4</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Formulário de partida (dentro do horário) -->
+            <div id="match-form">
+                <h2>Registrar Partida</h2>
 
-            <div class="card">
-                <div style="display: flex; justify-content: space-around; align-items: center">
-                    <div style="text-align: center">
-                        <span style="font-size: 12px; color: var(--text-muted)">TIME 1</span>
-                        <div class="score-input">
-                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, -1)">-</button>
-                            <div class="score-box" id="score-1">0</div>
-                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, 1)">+</button>
+                <div class="team-group">
+                    <span class="team-group-label">TIME 1 (Esquerda)</span>
+                    <div class="player-select-grid">
+                        <div class="player-slot" onclick="app.showPlayerPicker(0)" id="slot-0">
+                            <i data-lucide="plus"></i>
+                            <span style="font-size: 12px">Jogador 1</span>
                         </div>
-                    </div>
-                    <div style="text-align: center">
-                        <span style="font-size: 12px; color: var(--text-muted)">TIME 2</span>
-                        <div class="score-input">
-                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, -1)">-</button>
-                            <div class="score-box" id="score-2">0</div>
-                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, 1)">+</button>
+                        <div class="player-slot" onclick="app.showPlayerPicker(1)" id="slot-1">
+                            <i data-lucide="plus"></i>
+                            <span style="font-size: 12px">Jogador 2</span>
                         </div>
                     </div>
                 </div>
-                
-                <div id="bucho-re-container" style="display: none; align-items: center; justify-content: center; gap: 10px; margin-top: 10px">
-                    <input type="checkbox" id="check-re" style="width: 24px; height: 24px">
-                    <label for="check-re">Fomos Bucho de Ré? 🔥</label>
-                </div>
-            </div>
 
-            <button class="btn btn-primary" style="width: 100%; margin-top: 20px" onclick="app.saveMatch()">Salvar Partida</button>
+                <div class="team-group">
+                    <span class="team-group-label">TIME 2 (Direita)</span>
+                    <div class="player-select-grid">
+                        <div class="player-slot" onclick="app.showPlayerPicker(2)" id="slot-2">
+                            <i data-lucide="plus"></i>
+                            <span style="font-size: 12px">Jogador 3</span>
+                        </div>
+                        <div class="player-slot" onclick="app.showPlayerPicker(3)" id="slot-3">
+                            <i data-lucide="plus"></i>
+                            <span style="font-size: 12px">Jogador 4</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-around; align-items: center">
+                        <div style="text-align: center">
+                            <span style="font-size: 12px; color: var(--text-muted)">TIME 1</span>
+                            <div class="score-input">
+                                <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, -1)">-</button>
+                                <div class="score-box" id="score-1">0</div>
+                                <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, 1)">+</button>
+                            </div>
+                        </div>
+                        <div style="text-align: center">
+                            <span style="font-size: 12px; color: var(--text-muted)">TIME 2</span>
+                            <div class="score-input">
+                                <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, -1)">-</button>
+                                <div class="score-box" id="score-2">0</div>
+                                <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="bucho-re-container" style="display: none; align-items: center; justify-content: center; gap: 10px; margin-top: 10px">
+                        <input type="checkbox" id="check-re" style="width: 24px; height: 24px">
+                        <label for="check-re">Fomos Bucho de Ré? 🔥</label>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; margin-top: 20px" onclick="app.saveMatch()">Salvar Partida</button>
+            </div>
         </div>
 
         <!-- Finance -->
@@ -408,7 +419,7 @@
                 <i data-lucide="layout-dashboard"></i>
                 <span>Home</span>
             </a>
-            <a href="#" class="nav-item" onclick="app.navigate('match', event)">
+            <a href="#" class="nav-item" id="nav-match" onclick="app.navigate('match', event)">
                 <i data-lucide="plus-square"></i>
                 <span>Jogar</span>
             </a>
@@ -460,11 +471,29 @@
                 globalStats: null
             },
 
+            isMatchAvailable() {
+                const nowRecife = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Recife' }));
+                const dow = nowRecife.getDay();
+                const minuteOfDay = nowRecife.getHours() * 60 + nowRecife.getMinutes();
+                return dow >= 1 && dow <= 5 && minuteOfDay >= (11 * 60 + 45) && minuteOfDay < (14 * 60);
+            },
+
+            applyMatchAvailability() {
+                const available = this.isMatchAvailable();
+                const navBtn = document.getElementById('nav-match');
+                const locked = document.getElementById('match-locked');
+                const form = document.getElementById('match-form');
+                if (navBtn) navBtn.style.opacity = available ? '1' : '0.4';
+                if (locked) locked.style.display = available ? 'none' : 'flex';
+                if (form)   form.style.display   = available ? 'block' : 'none';
+            },
+
             async init() {
                 if (this.state.user) {
                     this.showMain();
                     await this.loadData();
                     lucide.createIcons();
+                    this.applyMatchAvailability();
                 } else {
                     this.showLogin();
                 }
@@ -924,6 +953,9 @@
                 const items = document.querySelectorAll('.nav-item');
                 const targetIdx = id === 'dashboard' ? 0 : (id === 'match' ? 1 : (id === 'finance' ? 2 : 3));
                 items[targetIdx].classList.add('active');
+
+                // Recheck time lock every time match tab is opened
+                if (id === 'match') this.applyMatchAvailability();
             },
 
             // --- Match Registration Logic ---
@@ -992,15 +1024,8 @@
             async saveMatch() {
                 if (this.state.selectedPlayers.includes(null)) return this.showAlert('Atenção', 'Selecione os 4 jogadores!');
 
-                // Trava de horário — (seg–sex, 11:45–14:00, fuso Recife)
-                const nowRecife = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Recife' }));
-                const dow = nowRecife.getDay(); // 0=Dom, 6=Sáb
-                const h = nowRecife.getHours();
-                const m = nowRecife.getMinutes();
-                const minuteOfDay = h * 60 + m;
-                const isWeekday = dow >= 1 && dow <= 5;
-                const inWindow = minuteOfDay >= (11 * 60 + 45) && minuteOfDay < (14 * 60);
-                if (!isWeekday || !inWindow) {
+                // Trava de horário — usa helper centralizado
+                if (!this.isMatchAvailable()) {
                     return this.showAlert('Fora do horário', 'O registro de partidas só é permitido de segunda a sexta, entre 11h45 e 14h00 (horário de Recife).');
                 }
 
@@ -1160,6 +1185,13 @@
         }
 
         app.init();
+
+        // Reload page when user comes back to the tab (prevents time-window bypass)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && localStorage.getItem('user')) {
+                location.reload();
+            }
+        });
     </script>
 </body>
 </html>
