@@ -1,19 +1,7 @@
 package com.marcioarruda.clubedodomino.data
 
 import com.google.gson.JsonSyntaxException
-import com.marcioarruda.clubedodomino.data.network.ApiService
-import com.marcioarruda.clubedodomino.data.network.BuchoDto
-import com.marcioarruda.clubedodomino.data.network.ComprovanteRequest
-import com.marcioarruda.clubedodomino.data.network.CreateMensalidadeRequest
-import com.marcioarruda.clubedodomino.data.network.DebitRequest
-import com.marcioarruda.clubedodomino.data.network.LoginRequest
-import com.marcioarruda.clubedodomino.data.network.LoginResponse
-import com.marcioarruda.clubedodomino.data.network.MatchDTO
-import com.marcioarruda.clubedodomino.data.network.MensalidadeDto
-import com.marcioarruda.clubedodomino.data.network.PlayerDTO
-import com.marcioarruda.clubedodomino.data.network.RetrofitClient
-import com.marcioarruda.clubedodomino.data.network.UpdatePlayerRequest
-import com.marcioarruda.clubedodomino.data.network.UpdateProfileRequest
+import com.marcioarruda.clubedodomino.data.network.*
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -405,6 +393,8 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
             dupla_vencedora = if (score1 > score2) "${team1Player1.name}/${team1Player2.name}" else "${team2Player1.name}/${team2Player2.name}",
             buttonName = buttonName
         )
+    }
+
     private fun String.normalize(): String {
         return java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
             .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
