@@ -575,18 +575,7 @@
                     this.state.players = Array.isArray(players) ? players : [];
                     this.state.matches = Array.isArray(matches) ? matches : [];
                     
-                    // Fetch global stats for current month display
-                    const now = new Date();
-                    const targetMes = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
-                    try {
-                        const statsRes = await fetch(`${API_BASE}webhook/estatisticas-globais`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ mes: now.getMonth() + 1, ano: now.getFullYear() })
-                        });
-                        const list = await statsRes.json();
-                        this.state.globalStats = list.find(m => m.mes === targetMes) || null;
-                    } catch (e) { console.warn("Global stats fetch failed", e); }
+
 
                     // Unified debts list
                     this.processDebts(this.state.players, buchos || [], mensalidades || []);
