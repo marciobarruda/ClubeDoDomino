@@ -188,28 +188,7 @@ fun FinanceScreen(
                                 TotalDueCard(uiState.totalDue, uiState.totalUpcoming)
                             }
                             
-                            uiState.globalStats?.let { stats ->
-                                item {
-                                    Card(
-                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceAround
-                                        ) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text("Média Partidas (Mês Ant.)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                                Text(String.format("%.1f", stats.avgMatches), color = RoyalGold, style = MaterialTheme.typography.titleLarge)
-                                            }
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text("Média Buchos (Mês Ant.)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                                Text(String.format("%.1f", stats.avgBuchos), color = RoyalGold, style = MaterialTheme.typography.titleLarge)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+
 
                             if (uiState.debts.isEmpty()) {
                                 item {

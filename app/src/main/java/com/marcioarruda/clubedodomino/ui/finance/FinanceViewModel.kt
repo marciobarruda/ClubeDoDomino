@@ -46,7 +46,6 @@ data class FinanceUiState(
     val uploadStatus: UploadStatus = UploadStatus.IDLE,
     val uploadError: String? = null,
     val navigateToHome: Boolean = false,
-    val globalStats: GlobalStats? = null,
     val isRefreshing: Boolean = false
 )
 
@@ -135,9 +134,7 @@ class FinanceViewModel(
 
                     val buchosResult = repository.getBuchosResult()
                     val mensalidadesResult = repository.getMensalidadesResult()
-                    val matches = repository.getMatches()
-                    val buchosList = buchosResult.getOrNull() ?: emptyList()
-
+                    
                     val allDebts = mutableListOf<FinancialEntry>()
                     buchosResult.onSuccess { buchos ->
                         allDebts.addAll(buchos.mapNotNull { with(repository) { it.toFinancialEntry(users) } })
@@ -183,11 +180,8 @@ class FinanceViewModel(
                     // Final Refresh
                     val finalBuchos = repository.getBuchosResult().getOrNull()?.mapNotNull { with(repository) { it.toFinancialEntry(users) } } ?: emptyList()
                     val finalMensalidades = repository.getMensalidadesResult().getOrNull()?.mapNotNull { with(repository) { it.toFinancialEntry(users) } } ?: emptyList()
-                    val prevMonthCal = Calendar.getInstance().apply { add(Calendar.MONTH, -1) }
                     
-                    val globalStats = adminRepository.calculateStats(matches, buchosList, users, prevMonthCal.get(Calendar.MONTH), prevMonthCal.get(Calendar.YEAR))
-                    
-                    updateUiState(finalBuchos + finalMensalidades, currentUser.id, globalStats)
+                    updateUiState(finalBuchos + finalMensalidades, currentUser.id)
 
                 } catch (e: Exception) {
                     Log.e("FinanceViewModel", "Erro no carregamento financeiro", e)
@@ -197,7 +191,7 @@ class FinanceViewModel(
         }
     }
 
-    private fun updateUiState(allDebts: List<FinancialEntry>, userId: String, globalStats: GlobalStats? = null) {
+    private fun updateUiState(allDebts: List<FinancialEntry>, userId: String) {
         val userDebts = allDebts.filter { it.userId == userId }
         val pendingDebts = userDebts.filter { 
             val isPaidExtraTax = it.type == FinancialEntryType.EXTRA_TAX && it.status == FinancialEntryStatus.PAID
@@ -232,7 +226,7 @@ class FinanceViewModel(
         _uiState.update {
             it.copy(
                 isLoading = false, isRefreshing = false, debts = sortedDebts,
-                totalDue = totalDue, totalUpcoming = totalUpcoming, globalStats = globalStats
+                totalDue = totalDue, totalUpcoming = totalUpcoming
             )
         }
     }
