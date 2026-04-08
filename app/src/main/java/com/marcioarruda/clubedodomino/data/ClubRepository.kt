@@ -191,11 +191,10 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         apiService.uploadComprovante(request)
     }
 
-    suspend fun getTaxasExtras(): List<TaxaExtraDto>? {
-        return try {
-            apiService.getTaxasExtras()
+    suspend fun triggerTaxasExtras() {
+        try {
+            apiService.triggerTaxasExtras()
         } catch (e: Exception) {
-            null
         }
     }
 

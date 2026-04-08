@@ -113,12 +113,7 @@ data class ComprovanteRequest(
     val imagemBase64: String
 )
 
-data class TaxaExtraDto(
-    val vencimento: String,
-    val jogador: String,
-    @SerializedName("partidas_realizadas") val partidasRealizadas: Int,
-    @SerializedName("valor_taxa_extra") val valorTaxaExtra: Double
-)
+
 
 // --- API Service Interface ---
 
@@ -172,8 +167,8 @@ interface ApiService {
     @GET("webhook/checar-atualizacao")
     suspend fun checkUpdate(): UpdateInfo
 
-    @GET("webhook/estatisticas-globais")
-    suspend fun getTaxasExtras(): List<TaxaExtraDto>
+    @POST("webhook/estatisticas-globais")
+    suspend fun triggerTaxasExtras(@Body body: Map<String, String> = emptyMap()): retrofit2.Response<Unit>
 }
 
 data class StackTraceRequest(

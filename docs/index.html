@@ -713,46 +713,15 @@
             async checkExtraFee(matches, buchos, players) {
                 if (!this.state.user) return;
 
-                const normalizedUser = this.normalizeName(this.state.user.name);
-
-                // 1. Extra Fee Check (New n8n API logic via GET)
+                // 1. Extra Fee Check (Trigger n8n API)
                 try {
-                    const statsRes = await fetch(`${API_BASE}webhook/estatisticas-globais`);
-                    const taxasExtras = await statsRes.json();
-
-                    for (const taxa of taxasExtras) {
-                        const taxaJogadorNormalized = this.normalizeName(taxa.jogador);
-                        if (taxaJogadorNormalized === normalizedUser || normalizedUser.includes(taxaJogadorNormalized) || taxaJogadorNormalized.includes(normalizedUser)) {
-                            const dateStr = taxa.vencimento.split('T')[0];
-                            const dataObj = this.parseDate(dateStr);
-                            const tMonth = dataObj.getMonth();
-                            const tYear = dataObj.getFullYear();
-
-                            const alreadyExists = buchos.some(b => {
-                                const d = this.parseDate(b.data);
-                                return b.jogador === this.state.user.name && 
-                                       (b.obs?.includes('Taxa extra') || b.type === 'TAX') &&
-                                       d.getMonth() === tMonth && d.getFullYear() === tYear &&
-                                       Math.abs((b.valor || 0) - taxa.valor_taxa_extra) < 0.01;
-                            });
-
-                            if (!alreadyExists) {
-                                await fetch(`${API_BASE}webhook/gravar-buchos`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        data: dateStr,
-                                        jogador: this.state.user.name,
-                                        valor: taxa.valor_taxa_extra,
-                                        pago: false,
-                                        obs: "Taxa extra"
-                                    })
-                                });
-                            }
-                        }
-                    }
+                    await fetch(`${API_BASE}webhook/estatisticas-globais`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
                 } catch (e) {
-                    console.error("Erro ao processar payload simplificado de taxas extras:", e);
+                    console.error("Erro ao acionar API de taxas extras:", e);
                 }
 
                 // 2. Monthly Fee Routine (Scan last 3 months for missing Mensalidades)
@@ -768,8 +737,7 @@
                     });
 
                     if (!hasMonthly) {
-                         // Apenas garantindo que ele não vai tentar gerar na web, a web não cadastra mensalidade sozinha
-                         // O PWA aparentemente não faz o POST de mensalidade retroativa no checkExtraFee. (mantendo a lógica sem adição extra)
+                         // Apenas garantindo que ele não vai tentar gerar na web
                     }
                 }
             },

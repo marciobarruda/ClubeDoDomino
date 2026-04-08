@@ -150,53 +150,12 @@ class FinanceViewModel(
                     val isActive = adminRepository.isPlayerActive(userId)
                     val isOnVacation = adminRepository.isPlayerOnVacation(userId)
 
-                    // 1. Extra Fee Check (New n8n API)
+                    // 1. Extra Fee Check (Trigger n8n API)
                     if (isActive && !isOnVacation) {
                         try {
-                            val taxasExtras = repository.getTaxasExtras() ?: emptyList()
-                            val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                            
-                            fun normalizeName(name: String): String {
-                                return java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD)
-                                    .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
-                                    .uppercase()
-                            }
-                            
-                            val currentUserNormalized = normalizeName(currentUser.name)
-
-                            taxasExtras.forEach { taxa ->
-                                val taxaJogadorNormalized = normalizeName(taxa.jogador)
-                                if (taxaJogadorNormalized == currentUserNormalized || currentUserNormalized.contains(taxaJogadorNormalized) || taxaJogadorNormalized.contains(currentUserNormalized)) {
-                                    
-                                    val dateStr = taxa.vencimento.split("T").firstOrNull() ?: taxa.vencimento
-                                    val date = dateFormat.parse(dateStr)
-                                    if (date != null) {
-                                        val cal = Calendar.getInstance().apply { time = date }
-                                        val tMonth = cal.get(Calendar.MONTH)
-                                        val tYear = cal.get(Calendar.YEAR)
-
-                                        val alreadyHasExtra = allDebts.any { b ->
-                                            val bCal = Calendar.getInstance().apply { time = b.dueDate }
-                                            b.userId == currentUser.id && 
-                                            (b.type == FinancialEntryType.EXTRA_TAX || b.title.contains("Taxa extra", ignoreCase = true)) &&
-                                            bCal.get(Calendar.MONTH) == tMonth && bCal.get(Calendar.YEAR) == tYear &&
-                                            Math.abs(b.amount - taxa.valorTaxaExtra) < 0.01
-                                        }
-
-                                        if (!alreadyHasExtra) {
-                                            repository.registerDebit(com.marcioarruda.clubedodomino.data.network.DebitRequest(
-                                                data = dateStr,
-                                                jogador = currentUser.name, 
-                                                valor = taxa.valorTaxaExtra, 
-                                                pago = false, 
-                                                obs = "Taxa extra"
-                                            ))
-                                        }
-                                    }
-                                }
-                            }
+                            repository.triggerTaxasExtras()
                         } catch(e: Exception) {
-                            Log.e("FinanceViewModel", "Erro ao buscar taxas extras", e)
+                            Log.e("FinanceViewModel", "Erro ao acionar API de taxas extras", e)
                         }
                     }
 
