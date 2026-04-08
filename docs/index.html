@@ -991,7 +991,19 @@
 
             async saveMatch() {
                 if (this.state.selectedPlayers.includes(null)) return this.showAlert('Atenção', 'Selecione os 4 jogadores!');
-                
+
+                // Trava de horário — (seg–sex, 11:45–14:00, fuso Recife)
+                const nowRecife = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Recife' }));
+                const dow = nowRecife.getDay(); // 0=Dom, 6=Sáb
+                const h = nowRecife.getHours();
+                const m = nowRecife.getMinutes();
+                const minuteOfDay = h * 60 + m;
+                const isWeekday = dow >= 1 && dow <= 5;
+                const inWindow = minuteOfDay >= (11 * 60 + 45) && minuteOfDay < (14 * 60);
+                if (!isWeekday || !inWindow) {
+                    return this.showAlert('Fora do horário', 'O registro de partidas só é permitido de segunda a sexta, entre 11h45 e 14h00 (horário de Recife).');
+                }
+
                 this.setLoading(true);
                 try {
                     const s1 = this.state.score1;
