@@ -713,112 +713,63 @@
             async checkExtraFee(matches, buchos, players) {
                 if (!this.state.user) return;
 
+                const normalizedUser = this.normalizeName(this.state.user.name);
+
+                // 1. Extra Fee Check (New n8n API logic via GET)
+                try {
+                    const statsRes = await fetch(`${API_BASE}webhook/estatisticas-globais`);
+                    const taxasExtras = await statsRes.json();
+
+                    for (const taxa of taxasExtras) {
+                        const taxaJogadorNormalized = this.normalizeName(taxa.jogador);
+                        if (taxaJogadorNormalized === normalizedUser || normalizedUser.includes(taxaJogadorNormalized) || taxaJogadorNormalized.includes(normalizedUser)) {
+                            const dateStr = taxa.vencimento.split('T')[0];
+                            const dataObj = this.parseDate(dateStr);
+                            const tMonth = dataObj.getMonth();
+                            const tYear = dataObj.getFullYear();
+
+                            const alreadyExists = buchos.some(b => {
+                                const d = this.parseDate(b.data);
+                                return b.jogador === this.state.user.name && 
+                                       (b.obs?.includes('Taxa extra') || b.type === 'TAX') &&
+                                       d.getMonth() === tMonth && d.getFullYear() === tYear &&
+                                       Math.abs((b.valor || 0) - taxa.valor_taxa_extra) < 0.01;
+                            });
+
+                            if (!alreadyExists) {
+                                await fetch(`${API_BASE}webhook/gravar-buchos`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        data: dateStr,
+                                        jogador: this.state.user.name,
+                                        valor: taxa.valor_taxa_extra,
+                                        pago: false,
+                                        obs: "Taxa extra"
+                                    })
+                                });
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Erro ao processar payload simplificado de taxas extras:", e);
+                }
+
+                // 2. Monthly Fee Routine (Scan last 3 months for missing Mensalidades)
                 const now = new Date();
-                
-                // Scan last 3 months for missing Extra Fees (Retroactive)
                 for (let i = 1; i <= 3; i++) {
                     const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
                     const targetMonth = targetDate.getMonth();
                     const targetYear = targetDate.getFullYear();
 
-                    // 1. Fetch Global Stats from API (with local fallback)
-                    let clubAvgMatches = 0;
-                    let baseFee = 0;
-                    let myMatchesTargetMonth = null;
-                    let myBuchosValue = null;
+                    const hasMonthly = buchos.some(b => {
+                        const d = this.parseDate(b.data);
+                        return b.jogador === this.state.user.name && b.obs === 'Mensalidade' && d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+                    });
 
-                    const targetMes = `${(targetMonth + 1).toString().padStart(2, '0')}/${targetYear}`;
-                    try {
-                        const statsRes = await fetch(`${API_BASE}webhook/estatisticas-globais`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ mes: targetMonth + 1, ano: targetYear })
-                        });
-                        const list = await statsRes.json();
-                        const monthData = list.find(m => m.mes === targetMes);
-                        if (!monthData) throw new Error("Mês não encontrado na API");
-
-                        clubAvgMatches = monthData.resumo_membros.media_partidas_por_membro;
-                        baseFee = monthData.resumo_membros.valor_medio_de_buchos;
-                        
-                        const normalizedUser = this.normalizeName(this.state.user.name);
-                        const playerDetail = monthData.detalhado_por_jogador.find(p => {
-                            const normalizedP = this.normalizeName(p.nome);
-                            return normalizedP === normalizedUser || normalizedUser.includes(normalizedP);
-                        });
-                        if (playerDetail) {
-                            myMatchesTargetMonth = playerDetail.partidas;
-                            myBuchosValue = playerDetail.valor_total;
-                        } else {
-                            // If API is success but player not found, assume 0 matches/buchos (Full Fee)
-                            myMatchesTargetMonth = 0;
-                            myBuchosValue = 0;
-                        }
-                    } catch (e) {
-                        console.warn("Falling back to local stats calculation", e);
-                        const activeCount = players.filter(p => !p.jogador.includes('NÃO MEMBRO')).length || 1;
-                        const clubMatchesTargetMonth = matches.filter(m => {
-                            const d = this.parseDate(m.data);
-                            return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-                        });
-                        clubAvgMatches = clubMatchesTargetMonth.length / activeCount;
-
-                        const clubBuchosTargetMonth = buchos.filter(b => {
-                            const d = this.parseDate(b.data);
-                            return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-                        });
-                        baseFee = clubBuchosTargetMonth.reduce((acc, b) => acc + (b.valor || 0), 0) / activeCount;
-                    }
-
-                    // 2. User Performance for TARGET month (use API values or calculate locally)
-                    if (myMatchesTargetMonth === null) {
-                        myMatchesTargetMonth = matches.filter(m => {
-                            const d = this.parseDate(m.data);
-                            return d.getMonth() === targetMonth && d.getFullYear() === targetYear &&
-                                   [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name);
-                        }).length;
-                    }
-
-                    if (myMatchesTargetMonth < clubAvgMatches) {
-                        if (myBuchosValue === null) {
-                            myBuchosValue = buchos
-                                .filter(b => {
-                                    const d = this.parseDate(b.data);
-                                    return b.jogador === this.state.user.name && d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-                                })
-                                .reduce((acc, b) => acc + (b.valor || 0), 0);
-                        }
-                        
-                        const deficit = baseFee - myBuchosValue;
-
-                        if (deficit > 0.01) {
-                            // Robust check for existing record
-                            const alreadyExists = buchos.some(b => {
-                                const d = this.parseDate(b.data);
-                                return b.jogador === this.state.user.name && 
-                                       (b.obs?.includes('Taxa extra') || b.type === 'TAX') &&
-                                       d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-                            });
-
-                            if (!alreadyExists) {
-                                const lastBizDay = this.getLastBusinessDay(targetYear, targetMonth);
-                                const dateStr = lastBizDay.toISOString().split('T')[0];
-
-                                try {
-                                    await fetch(`${API_BASE}webhook/gravar-buchos`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            data: dateStr,
-                                            jogador: this.state.user.name,
-                                            valor: deficit,
-                                            pago: false,
-                                            obs: `Taxa Extra - (Déficit de Buchos) - ref: ${targetMes}. Motivo: Participação inferior à média (Alvo: ${clubAvgMatches.toFixed(1)} partidas. Realizado: ${myMatchesTargetMonth} partidas).`
-                                        })
-                                    });
-                                } catch(e) { console.error(`Taxa extra error for ${targetMonth+1}/${targetYear}:`, e); }
-                            }
-                        }
+                    if (!hasMonthly) {
+                         // Apenas garantindo que ele não vai tentar gerar na web, a web não cadastra mensalidade sozinha
+                         // O PWA aparentemente não faz o POST de mensalidade retroativa no checkExtraFee. (mantendo a lógica sem adição extra)
                     }
                 }
             },

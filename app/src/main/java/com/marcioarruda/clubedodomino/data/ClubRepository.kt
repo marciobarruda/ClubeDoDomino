@@ -191,12 +191,9 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         apiService.uploadComprovante(request)
     }
 
-    suspend fun getGlobalStats(month: Int, year: Int, playerName: String? = null): GlobalStats? {
+    suspend fun getTaxasExtras(): List<TaxaExtraDto>? {
         return try {
-            val list = apiService.getGlobalStats(GlobalStatsRequest(month + 1, year))
-            val targetMes = String.format("%02d/%d", month + 1, year)
-            val monthData = list.find { it.mes == targetMes } ?: return null
-            monthData.toGlobalStats(playerName)
+            apiService.getTaxasExtras()
         } catch (e: Exception) {
             null
         }
@@ -321,23 +318,7 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         )
     }
 
-    private fun GlobalStatsMonthDto.toGlobalStats(playerName: String?): GlobalStats {
-        val detail = playerName?.let { name ->
-            val normalizedSearch = name.normalize()
-            this.detalhado?.find { 
-                val normalizedTarget = it.nome?.normalize() ?: ""
-                normalizedTarget == normalizedSearch || normalizedSearch.contains(normalizedTarget)
-            }
-        }
-        
-        return GlobalStats(
-            avgMatches = this.resumo?.mediaPartidas ?: 0.0,
-            avgBuchos = this.resumo?.valorMedioBuchos ?: 0.0,
-            activeMembersCount = this.resumo?.totalMembros ?: 0,
-            playerMatches = if (playerName != null) (detail?.partidas ?: 0) else null,
-            playerBuchosValue = if (playerName != null) (detail?.valorTotal ?: 0.0) else null
-        )
-    }
+
 
     private fun PlayerDTO.toUser(): User? {
         if (this.email.isNullOrBlank() || this.jogador.isNullOrBlank()) {

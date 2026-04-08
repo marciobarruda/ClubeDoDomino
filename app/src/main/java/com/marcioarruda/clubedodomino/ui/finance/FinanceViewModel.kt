@@ -150,50 +150,62 @@ class FinanceViewModel(
                     val isActive = adminRepository.isPlayerActive(userId)
                     val isOnVacation = adminRepository.isPlayerOnVacation(userId)
 
+                    // 1. Extra Fee Check (New n8n API)
+                    if (isActive && !isOnVacation) {
+                        try {
+                            val taxasExtras = repository.getTaxasExtras() ?: emptyList()
+                            val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                            
+                            fun normalizeName(name: String): String {
+                                return java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD)
+                                    .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
+                                    .uppercase()
+                            }
+                            
+                            val currentUserNormalized = normalizeName(currentUser.name)
+
+                            taxasExtras.forEach { taxa ->
+                                val taxaJogadorNormalized = normalizeName(taxa.jogador)
+                                if (taxaJogadorNormalized == currentUserNormalized || currentUserNormalized.contains(taxaJogadorNormalized) || taxaJogadorNormalized.contains(currentUserNormalized)) {
+                                    
+                                    val dateStr = taxa.vencimento.split("T").firstOrNull() ?: taxa.vencimento
+                                    val date = dateFormat.parse(dateStr)
+                                    if (date != null) {
+                                        val cal = Calendar.getInstance().apply { time = date }
+                                        val tMonth = cal.get(Calendar.MONTH)
+                                        val tYear = cal.get(Calendar.YEAR)
+
+                                        val alreadyHasExtra = allDebts.any { b ->
+                                            val bCal = Calendar.getInstance().apply { time = b.dueDate }
+                                            b.userId == currentUser.id && 
+                                            (b.type == FinancialEntryType.EXTRA_TAX || b.title.contains("Taxa extra", ignoreCase = true)) &&
+                                            bCal.get(Calendar.MONTH) == tMonth && bCal.get(Calendar.YEAR) == tYear &&
+                                            Math.abs(b.amount - taxa.valorTaxaExtra) < 0.01
+                                        }
+
+                                        if (!alreadyHasExtra) {
+                                            repository.registerDebit(com.marcioarruda.clubedodomino.data.network.DebitRequest(
+                                                data = dateStr,
+                                                jogador = currentUser.name, 
+                                                valor = taxa.valorTaxaExtra, 
+                                                pago = false, 
+                                                obs = "Taxa extra"
+                                            ))
+                                        }
+                                    }
+                                }
+                            }
+                        } catch(e: Exception) {
+                            Log.e("FinanceViewModel", "Erro ao buscar taxas extras", e)
+                        }
+                    }
+
+                    // 2. Monthly Fee Check
                     for (i in 1..3) {
                         val targetCal = Calendar.getInstance().apply { add(Calendar.MONTH, -i) }
                         val targetMonth = targetCal.get(Calendar.MONTH)
                         val targetYear = targetCal.get(Calendar.YEAR)
 
-                        // 1. Extra Fee Check
-                        val alreadyHasExtra = allDebts.any { b ->
-                            val bCal = Calendar.getInstance().apply { time = b.dueDate }
-                            b.userId == currentUser.id && b.type == FinancialEntryType.EXTRA_TAX &&
-                                    bCal.get(Calendar.MONTH) == targetMonth && bCal.get(Calendar.YEAR) == targetYear
-                        }
-
-                        if (!alreadyHasExtra && isActive && !isOnVacation) {
-                            val monthStats = repository.getGlobalStats(targetMonth, targetYear, currentUser.name) 
-                                ?: adminRepository.calculateStats(matches, buchosList, users, targetMonth, targetYear)
-                            
-                            val playerMatches = monthStats.playerMatches ?: matches.count { m ->
-                                val mCal = Calendar.getInstance().apply { time = m.date }
-                                mCal.get(Calendar.MONTH) == targetMonth && mCal.get(Calendar.YEAR) == targetYear &&
-                                (m.team1Player1.id == userId || m.team1Player2.id == userId || 
-                                 m.team2Player1.id == userId || m.team2Player2.id == userId)
-                            }
-
-                            if (playerMatches < monthStats.avgMatches) {
-                                val playerBuchosValue = monthStats.playerBuchosValue ?: allDebts.filter { b ->
-                                    val bCal = Calendar.getInstance().apply { time = b.dueDate }
-                                    b.userId == currentUser.id && b.type == FinancialEntryType.BUCHO &&
-                                    bCal.get(Calendar.MONTH) == targetMonth && bCal.get(Calendar.YEAR) == targetYear
-                                }.sumOf { it.amount }
-
-                                val deficit = monthStats.avgBuchos - playerBuchosValue
-                                if (deficit > 0.01) {
-                                    val lastBusinessDay = adminRepository.getLastBusinessDayOfMonth(targetYear, targetMonth)
-                                    val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                                    val obsStr = "Taxa Extra - (Déficit de Buchos) - ref: ${String.format("%02d/%d", targetMonth + 1, targetYear)}. Motivo: Participação inferior à média (Alvo: ${String.format("%.1f", monthStats.avgMatches)} partidas. Realizado: $playerMatches partidas)."
-                                    repository.registerDebit(com.marcioarruda.clubedodomino.data.network.DebitRequest(
-                                        data = dateFormat.format(lastBusinessDay),
-                                        jogador = currentUser.name, valor = deficit, pago = false, obs = obsStr
-                                    ))
-                                }
-                            }
-                        }
-
-                        // 2. Monthly Fee Check
                         val hasMonthly = allDebts.any { m ->
                             val mCal = Calendar.getInstance().apply { time = m.dueDate }
                             m.userId == currentUser.id && m.type == FinancialEntryType.MONTHLY_FEE &&
@@ -213,8 +225,8 @@ class FinanceViewModel(
                     val finalBuchos = repository.getBuchosResult().getOrNull()?.mapNotNull { with(repository) { it.toFinancialEntry(users) } } ?: emptyList()
                     val finalMensalidades = repository.getMensalidadesResult().getOrNull()?.mapNotNull { with(repository) { it.toFinancialEntry(users) } } ?: emptyList()
                     val prevMonthCal = Calendar.getInstance().apply { add(Calendar.MONTH, -1) }
-                    val globalStats = repository.getGlobalStats(prevMonthCal.get(Calendar.MONTH), prevMonthCal.get(Calendar.YEAR), currentUser.name)
-                        ?: adminRepository.calculateStats(matches, buchosList, users, prevMonthCal.get(Calendar.MONTH), prevMonthCal.get(Calendar.YEAR))
+                    
+                    val globalStats = adminRepository.calculateStats(matches, buchosList, users, prevMonthCal.get(Calendar.MONTH), prevMonthCal.get(Calendar.YEAR))
                     
                     updateUiState(finalBuchos + finalMensalidades, currentUser.id, globalStats)
 
