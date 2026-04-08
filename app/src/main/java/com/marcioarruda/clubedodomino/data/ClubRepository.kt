@@ -345,11 +345,9 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         return GlobalStats(
             avgMatches = this.resumo?.mediaPartidas ?: 0.0,
             avgBuchos = this.resumo?.valorMedioBuchos ?: 0.0,
-            totalMatchesMonth = 0, 
-            totalBuchosMonth = 0,
             activeMembersCount = this.resumo?.totalMembros ?: 0,
-            playerMatches = detail?.partidas,
-            playerBuchosValue = detail?.valorTotal
+            playerMatches = if (playerName != null) (detail?.partidas ?: 0) else null,
+            playerBuchosValue = if (playerName != null) (detail?.valorTotal ?: 0.0) else null
         )
     }
 

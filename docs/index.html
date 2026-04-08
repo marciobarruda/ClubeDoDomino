@@ -749,6 +749,10 @@
                         if (playerDetail) {
                             myMatchesTargetMonth = playerDetail.partidas;
                             myBuchosValue = playerDetail.valor_total;
+                        } else {
+                            // If API is success but player not found, assume 0 matches/buchos (Full Fee)
+                            myMatchesTargetMonth = 0;
+                            myBuchosValue = 0;
                         }
                     } catch (e) {
                         console.warn("Falling back to local stats calculation", e);
