@@ -150,47 +150,21 @@ class FinanceViewModel(
                     val isActive = adminRepository.isPlayerActive(userId)
                     val isOnVacation = adminRepository.isPlayerOnVacation(userId)
 
+                    // 1. Extra Fee Check (Trigger n8n API)
+                    if (isActive && !isOnVacation) {
+                        try {
+                            repository.triggerTaxasExtras()
+                        } catch(e: Exception) {
+                            Log.e("FinanceViewModel", "Erro ao acionar API de taxas extras", e)
+                        }
+                    }
+
+                    // 2. Monthly Fee Check
                     for (i in 1..3) {
                         val targetCal = Calendar.getInstance().apply { add(Calendar.MONTH, -i) }
                         val targetMonth = targetCal.get(Calendar.MONTH)
                         val targetYear = targetCal.get(Calendar.YEAR)
 
-                        // 1. Extra Fee Check
-                        val alreadyHasExtra = allDebts.any { b ->
-                            val bCal = Calendar.getInstance().apply { time = b.dueDate }
-                            b.userId == currentUser.id && b.type == FinancialEntryType.EXTRA_TAX &&
-                                    bCal.get(Calendar.MONTH) == targetMonth && bCal.get(Calendar.YEAR) == targetYear
-                        }
-
-                        if (!alreadyHasExtra && isActive && !isOnVacation) {
-                            val monthStats = adminRepository.calculateStats(matches, buchosList, users, targetMonth, targetYear)
-                            val playerMatches = matches.count { m ->
-                                val mCal = Calendar.getInstance().apply { time = m.date }
-                                mCal.get(Calendar.MONTH) == targetMonth && mCal.get(Calendar.YEAR) == targetYear &&
-                                (m.team1Player1.id == userId || m.team1Player2.id == userId || 
-                                 m.team2Player1.id == userId || m.team2Player2.id == userId)
-                            }
-
-                            if (playerMatches < monthStats.avgMatches) {
-                                val playerBuchosValue = allDebts.filter { b ->
-                                    val bCal = Calendar.getInstance().apply { time = b.dueDate }
-                                    b.userId == currentUser.id && b.type == FinancialEntryType.BUCHO &&
-                                    bCal.get(Calendar.MONTH) == targetMonth && bCal.get(Calendar.YEAR) == targetYear
-                                }.sumOf { it.amount }
-
-                                val deficit = monthStats.avgBuchos - playerBuchosValue
-                                if (deficit > 0.01) {
-                                    val lastBusinessDay = adminRepository.getLastBusinessDayOfMonth(targetYear, targetMonth)
-                                    val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                                    repository.registerDebit(com.marcioarruda.clubedodomino.data.network.DebitRequest(
-                                        data = dateFormat.format(lastBusinessDay),
-                                        jogador = currentUser.name, valor = deficit, pago = false, obs = "Taxa extra"
-                                    ))
-                                }
-                            }
-                        }
-
-                        // 2. Monthly Fee Check
                         val hasMonthly = allDebts.any { m ->
                             val mCal = Calendar.getInstance().apply { time = m.dueDate }
                             m.userId == currentUser.id && m.type == FinancialEntryType.MONTHLY_FEE &&
@@ -210,6 +184,7 @@ class FinanceViewModel(
                     val finalBuchos = repository.getBuchosResult().getOrNull()?.mapNotNull { with(repository) { it.toFinancialEntry(users) } } ?: emptyList()
                     val finalMensalidades = repository.getMensalidadesResult().getOrNull()?.mapNotNull { with(repository) { it.toFinancialEntry(users) } } ?: emptyList()
                     val prevMonthCal = Calendar.getInstance().apply { add(Calendar.MONTH, -1) }
+                    
                     val globalStats = adminRepository.calculateStats(matches, buchosList, users, prevMonthCal.get(Calendar.MONTH), prevMonthCal.get(Calendar.YEAR))
                     
                     updateUiState(finalBuchos + finalMensalidades, currentUser.id, globalStats)

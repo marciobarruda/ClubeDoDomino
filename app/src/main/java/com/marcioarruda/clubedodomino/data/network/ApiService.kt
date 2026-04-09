@@ -31,6 +31,7 @@ data class MatchDTO(
     val buchore: Boolean?,
     val pts: Int?,
     val dupla_vencedora: String?,
+    val cadastrado_por: String? = null,
     val buttonName: String? = null
 )
 
@@ -113,6 +114,8 @@ data class ComprovanteRequest(
     val imagemBase64: String
 )
 
+
+
 // --- API Service Interface ---
 
 interface ApiService {
@@ -164,6 +167,9 @@ interface ApiService {
 
     @GET("webhook/checar-atualizacao")
     suspend fun checkUpdate(): UpdateInfo
+
+    @POST("webhook/estatisticas-globais")
+    suspend fun triggerTaxasExtras(@Body body: Map<String, String> = emptyMap()): retrofit2.Response<Unit>
 }
 
 data class StackTraceRequest(

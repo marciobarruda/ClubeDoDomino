@@ -1,23 +1,20 @@
 # Resumo da Atualização Financeira - Clube do Dominó
 
-Este documento serve como ponto de controle para continuar o trabalho em outro computador.
+Este documento serve como ponto de controle para continuar o trabalho.
 
 ## Estado Atual (07/04/2026)
 
 ### O que foi implementado:
-1.  **Versão v43 (Android)**: O app agora possui lógica retroativa para **Mensalidades** e **Taxas Extras**.
-2.  **PWA**: O `index.html` também foi atualizado com a mesma lógica retroativa.
-3.  **Parser de Datas**: Implementei um sistema robusto que entende datas no formato `DD/MM/YYYY` (brasileiro) e `YYYY-MM-DD`. Isso resolveu o problema de o sistema não reconhecer cobranças antigas.
-
-### Bloqueio Atual:
-O cálculo da **Taxa Extra** (média de jogos do clube e média de buchos sofridos) ainda apresenta imprecisões quando feito localmente no celular/PWA. Isso ocorre porque o app nem sempre tem acesso a todo o histórico de partidas do clube.
+1.  **Versão v46 (Android)**: A lógica de checagem retroativa e cálculo de taxa extra do cliente foi **totalmente removida**. O app e o PWA agora se limitam a **disparar a API central no n8n** (como um POST), o que transfere toda a responsabilidade de calcular médias e gerar as cobranças precisas (buchos) diretamente no servidor.
+2.  **PWA**: O `index.html` também teve o código complexado removido e agora apenas envia uma requisição `{}` via POST para acionar o fluxo n8n.
+3.  **Maior Segurança e Escalabilidade**: O n8n tem os dados centralizados para conferir as partidas do clube versus as partidas dos jogadores em um só local, não havendo mais divergências ou atrasos locais gerando taxas indevidas ou não gerando.
 
 ### Próximos Passos:
-- **Aguardar API Customizada**: O usuário está criando um endpoint no N8N que devolverá os valores de `média de partidas` e `valor médio de buchos` já calculados por mês.
-- **Integração**: Assim que o endpoint estiver pronto, devemos atualizar o `FinanceViewModel.kt` e o `index.html` para consultar esses valores antes de decidir gerar a taxa extra.
+- **Monitorar Atribuição Pelo N8N**: Validar se as novas cobranças chegam sem duplicidades nos painéis dos jogadores ao abrir o jogo na aba de transações.
 
 ---
 
 ## Log de Commits Recentes
-- `9f495d9`: Corrigido parser de datas brasileiro (DD/MM/YYYY) e finalizado Taxa Extra retroativa v43
-- `8577608`: Implementado lógica financeira retroativa (Jan, Feb, Mar) no Android e PWA v42
+- `d24448c`: Remove client-side extra fee logic, rely on POST trigger to n8n API (v46)
+- `9323cd0`: Implement n8n simplified tax logic using GET method and upgrade to v45
+- `0e60eb5`: Lógica de taxa integral para jogadores ausentes e bump para v44

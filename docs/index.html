@@ -232,7 +232,26 @@
             animation: spin 1s infinite linear;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-
+ 
+        .match-card.clickable { cursor: pointer; transition: background 0.2s; }
+        .match-card.clickable:active { background: rgba(255,255,255,0.05); }
+        .bucho-re-tag {
+            font-size: 8px;
+            font-weight: 900;
+            color: var(--primary);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: var(--text-muted); font-size: 13px; }
+        .detail-value { color: white; font-weight: 500; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -304,63 +323,74 @@
 
         <!-- Match Registration -->
         <div id="match-screen" class="screen">
-            <h2>Registrar Partida</h2>
-            
-            <div class="team-group">
-                <span class="team-group-label">TIME 1 (Esquerda)</span>
-                <div class="player-select-grid">
-                    <div class="player-slot" onclick="app.showPlayerPicker(0)" id="slot-0">
-                        <i data-lucide="plus"></i>
-                        <span style="font-size: 12px">Jogador 1</span>
-                    </div>
-                    <div class="player-slot" onclick="app.showPlayerPicker(1)" id="slot-1">
-                        <i data-lucide="plus"></i>
-                        <span style="font-size: 12px">Jogador 2</span>
-                    </div>
-                </div>
+
+            <!-- Tela de bloqueio (fora do horário) -->
+            <div id="match-locked" style="display:none; flex-direction: column; align-items: center; justify-content: center; height: 60vh; gap: 16px; text-align: center; padding: 24px">
+                <i data-lucide="clock" style="width: 56px; height: 56px; color: var(--warning)"></i>
+                <h2 style="margin: 0">Módulo Indisponível</h2>
+                <p style="color: var(--text-muted); margin: 0">O registro de partidas só é permitido de <strong>segunda a sexta</strong>, entre <strong>11h45 e 14h00</strong> (horário de Recife).</p>
             </div>
 
-            <div class="team-group">
-                <span class="team-group-label">TIME 2 (Direita)</span>
-                <div class="player-select-grid">
-                    <div class="player-slot" onclick="app.showPlayerPicker(2)" id="slot-2">
-                        <i data-lucide="plus"></i>
-                        <span style="font-size: 12px">Jogador 3</span>
-                    </div>
-                    <div class="player-slot" onclick="app.showPlayerPicker(3)" id="slot-3">
-                        <i data-lucide="plus"></i>
-                        <span style="font-size: 12px">Jogador 4</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Formulário de partida (dentro do horário) -->
+            <div id="match-form">
+                <h2>Registrar Partida</h2>
 
-            <div class="card">
-                <div style="display: flex; justify-content: space-around; align-items: center">
-                    <div style="text-align: center">
-                        <span style="font-size: 12px; color: var(--text-muted)">TIME 1</span>
-                        <div class="score-input">
-                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, -1)">-</button>
-                            <div class="score-box" id="score-1">0</div>
-                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, 1)">+</button>
+                <div class="team-group">
+                    <span class="team-group-label">TIME 1 (Esquerda)</span>
+                    <div class="player-select-grid">
+                        <div class="player-slot" onclick="app.showPlayerPicker(0)" id="slot-0">
+                            <i data-lucide="plus"></i>
+                            <span style="font-size: 12px">Jogador 1</span>
                         </div>
-                    </div>
-                    <div style="text-align: center">
-                        <span style="font-size: 12px; color: var(--text-muted)">TIME 2</span>
-                        <div class="score-input">
-                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, -1)">-</button>
-                            <div class="score-box" id="score-2">0</div>
-                            <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, 1)">+</button>
+                        <div class="player-slot" onclick="app.showPlayerPicker(1)" id="slot-1">
+                            <i data-lucide="plus"></i>
+                            <span style="font-size: 12px">Jogador 2</span>
                         </div>
                     </div>
                 </div>
-                
-                <div id="bucho-re-container" style="display: none; align-items: center; justify-content: center; gap: 10px; margin-top: 10px">
-                    <input type="checkbox" id="check-re" style="width: 24px; height: 24px">
-                    <label for="check-re">Fomos Bucho de Ré? 🔥</label>
-                </div>
-            </div>
 
-            <button class="btn btn-primary" style="width: 100%; margin-top: 20px" onclick="app.saveMatch()">Salvar Partida</button>
+                <div class="team-group">
+                    <span class="team-group-label">TIME 2 (Direita)</span>
+                    <div class="player-select-grid">
+                        <div class="player-slot" onclick="app.showPlayerPicker(2)" id="slot-2">
+                            <i data-lucide="plus"></i>
+                            <span style="font-size: 12px">Jogador 3</span>
+                        </div>
+                        <div class="player-slot" onclick="app.showPlayerPicker(3)" id="slot-3">
+                            <i data-lucide="plus"></i>
+                            <span style="font-size: 12px">Jogador 4</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-around; align-items: center">
+                        <div style="text-align: center">
+                            <span style="font-size: 12px; color: var(--text-muted)">TIME 1</span>
+                            <div class="score-input">
+                                <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, -1)">-</button>
+                                <div class="score-box" id="score-1">0</div>
+                                <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, 1)">+</button>
+                            </div>
+                        </div>
+                        <div style="text-align: center">
+                            <span style="font-size: 12px; color: var(--text-muted)">TIME 2</span>
+                            <div class="score-input">
+                                <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, -1)">-</button>
+                                <div class="score-box" id="score-2">0</div>
+                                <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="bucho-re-container" style="display: none; align-items: center; justify-content: center; gap: 10px; margin-top: 10px">
+                        <input type="checkbox" id="check-re" style="width: 24px; height: 24px">
+                        <label for="check-re">Fomos Bucho de Ré? 🔥</label>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; margin-top: 20px" onclick="app.saveMatch()">Salvar Partida</button>
+            </div>
         </div>
 
         <!-- Finance -->
@@ -386,13 +416,15 @@
         <!-- Ranking -->
         <div id="ranking-screen" class="screen">
             <h2>Ranking</h2>
-            <div class="card">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div class="card" style="overflow-x: auto">
+                <table style="width: 100%; border-collapse: collapse; min-width: 320px">
                     <thead>
-                        <tr style="text-align: left; font-size: 12px; color: var(--text-muted)">
-                            <th style="padding-bottom: 12px">POS</th>
+                        <tr style="text-align: left; font-size: 11px; color: var(--text-muted)">
+                            <th style="padding-bottom: 12px">#</th>
                             <th style="padding-bottom: 12px">JOGADOR</th>
-                            <th style="padding-bottom: 12px; text-align: right">PONTOS</th>
+                            <th style="padding-bottom: 12px; text-align: right">HOJE</th>
+                            <th style="padding-bottom: 12px; text-align: right">MÊS</th>
+                            <th style="padding-bottom: 12px; text-align: right">ANO</th>
                         </tr>
                     </thead>
                     <tbody id="ranking-table">
@@ -408,7 +440,7 @@
                 <i data-lucide="layout-dashboard"></i>
                 <span>Home</span>
             </a>
-            <a href="#" class="nav-item" onclick="app.navigate('match', event)">
+            <a href="#" class="nav-item" id="nav-match" onclick="app.navigate('match', event)">
                 <i data-lucide="plus-square"></i>
                 <span>Jogar</span>
             </a>
@@ -436,10 +468,22 @@
 
     <!-- Alert Modal -->
     <div id="alert-modal" class="modal">
-        <div class="modal-content" style="text-align: center;">
-            <h3 id="alert-title">Aviso</h3>
-            <p id="alert-message" style="color: var(--text-muted); margin: 20px 0;"></p>
-            <button class="btn btn-primary" style="width: 100%" onclick="app.closeAlert()">OK</button>
+        <div class="modal-content">
+            <h3 id="alert-title">Atenção</h3>
+            <p id="alert-message" style="color: var(--text-muted); line-height: 1.5"></p>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 16px" onclick="app.closeAlert()">OK</button>
+        </div>
+    </div>
+ 
+    <!-- Match Details Modal -->
+    <div id="match-modal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+                <h3 style="margin: 0">Detalhes da Partida</h3>
+                <i data-lucide="x" onclick="document.getElementById('match-modal').classList.remove('active')" style="cursor: pointer"></i>
+            </div>
+            <div id="match-details-content"></div>
+            <button class="btn btn-ghost" style="width: 100%; margin-top: 20px" onclick="document.getElementById('match-modal').classList.remove('active')">Fechar</button>
         </div>
     </div>
 
@@ -456,7 +500,25 @@
                 score1: 0,
                 score2: 0,
                 activePicker: -1,
-                blockedIds: new Set()
+                blockedIds: new Set(),
+                globalStats: null
+            },
+
+            isMatchAvailable() {
+                const nowRecife = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Recife' }));
+                const dow = nowRecife.getDay();
+                const minuteOfDay = nowRecife.getHours() * 60 + nowRecife.getMinutes();
+                return dow >= 1 && dow <= 5 && minuteOfDay >= (11 * 60 + 45) && minuteOfDay < (14 * 60);
+            },
+
+            applyMatchAvailability() {
+                const available = this.isMatchAvailable();
+                const navBtn = document.getElementById('nav-match');
+                const locked = document.getElementById('match-locked');
+                const form = document.getElementById('match-form');
+                if (navBtn) navBtn.style.opacity = available ? '1' : '0.4';
+                if (locked) locked.style.display = available ? 'none' : 'flex';
+                if (form)   form.style.display   = available ? 'block' : 'none';
             },
 
             async init() {
@@ -464,6 +526,7 @@
                     this.showMain();
                     await this.loadData();
                     lucide.createIcons();
+                    this.applyMatchAvailability();
                 } else {
                     this.showLogin();
                 }
@@ -574,16 +637,23 @@
                     this.state.players = Array.isArray(players) ? players : [];
                     this.state.matches = Array.isArray(matches) ? matches : [];
                     
+
+
                     // Unified debts list
                     this.processDebts(this.state.players, buchos || [], mensalidades || []);
                     this.checkMonthlyFee(mensalidades || [], players || []);
-                    this.checkExtraFee(matches, buchos, players);
+                    await this.checkExtraFee(matches, buchos, players);
                     this.renderAll();
                 } catch (e) {
                     console.error("Data load error:", e);
                     this.showAlert('Sincronização', 'Erro ao carregar dados do servidor. Verifique sua conexão.');
                 }
                 this.setLoading(false);
+            },
+
+            normalizeName(name) {
+                if (!name) return "";
+                return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
             },
 
             processDebts(players, buchos, mensalidades) {
@@ -694,72 +764,31 @@
             async checkExtraFee(matches, buchos, players) {
                 if (!this.state.user) return;
 
+                // 1. Extra Fee Check (Trigger n8n API)
+                try {
+                    await fetch(`${API_BASE}webhook/estatisticas-globais`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
+                } catch (e) {
+                    console.error("Erro ao acionar API de taxas extras:", e);
+                }
+
+                // 2. Monthly Fee Routine (Scan last 3 months for missing Mensalidades)
                 const now = new Date();
-                
-                // Scan last 3 months for missing Extra Fees (Retroactive)
                 for (let i = 1; i <= 3; i++) {
                     const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
                     const targetMonth = targetDate.getMonth();
                     const targetYear = targetDate.getFullYear();
 
-                    // 1. Calculate Club Base (Denominator = Active Members)
-                    const activeMembers = players.filter(p => !p.jogador.includes('NÃO MEMBRO'));
-                    const activeCount = activeMembers.length || 1;
-
-                    // 2. Club Stats for THIS SPECIFIC target month
-                    const clubMatchesTargetMonth = matches.filter(m => {
-                        const d = this.parseDate(m.data);
-                        return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-                    });
-                    const clubAvgMatches = clubMatchesTargetMonth.length / activeCount;
-
-                    const clubBuchosTargetMonth = buchos.filter(b => {
+                    const hasMonthly = buchos.some(b => {
                         const d = this.parseDate(b.data);
-                        return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+                        return b.jogador === this.state.user.name && b.obs === 'Mensalidade' && d.getMonth() === targetMonth && d.getFullYear() === targetYear;
                     });
-                    const totalBuchosValue = clubBuchosTargetMonth.reduce((acc, b) => acc + (b.valor || 0), 0);
-                    const baseFee = totalBuchosValue / activeCount;
 
-                    // 3. User Performance for TARGET month
-                    const myMatchesTargetMonth = clubMatchesTargetMonth.filter(m => 
-                        [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name)
-                    ).length;
-
-                    if (myMatchesTargetMonth < clubAvgMatches) {
-                        const myBuchosValue = clubBuchosTargetMonth
-                            .filter(b => b.jogador === this.state.user.name)
-                            .reduce((acc, b) => acc + (b.valor || 0), 0);
-                        
-                        const deficit = baseFee - myBuchosValue;
-
-                        if (deficit > 0.01) {
-                            // Robust check for existing record
-                            const alreadyExists = buchos.some(b => {
-                                const d = this.parseDate(b.data);
-                                return b.jogador === this.state.user.name && 
-                                       (b.obs?.includes('Taxa extra') || b.type === 'TAX') &&
-                                       d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-                            });
-
-                            if (!alreadyExists) {
-                                const lastBizDay = this.getLastBusinessDay(targetYear, targetMonth);
-                                const dateStr = lastBizDay.toISOString().split('T')[0];
-
-                                try {
-                                    await fetch(`${API_BASE}webhook/gravar-buchos`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            data: dateStr,
-                                            jogador: this.state.user.name,
-                                            valor: deficit,
-                                            pago: false,
-                                            obs: "Taxa extra"
-                                        })
-                                    });
-                                } catch(e) { console.error(`Taxa extra error for ${targetMonth+1}/${targetYear}:`, e); }
-                            }
-                        }
+                    if (!hasMonthly) {
+                         // Apenas garantindo que ele não vai tentar gerar na web
                     }
                 }
             },
@@ -802,13 +831,25 @@
                 document.getElementById('stats-due').innerText = `R$ ${totalDue.toFixed(2).replace('.', ',')}`;
                 document.getElementById('stats-upcoming').innerText = `R$ ${totalUpcoming.toFixed(2).replace('.', ',')}`;
 
-                // Real Monthly Match Count
-                const myMonthlyMatches = this.state.matches.filter(m => {
-                    const d = new Date(m.data);
-                    const isMyMatch = [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name);
-                    return isMyMatch && d.getMonth() === curMonth && d.getFullYear() === curYear;
-                }).length;
-                document.getElementById('stats-avg').innerText = myMonthlyMatches;
+                // Monthly Average (use API detail if exists)
+                let myMonthlyMatches = 0;
+                const playerDetail = this.state.globalStats?.detalhado_por_jogador?.find(p => 
+                    p.nome.toUpperCase() === this.state.user.name.toUpperCase() || 
+                    this.state.user.name.toUpperCase().includes(p.nome.toUpperCase())
+                );
+
+                if (playerDetail) {
+                    myMonthlyMatches = playerDetail.partidas;
+                } else {
+                    myMonthlyMatches = this.state.matches.filter(m => {
+                        const d = new Date(m.data);
+                        const isMyMatch = [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name);
+                        return isMyMatch && d.getMonth() === curMonth && d.getFullYear() === curYear;
+                    }).length;
+                }
+
+                const globalAvg = this.state.globalStats?.resumo_membros?.media_partidas_por_membro;
+                document.getElementById('stats-avg').innerText = globalAvg ? `${myMonthlyMatches} / ${globalAvg.toFixed(1)}` : myMonthlyMatches;
 
                 // Real Points in the Year
                 let totalPts = 0;
@@ -829,14 +870,13 @@
             renderMatches() {
                 const list = document.getElementById('matches-list');
                 list.innerHTML = '';
-                
                 [...this.state.matches].reverse().slice(0, 10).forEach(m => {
                     const row = document.createElement('div');
-                    row.className = 'card match-card';
+                    row.className = 'card match-card clickable';
+                    row.onclick = () => this.showMatchDetails(m.id || `local_${m.data}_${m.jogador1}`);
                     
                     const points = m.pts || 0;
-                    const date = new Date(m.data).toLocaleDateString('pt-BR');
-
+ 
                     row.innerHTML = `
                         <div class="team">
                             <div class="match-players">
@@ -847,7 +887,7 @@
                         </div>
                         <div style="text-align: center">
                             <div class="score">${m.scored1} x ${m.scored2}</div>
-                            <div style="font-size: 10px; color: var(--text-muted)">pts: ${points}</div>
+                            ${m.buchore ? '<div class="bucho-re-tag">🔥 Bucho de Ré</div>' : `<div style="font-size: 10px; color: var(--text-muted)">pts: ${points}</div>`}
                         </div>
                         <div class="team">
                             <div class="match-players">
@@ -898,36 +938,71 @@
                 const table = document.getElementById('ranking-table');
                 table.innerHTML = '';
 
-                // Calculate points
-                const scoreboard = {};
-                this.state.players.forEach(p => { scoreboard[p.jogador] = 0; });
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+                const curMonth = now.getMonth();
+                const curYear = now.getFullYear();
+
+                // Initialise per-player scoreboards
+                const scoreDay   = {};
+                const scoreMonth = {};
+                const scoreYear  = {};
+                this.state.players
+                    .filter(p => !p.jogador.includes('NÃO MEMBRO'))
+                    .forEach(p => {
+                        scoreDay[p.jogador]   = 0;
+                        scoreMonth[p.jogador] = 0;
+                        scoreYear[p.jogador]  = 0;
+                    });
 
                 this.state.matches.forEach(m => {
+                    const d = new Date(m.data);
+                    const matchDate = m.data ? m.data.split('T')[0] : '';
                     const pts = m.pts || 0;
-                    if (m.scored1 > m.scored2) {
-                        scoreboard[m.jogador1] = (scoreboard[m.jogador1] || 0) + pts;
-                        scoreboard[m.jogador2] = (scoreboard[m.jogador2] || 0) + pts;
-                    } else {
-                        scoreboard[m.jogador3] = (scoreboard[m.jogador3] || 0) + pts;
-                        scoreboard[m.jogador4] = (scoreboard[m.jogador4] || 0) + pts;
-                    }
+
+                    const winners = m.scored1 > m.scored2
+                        ? [m.jogador1, m.jogador2]
+                        : [m.jogador3, m.jogador4];
+
+                    winners.forEach(name => {
+                        if (!name || name.includes('NÃO MEMBRO')) return;
+
+                        // Year
+                        if (d.getFullYear() === curYear) {
+                            scoreYear[name] = (scoreYear[name] || 0) + pts;
+                        }
+                        // Month
+                        if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
+                            scoreMonth[name] = (scoreMonth[name] || 0) + pts;
+                        }
+                        // Today
+                        if (matchDate === todayStr) {
+                            scoreDay[name] = (scoreDay[name] || 0) + pts;
+                        }
+                    });
                 });
 
-                const sorted = Object.entries(scoreboard)
-                    .sort((a, b) => b[1] - a[1])
-                    .filter(entry => entry[0] && !entry[0].includes('NÃO MEMBRO'));
+                // Sort by month score (main column), then year as tiebreaker
+                const players = Object.keys(scoreMonth)
+                    .filter(n => n && !n.includes('NÃO MEMBRO'))
+                    .sort((a, b) => (scoreMonth[b] - scoreMonth[a]) || (scoreYear[b] - scoreYear[a]));
 
-                sorted.forEach((entry, idx) => {
+                players.forEach((name, idx) => {
                     const tr = document.createElement('tr');
+                    const isMe = this.state.user && name === this.state.user.name;
+                    const rowStyle = isMe ? 'background: rgba(99,102,241,0.12); border-radius: 8px;' : '';
+                    tr.setAttribute('style', rowStyle);
                     tr.innerHTML = `
-                        <td style="padding: 12px 0; font-weight: 700; color: var(--text-muted)">#${idx + 1}</td>
-                        <td style="padding: 12px 0">
-                            <div style="display: flex; align-items: center; gap: 10px">
-                                <img src="${this.getAvatar(entry[0])}" style="width: 24px; height: 24px; border-radius: 50%">
-                                <span>${entry[0]}</span>
+                        <td style="padding: 10px 4px; font-weight: 700; color: var(--text-muted); font-size: 12px">${idx + 1}</td>
+                        <td style="padding: 10px 4px">
+                            <div style="display: flex; align-items: center; gap: 8px">
+                                <img src="${this.getAvatar(name)}" style="width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0">
+                                <span style="font-size: 13px">${this.firstName(name)}</span>
                             </div>
                         </td>
-                        <td style="padding: 12px 0; text-align: right; font-weight: 700; color: var(--primary)">${entry[1]}</td>
+                        <td style="padding: 10px 4px; text-align: right; font-size: 13px; color: ${scoreDay[name] > 0 ? 'var(--success)' : 'var(--text-muted)'}">${scoreDay[name] || 0}</td>
+                        <td style="padding: 10px 4px; text-align: right; font-weight: 700; font-size: 13px; color: var(--primary)">${scoreMonth[name] || 0}</td>
+                        <td style="padding: 10px 4px; text-align: right; font-size: 13px; color: var(--text-muted)">${scoreYear[name] || 0}</td>
                     `;
                     table.appendChild(tr);
                 });
@@ -945,6 +1020,9 @@
                 const items = document.querySelectorAll('.nav-item');
                 const targetIdx = id === 'dashboard' ? 0 : (id === 'match' ? 1 : (id === 'finance' ? 2 : 3));
                 items[targetIdx].classList.add('active');
+
+                // Recheck time lock every time match tab is opened
+                if (id === 'match') this.applyMatchAvailability();
             },
 
             // --- Match Registration Logic ---
@@ -1012,7 +1090,12 @@
 
             async saveMatch() {
                 if (this.state.selectedPlayers.includes(null)) return this.showAlert('Atenção', 'Selecione os 4 jogadores!');
-                
+
+                // Trava de horário — usa helper centralizado
+                if (!this.isMatchAvailable()) {
+                    return this.showAlert('Fora do horário', 'O registro de partidas só é permitido de segunda a sexta, entre 11h45 e 14h00 (horário de Recife).');
+                }
+
                 this.setLoading(true);
                 try {
                     const s1 = this.state.score1;
@@ -1043,7 +1126,8 @@
                             jogador3: this.state.selectedPlayers[2].jogador,
                             jogador4: this.state.selectedPlayers[3].jogador,
                             scored1: s1, scored2: s2, buchore: isRe, pts: pts,
-                            dupla_vencedora: `${winners[0].jogador}/${winners[1].jogador}`
+                            dupla_vencedora: `${winners[0].jogador}/${winners[1].jogador}`,
+                            cadastrado_por: this.state.user.name
                         })
                     });
 
@@ -1083,7 +1167,42 @@
             },
 
             // --- Utils ---
-            firstName(name) { return name ? (name.split(' ')[0] || '') : ''; },
+            firstName(name) {
+                if (!name) return "";
+                return name.split(' ')[0];
+            },
+ 
+            showMatchDetails(matchId) {
+                const match = this.state.matches.find(m => m.id === matchId || `local_${m.data}_${m.jogador1}` === matchId);
+                if (!match) return;
+ 
+                const content = document.getElementById('match-details-content');
+                const date = new Date(match.data).toLocaleString('pt-BR');
+                
+                content.innerHTML = `
+                    <div class="detail-row"><span class="detail-label">Data</span><span class="detail-value">${date}</span></div>
+                    <div style="margin: 12px 0; height: 1px; background: rgba(255,255,255,0.05)"></div>
+                    <div style="margin-bottom: 12px">
+                        <div class="detail-label" style="margin-bottom: 4px">Time 1</div>
+                        <div class="detail-value" style="${match.scored1 > match.scored2 ? 'color: var(--primary)' : ''}">${match.jogador1} / ${match.jogador2}</div>
+                    </div>
+                    <div style="margin-bottom: 12px">
+                        <div class="detail-label" style="margin-bottom: 4px">Time 2</div>
+                        <div class="detail-value" style="${match.scored2 > match.scored1 ? 'color: var(--primary)' : ''}">${match.jogador3} / ${match.jogador4}</div>
+                    </div>
+                    <div style="margin: 12px 0; height: 1px; background: rgba(255,255,255,0.05)"></div>
+                    <div class="detail-row">
+                        <span class="detail-label">Placar Final</span>
+                        <span class="detail-value" style="color: var(--primary); font-weight: 800">${match.scored1} x ${match.scored2}</span>
+                    </div>
+                    ${match.buchore ? '<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="color: var(--primary)">🔥 BUCHO DE RÉ</span></div>' : ''}
+                    <div class="detail-row"><span class="detail-label">Pontos Conquistados</span><span class="detail-value">${match.pts || 0} pts</span></div>
+                    <div class="detail-row"><span class="detail-label">Cadastrado por</span><span class="detail-value">${match.cadastrado_por || 'N/A'}</span></div>
+                `;
+ 
+                document.getElementById('match-modal').classList.add('active');
+            },
+ 
             formatAvatar(avatar) {
                 if (!avatar) return '';
                 if (avatar.startsWith('http') || avatar.startsWith('data:')) return avatar;
@@ -1169,6 +1288,13 @@
         }
 
         app.init();
+
+        // Reload page when user comes back to the tab (prevents time-window bypass)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && localStorage.getItem('user')) {
+                location.reload();
+            }
+        });
     </script>
 </body>
 </html>

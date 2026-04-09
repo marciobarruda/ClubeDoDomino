@@ -1,19 +1,7 @@
 package com.marcioarruda.clubedodomino.data
 
 import com.google.gson.JsonSyntaxException
-import com.marcioarruda.clubedodomino.data.network.ApiService
-import com.marcioarruda.clubedodomino.data.network.BuchoDto
-import com.marcioarruda.clubedodomino.data.network.ComprovanteRequest
-import com.marcioarruda.clubedodomino.data.network.CreateMensalidadeRequest
-import com.marcioarruda.clubedodomino.data.network.DebitRequest
-import com.marcioarruda.clubedodomino.data.network.LoginRequest
-import com.marcioarruda.clubedodomino.data.network.LoginResponse
-import com.marcioarruda.clubedodomino.data.network.MatchDTO
-import com.marcioarruda.clubedodomino.data.network.MensalidadeDto
-import com.marcioarruda.clubedodomino.data.network.PlayerDTO
-import com.marcioarruda.clubedodomino.data.network.RetrofitClient
-import com.marcioarruda.clubedodomino.data.network.UpdatePlayerRequest
-import com.marcioarruda.clubedodomino.data.network.UpdateProfileRequest
+import com.marcioarruda.clubedodomino.data.network.*
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -203,6 +191,13 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         apiService.uploadComprovante(request)
     }
 
+    suspend fun triggerTaxasExtras() {
+        try {
+            apiService.triggerTaxasExtras()
+        } catch (e: Exception) {
+        }
+    }
+
     suspend fun registerMatch(match: Match) {
         apiService.registerMatch(match.toDTO())
     }
@@ -322,6 +317,8 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         )
     }
 
+
+
     private fun PlayerDTO.toUser(): User? {
         if (this.email.isNullOrBlank() || this.jogador.isNullOrBlank()) {
             return null
@@ -345,12 +342,15 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         
         val stableId = "match_${this.data}_${this.jogador1}".hashCode().toString()
         val date = parseAnyDate(this.data) ?: Date()
+        
+        val registeredBy = users.find { it.name.equals(this.cadastrado_por?.trim(), ignoreCase = true) } ?: users.first()
 
         return Match(
             id = this.id?.toString() ?: stableId,
             date = date,
             team1Player1 = t1p1, team1Player2 = t1p2, team2Player1 = t2p1, team2Player2 = t2p2,
-            score1 = this.scored1 ?: 0, score2 = this.scored2 ?: 0, wasBuchoRe = this.buchore ?: false, registeredBy = users.first(),
+            score1 = this.scored1 ?: 0, score2 = this.scored2 ?: 0, wasBuchoRe = this.buchore ?: false, 
+            registeredBy = registeredBy,
             pts = this.pts ?: 0
         )
     }
@@ -374,7 +374,14 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
             jogador2 = this.team1Player2.name, jogador3 = this.team2Player1.name, jogador4 = this.team2Player2.name,
             scored1 = this.score1, scored2 = this.score2, buchore = this.wasBuchoRe, pts = points,
             dupla_vencedora = if (score1 > score2) "${team1Player1.name}/${team1Player2.name}" else "${team2Player1.name}/${team2Player2.name}",
+            cadastrado_por = this.registeredBy.name,
             buttonName = buttonName
         )
+    }
+
+    private fun String.normalize(): String {
+        return java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
+            .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
+            .uppercase()
     }
 }

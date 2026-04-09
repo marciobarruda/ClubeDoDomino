@@ -89,6 +89,7 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     var showProfileDialog by remember { mutableStateOf(false) }
+    var selectedMatch by remember { mutableStateOf<Match?>(null) }
 
     if (showProfileDialog && uiState.user != null) {
         ProfileDialog(
@@ -160,10 +161,16 @@ fun DashboardScreen(
                             state = uiState,
                             navController = navController,
                             onAvatarClick = { showProfileDialog = true },
-                            onMatchClick = { /* No action */ }
+                            onMatchClick = { matchId ->
+                                selectedMatch = uiState.groupedMatches.values.flatten().find { it.id == matchId }
+                            }
                         )
                     }
                 }
+            }
+ 
+            selectedMatch?.let { match ->
+                MatchDetailsDialog(match = match, onDismiss = { selectedMatch = null })
             }
         }
     }
@@ -441,14 +448,24 @@ private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
                 Text("$t1n1 / $t1n2", fontSize = 10.sp, color = Color.LightGray, textAlign = TextAlign.Center, maxLines = 1)
             }
             
-            // Score
-            Text(
-                "${match.score1} a ${match.score2}", 
-                style = MaterialTheme.typography.titleLarge, 
-                fontWeight = FontWeight.Bold, 
-                color = Color.White,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
+            // Score and Status
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
+                Text(
+                    "${match.score1} x ${match.score2}", 
+                    style = MaterialTheme.typography.titleLarge, 
+                    fontWeight = FontWeight.Bold, 
+                    color = Color.White
+                )
+                if (match.wasBuchoRe) {
+                    Text(
+                        "🔥 BUCHO DE RÉ",
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
+                        color = DominoGold, // RoyalGold equivalent or DominoGold
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
             
             // Team 2
              Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
@@ -463,6 +480,59 @@ private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
                 Text("$t2n1 / $t2n2", fontSize = 10.sp, color = Color.LightGray, textAlign = TextAlign.Center, maxLines = 1)
             }
         }
+    }
+}
+
+@Composable
+private fun MatchDetailsDialog(match: Match, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Fechar", color = RoyalGold)
+            }
+        },
+        containerColor = Color(0xFF1E293B), // Slate 800
+        title = { Text("Detalhes da Partida", color = Color.White) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                MatchDetailRow(label = "Data", value = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(match.date))
+                
+                Divider(color = Color.White.copy(alpha = 0.1f))
+                
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Time 1 (Vencedor: ${if(match.score1 > match.score2) "Sim" else "Não"})", fontSize = 12.sp, color = Color.Gray)
+                    Text("${match.team1Player1.name} / ${match.team1Player2.name}", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Time 2 (Vencedor: ${if(match.score2 > match.score1) "Sim" else "Não"})", fontSize = 12.sp, color = Color.Gray)
+                    Text("${match.team2Player1.name} / ${match.team2Player2.name}", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                
+                Divider(color = Color.White.copy(alpha = 0.1f))
+
+                MatchDetailRow(label = "Placar Final", value = "${match.score1} x ${match.score2}", isHighLight = true)
+                if (match.wasBuchoRe) {
+                    MatchDetailRow(label = "Status", value = "🔥 BUCHO DE RÉ", isHighLight = true)
+                }
+                MatchDetailRow(label = "Pontos Conquistados", value = "${match.pts} pts")
+                MatchDetailRow(label = "Cadastrado por", value = match.registeredBy.name)
+            }
+        }
+    )
+}
+
+@Composable
+private fun MatchDetailRow(label: String, value: String, isHighLight: Boolean = false) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = Color.Gray, fontSize = 14.sp)
+        Text(
+            value, 
+            color = if (isHighLight) RoyalGold else Color.White, 
+            fontWeight = if (isHighLight) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 14.sp
+        )
     }
 }
 

@@ -28,7 +28,8 @@ import com.marcioarruda.clubedodomino.ui.theme.RoyalGold
 fun RegisterMatchScreen(
     navController: NavController, 
     viewModel: MatchViewModel = viewModel(),
-    matchId: String? = null
+    matchId: String? = null,
+    session: com.marcioarruda.clubedodomino.data.UserSession? = null
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -108,8 +109,9 @@ fun RegisterMatchScreen(
                     if (state.editingMatchId != null) {
                          viewModel.updateMatch(state.editingMatchId!!)
                     } else {
-                         // Mock registeredBy for now, ideally comes from session
-                         val currentUser = state.availablePlayers.firstOrNull() ?: User("0","User","User","","c1") 
+                         val currentUser = state.availablePlayers.find { it.id == session?.userEmail } 
+                             ?: state.availablePlayers.firstOrNull() 
+                             ?: User("0","User","User","","c1") 
                          viewModel.saveMatch(registeredBy = currentUser)
                     }
                 },

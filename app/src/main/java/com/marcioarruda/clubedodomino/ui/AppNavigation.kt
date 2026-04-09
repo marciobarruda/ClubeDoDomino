@@ -107,7 +107,7 @@ fun AppNavHost(
             })
         ) { backStackEntry ->
             val matchId = backStackEntry.arguments?.getString("matchId")
-            RegisterMatchScreen(navController = navController, viewModel = viewModel(factory = viewModelFactory), matchId = matchId)
+            RegisterMatchScreen(navController = navController, viewModel = viewModel(factory = viewModelFactory), matchId = matchId, session = session)
         }
         composable("ranking") {
             RankingScreen(navController = navController, rankingViewModel = viewModel(factory = viewModelFactory))
