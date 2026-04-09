@@ -48,6 +48,13 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.HorizontalDivider
+import com.marcioarruda.clubedodomino.ui.theme.RoyalGold
+import com.marcioarruda.clubedodomino.ui.theme.DominoGold
+import com.marcioarruda.clubedodomino.ui.theme.GlassyColor
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -498,7 +505,7 @@ private fun MatchDetailsDialog(match: Match, onDismiss: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 MatchDetailRow(label = "Data", value = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(match.date))
                 
-                Divider(color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
                 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Time 1 (Vencedor: ${if(match.score1 > match.score2) "Sim" else "Não"})", fontSize = 12.sp, color = Color.Gray)
@@ -510,7 +517,7 @@ private fun MatchDetailsDialog(match: Match, onDismiss: () -> Unit) {
                     Text("${match.team2Player1.name} / ${match.team2Player2.name}", color = Color.White, fontWeight = FontWeight.Bold)
                 }
                 
-                Divider(color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
                 MatchDetailRow(label = "Placar Final", value = "${match.score1} x ${match.score2}", isHighLight = true)
                 if (match.wasBuchoRe) {
