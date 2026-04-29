@@ -674,6 +674,9 @@
                     ]);
 
                     this.state.players = Array.isArray(players) ? players : [];
+                    if (!this.state.players.some(p => p.jogador && p.jogador.includes('NÃO MEMBRO'))) {
+                        this.state.players.push({ jogador: 'JOGADOR NÃO MEMBRO', email: '7', avatar: '' });
+                    }
                     this.state.matches = Array.isArray(matches) ? matches : [];
                     
 
