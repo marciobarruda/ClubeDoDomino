@@ -115,7 +115,22 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
     suspend fun getPlayers(): List<User> {
         return try {
             val playerDTOs = apiService.getPlayers()
-            allUsers = playerDTOs.mapNotNull { it.toUser() }
+            val users = playerDTOs.mapNotNull { it.toUser() }.toMutableList()
+            
+            // Garantir que "JOGADOR NÃO MEMBRO" existe para evitar falhas no toMatch
+            val hasNonMember = users.any { it.name.contains("NÃO MEMBRO", ignoreCase = true) || it.id == "7" }
+            if (!hasNonMember) {
+                users.add(User(
+                    id = "7",
+                    name = "JOGADOR NÃO MEMBRO",
+                    displayName = "NÃO MEMBRO",
+                    photoUrl = "",
+                    clubId = "c1",
+                    isMember = false
+                ))
+            }
+            
+            allUsers = users
             allUsers
         } catch (e: Exception) {
             throw e
@@ -343,7 +358,12 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
         val stableId = "match_${this.data}_${this.jogador1}".hashCode().toString()
         val date = parseAnyDate(this.data) ?: Date()
         
-        val registeredBy = users.find { it.name.equals(this.cadastrado_por?.trim(), ignoreCase = true) } ?: users.first()
+        val registeredBy = if (!this.cadastrado_por.isNullOrBlank()) {
+            users.find { it.name.equals(this.cadastrado_por.trim(), ignoreCase = true) } 
+                ?: User(id="ext", name=this.cadastrado_por.trim(), displayName=this.cadastrado_por.trim(), photoUrl="", clubId="c1")
+        } else {
+            User(id="0", name="N/A", displayName="N/A", photoUrl="", clubId="c1")
+        }
 
         return Match(
             id = this.id?.toString() ?: stableId,

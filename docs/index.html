@@ -501,14 +501,41 @@
                 score2: 0,
                 activePicker: -1,
                 blockedIds: new Set(),
-                globalStats: null
+                globalStats: null,
+                serverTime: null,
+                timeOffset: 0
+            },
+
+            async syncTime() {
+                try {
+                    const start = Date.now();
+                    const res = await fetch('https://worldtimeapi.org/api/timezone/America/Recife');
+                    const data = await res.json();
+                    const serverMillis = new Date(data.datetime).getTime();
+                    const latency = (Date.now() - start) / 2;
+                    this.state.timeOffset = (serverMillis + latency) - Date.now();
+                    console.log("Time synced! Offset:", this.state.timeOffset);
+                } catch (e) {
+                    console.error("Time sync failed, using device time (UNSAFE):", e);
+                }
+            },
+
+            getSyncedDate() {
+                return new Date(Date.now() + this.state.timeOffset);
             },
 
             isMatchAvailable() {
-                const nowRecife = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Recife' }));
+                const nowRecife = this.getSyncedDate();
                 const dow = nowRecife.getDay();
-                const minuteOfDay = nowRecife.getHours() * 60 + nowRecife.getMinutes();
-                return dow >= 1 && dow <= 5 && minuteOfDay >= (11 * 60 + 45) && minuteOfDay < (14 * 60);
+                const hours = nowRecife.getHours();
+                const minutes = nowRecife.getMinutes();
+                const minuteOfDay = hours * 60 + minutes;
+                
+                // Registro permitido de segunda a sexta, entre 11h45 e 14h00
+                const isWeekday = dow >= 1 && dow <= 5;
+                const isWithinWindow = minuteOfDay >= (11 * 60 + 45) && minuteOfDay < (14 * 60);
+                
+                return isWeekday && isWithinWindow;
             },
 
             applyMatchAvailability() {
@@ -522,6 +549,18 @@
             },
 
             async init() {
+                await this.syncTime();
+                
+                // Check for auto-close every 10 seconds
+                setInterval(() => {
+                    if (document.getElementById('match-screen').classList.contains('active')) {
+                        if (!this.isMatchAvailable()) {
+                            this.showAlert('Horário Encerrado', 'O módulo de registro foi fechado pontualmente às 14:00. Alterações não salvas foram descartadas.');
+                            this.navigate('dashboard');
+                        }
+                    }
+                }, 10000);
+
                 if (this.state.user) {
                     this.showMain();
                     await this.loadData();
@@ -1091,9 +1130,18 @@
             async saveMatch() {
                 if (this.state.selectedPlayers.includes(null)) return this.showAlert('Atenção', 'Selecione os 4 jogadores!');
 
+                const s1 = this.state.score1;
+                const s2 = this.state.score2;
+                
+                // O placar mínimo de uma das duplas deve ser 6
+                if (Math.max(s1, s2) < 6) {
+                    return this.showAlert('Placar Inválido', 'O placar mínimo de uma das duplas deve ser pelo menos 6 para registrar a partida.');
+                }
+
                 // Trava de horário — usa helper centralizado
                 if (!this.isMatchAvailable()) {
-                    return this.showAlert('Fora do horário', 'O registro de partidas só é permitido de segunda a sexta, entre 11h45 e 14h00 (horário de Recife).');
+                    this.navigate('dashboard');
+                    return this.showAlert('Fora do horário', 'O registro de partidas foi encerrado (Limite: 14h00).');
                 }
 
                 this.setLoading(true);
@@ -1197,7 +1245,7 @@
                     </div>
                     ${match.buchore ? '<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="color: var(--primary)">🔥 BUCHO DE RÉ</span></div>' : ''}
                     <div class="detail-row"><span class="detail-label">Pontos Conquistados</span><span class="detail-value">${match.pts || 0} pts</span></div>
-                    <div class="detail-row"><span class="detail-label">Cadastrado por</span><span class="detail-value">${match.cadastrado_por || 'N/A'}</span></div>
+                    <div class="detail-row"><span class="detail-label">Cadastrado por</span><span class="detail-value">${match.cadastrado_por || match.cadastrador || 'N/A'}</span></div>
                 `;
  
                 document.getElementById('match-modal').classList.add('active');

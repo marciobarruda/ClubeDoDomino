@@ -38,6 +38,44 @@ fun AdminScreen(
         viewModel.loadData()
     }
 
+    var showReleaseNotes by remember { mutableStateOf(false) }
+    var releaseInfo by remember { mutableStateOf<Triple<String, String, String>?>(null) } // Local, Server, Notes
+
+    if (showReleaseNotes) {
+        AlertDialog(
+            onDismissRequest = { showReleaseNotes = false },
+            title = { Text("Notas da Versão") },
+            text = {
+                Column {
+                    Text("Sua Versão: ${com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME} (${com.marcioarruda.clubedodomino.BuildConfig.VERSION_CODE})", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    if (releaseInfo != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Última disponível: v${releaseInfo?.second}", color = DominoGold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("O que mudou:", fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                        Text(releaseInfo?.third ?: "Nenhuma nota disponível.", color = Color.White)
+                    } else {
+                        CircularProgressIndicator(modifier = Modifier.padding(16.dp).align(androidx.compose.ui.Alignment.CenterHorizontally))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showReleaseNotes = false }) { Text("Fechar") }
+            }
+        )
+    }
+
+    LaunchedEffect(showReleaseNotes) {
+        if (showReleaseNotes && releaseInfo == null) {
+            try {
+                val info = com.marcioarruda.clubedodomino.data.network.RetrofitClient.instance.checkUpdate()
+                releaseInfo = Triple(com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME, info.versionName ?: info.versionCode.toString(), info.releaseNotes ?: "")
+            } catch (e: Exception) {
+                releaseInfo = Triple(com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME, "Indisponível", "Erro ao buscar notas.")
+            }
+        }
+    }
+
     if (uiState.message != null) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissMessage() },
@@ -102,12 +140,16 @@ fun AdminScreen(
             }
             
             // Footer with Version
-            Text(
-                text = "Versão: ${com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME}",
-                color = Color.Gray,
-                style = MaterialTheme.typography.labelSmall,
+            TextButton(
+                onClick = { showReleaseNotes = true },
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(8.dp)
-            )
+            ) {
+                Text(
+                    text = "Versão: ${com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME} (Ver Notas)",
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
         }
     }
 }
@@ -134,7 +176,14 @@ fun MatchesList(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(dateFormat.format(match.date), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                         Text("${match.team1Player1.displayName}/${match.team1Player2.displayName} vs ${match.team2Player1.displayName}/${match.team2Player2.displayName}", color = Color.White)
-                        Text("Placar: ${match.score1} x ${match.score2}", color = DominoGold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Placar: ${match.score1} x ${match.score2}", color = DominoGold)
+                            if (match.wasBuchoRe) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("🔥 BUCHO DE RÉ", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        Text("Cadastrado por: ${match.registeredBy.name}", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                     }
                     if (canEdit) {
                         Row {
@@ -168,7 +217,16 @@ fun BuchosList(buchos: List<com.marcioarruda.clubedodomino.data.network.BuchoDto
                     Column(modifier = Modifier.weight(1f)) {
                         Text(bucho.data ?: "", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                         Text(bucho.jogador ?: "", color = Color.White)
-                        Text("Valor: R$ ${bucho.valor}", color = DominoGold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Valor: R$ ${bucho.valor}", color = DominoGold)
+                            if (bucho.buchore == true) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("🔥 BUCHO DE RÉ", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        if (!bucho.cadastrado_por.isNullOrBlank()) {
+                            Text("Cadastrado por: ${bucho.cadastrado_por}", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                     if (canEdit) {
                         IconButton(onClick = { onDelete(bucho.id) }) {

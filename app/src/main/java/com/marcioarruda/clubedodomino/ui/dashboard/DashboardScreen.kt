@@ -204,6 +204,44 @@ private fun ProfileDialog(
             }
         }
     }
+    
+    var showReleaseNotes by remember { mutableStateOf(false) }
+    var releaseInfo by remember { mutableStateOf<Triple<String, String, String>?>(null) } // Local, Server, Notes
+
+    if (showReleaseNotes) {
+        AlertDialog(
+            onDismissRequest = { showReleaseNotes = false },
+            title = { Text("Notas da Versão") },
+            text = {
+                Column {
+                    Text("Sua Versão: ${com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME} (${com.marcioarruda.clubedodomino.BuildConfig.VERSION_CODE})", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    if (releaseInfo != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Última disponível: v${releaseInfo?.second}", color = DominoGold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("O que mudou:", fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                        Text(releaseInfo?.third ?: "Nenhuma nota disponível.", color = Color.White)
+                    } else {
+                        CircularProgressIndicator(modifier = Modifier.padding(16.dp).align(androidx.compose.ui.Alignment.CenterHorizontally))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showReleaseNotes = false }) { Text("Fechar") }
+            }
+        )
+    }
+
+    LaunchedEffect(showReleaseNotes) {
+        if (showReleaseNotes && releaseInfo == null) {
+            try {
+                val info = com.marcioarruda.clubedodomino.data.network.RetrofitClient.instance.checkUpdate()
+                releaseInfo = Triple(com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME, info.versionName ?: info.versionCode.toString(), info.releaseNotes ?: "")
+            } catch (e: Exception) {
+                releaseInfo = Triple(com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME, "Indisponível", "Erro ao buscar notas.")
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -229,6 +267,14 @@ private fun ProfileDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(user.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Text(user.id, fontSize = 14.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { showReleaseNotes = true },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DominoGold),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Notas da Versão")
+                }
             }
         },
         confirmButton = {

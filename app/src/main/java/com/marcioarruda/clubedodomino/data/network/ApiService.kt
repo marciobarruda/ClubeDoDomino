@@ -31,7 +31,7 @@ data class MatchDTO(
     val buchore: Boolean?,
     val pts: Int?,
     val dupla_vencedora: String?,
-    val cadastrado_por: String? = null,
+    @SerializedName("cadastrado_por", alternate = ["cadastrador"]) val cadastrado_por: String? = null,
     val buttonName: String? = null
 )
 
@@ -45,7 +45,9 @@ data class BuchoDto(
     val placar: String? = null,
     val dupla_vencedora: String? = null,
     val dupla_perdedora: String? = null,
-    val obs: String? = null
+    val obs: String? = null,
+    val cadastrado_por: String? = null,
+    val buchore: Boolean? = null
 )
 
 // DTO para Status de Mensalidade (buscar-info-mensalidade)
@@ -65,7 +67,9 @@ data class DebitRequest(
     val placar: String? = null,
     val dupla_vencedora: String? = null,
     val dupla_perdedora: String? = null,
-    val obs: String? = null
+    val obs: String? = null,
+    val cadastrado_por: String? = null,
+    val wasBuchoRe: Boolean? = null
 )
 
 data class LoginRequest(
@@ -112,6 +116,10 @@ data class ComprovanteRequest(
 
     @SerializedName("imagem_base64")
     val imagemBase64: String
+)
+
+data class WorldTimeResponse(
+    val datetime: String
 )
 
 
@@ -170,6 +178,9 @@ interface ApiService {
 
     @POST("webhook/estatisticas-globais")
     suspend fun triggerTaxasExtras(@Body body: Map<String, String> = emptyMap()): retrofit2.Response<Unit>
+
+    @GET("https://worldtimeapi.org/api/timezone/America/Recife")
+    suspend fun getServerTime(): WorldTimeResponse
 }
 
 data class StackTraceRequest(

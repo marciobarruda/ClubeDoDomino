@@ -7,6 +7,7 @@ import com.marcioarruda.clubedodomino.data.FinancialEntryStatus
 import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.data.User
 import com.marcioarruda.clubedodomino.data.network.DebitRequest
+import com.marcioarruda.clubedodomino.data.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +48,28 @@ class MatchViewModel(
 
     init {
         loadPlayers()
+        syncTime()
+        startAutoCloseTimer()
+    }
+
+    private fun syncTime() {
+        viewModelScope.launch {
+            matchAvailabilityManager.syncWithServer(RetrofitClient.instance)
+        }
+    }
+
+    private fun startAutoCloseTimer() {
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(10000) // Check every 10 seconds
+                if (!matchAvailabilityManager.isModuleAvailable()) {
+                    _uiState.update { 
+                        if (it.success) it else it.copy(error = "Módulo fechado pontualmente às 14:00.", success = true) 
+                    }
+                    break
+                }
+            }
+        }
     }
 
     private fun loadPlayers() {
@@ -238,6 +261,20 @@ class MatchViewModel(
 
         _uiState.update { it.copy(isLoading = true, error = null) }
 
+        // Regra: O placar mínimo de uma das duplas deve ser 6
+        val s1 = state.score1
+        val s2 = state.score2
+        if (s1 < 6 && s2 < 6) {
+            _uiState.update { it.copy(isLoading = false, error = "O placar mínimo de uma das duplas deve ser pelo menos 6.") }
+            return
+        }
+
+        // Regra: Bloqueio por horário
+        if (!matchAvailabilityManager.isModuleAvailable()) {
+            _uiState.update { it.copy(isLoading = false, error = "Fora do horário permitido para registro (Limite: 14h00).") }
+            return
+        }
+
         viewModelScope.launch {
             try {
                 val p1 = state.selectedPlayers[0]!!
@@ -312,20 +349,23 @@ class MatchViewModel(
                         // Loser 2 paga dobro
                         repository.registerDebit(DebitRequest(
                             data = dateStr, jogador = losers[1].name, valor = debitValue * 2,
-                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora
+                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora,
+                            cadastrado_por = registeredBy.name, wasBuchoRe = state.isBuchoRe
                         ))
                     } else if (loser2IsNonMember) {
                         // Loser 1 paga dobro
                         repository.registerDebit(DebitRequest(
                             data = dateStr, jogador = losers[0].name, valor = debitValue * 2,
-                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora
+                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora,
+                            cadastrado_por = registeredBy.name, wasBuchoRe = state.isBuchoRe
                         ))
                     } else {
                         // Ambos pagam normal - Chamada Única para evitar duplicidade
                         val combinedNames = "${losers[0].name} / ${losers[1].name}"
                         repository.registerDebit(DebitRequest(
                             data = dateStr, jogador = combinedNames, valor = debitValue,
-                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora
+                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora,
+                            cadastrado_por = registeredBy.name, wasBuchoRe = state.isBuchoRe
                         ))
                     }
                 }
