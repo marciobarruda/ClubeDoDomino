@@ -591,24 +591,41 @@
                 isTimeManipulated: false
             },
 
-            // Sincroniza com o servidor no carregamento (HEAD request rápido)
-            async syncWithServerTime() {
+            // Sincronização robusta (Internet -> Servidor -> Local)
+            async syncTime() {
+                this.setLoading(true);
                 try {
-                    const res = await fetch(API_BASE + 'webhook/buscar-jogadores', { method: 'HEAD' });
-                    const serverDateStr = res.headers.get('Date');
-                    if (serverDateStr) {
-                        const serverDate = new Date(serverDateStr);
+                    // 1. Tenta API pública de tempo (Recife)
+                    const res = await fetch('https://worldtimeapi.org/api/timezone/America/Recife');
+                    const data = await res.json();
+                    if (data && data.datetime) {
+                        const trueDate = new Date(data.datetime);
                         const localDate = new Date();
-                        const diff = Math.abs(serverDate - localDate);
+                        const diff = Math.abs(trueDate - localDate);
                         
-                        // Se a diferença for maior que 5 minutos, bloqueia
-                        if (diff > 300000) {
+                        if (diff > 300000) { // 5 min
                             this.state.isTimeManipulated = true;
                         }
                     }
                 } catch (e) {
-                    console.error("Sync failed:", e);
+                    console.warn("WorldTimeAPI falhou, tentando header do servidor...");
+                    // 2. Fallback para o header do n8n
+                    try {
+                        const res = await fetch(API_BASE + 'webhook/buscar-jogadores', { method: 'HEAD' });
+                        const serverDateStr = res.headers.get('Date');
+                        if (serverDateStr) {
+                            const serverDate = new Date(serverDateStr);
+                            const localDate = new Date();
+                            if (Math.abs(serverDate - localDate) > 300000) {
+                                this.state.isTimeManipulated = true;
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Todas as sincronizações de tempo falharam");
+                    }
                 }
+                this.setLoading(false);
+                this.applyMatchAvailability();
             },
 
             // Monitora manipulação de tempo em tempo real
@@ -616,27 +633,18 @@
                 setInterval(() => {
                     const currentElapsed = performance.now();
                     const currentDate = Date.now();
-                    
                     const expectedDate = this.state.baseDate + (currentElapsed - this.state.baseElapsed);
                     const drift = Math.abs(currentDate - expectedDate);
 
-                    // Se o relógio do sistema mudou mais de 30s em relação ao tempo decorrido, houve manipulação
-                    if (drift > 30000) {
-                        this.state.isTimeManipulated = true;
-                    }
+                    if (drift > 30000) this.state.isTimeManipulated = true;
+                    if (currentDate < this.state.lastKnownTime - 5000) this.state.isTimeManipulated = true;
 
-                    // Prevenção de viagem no tempo (voltar relógio)
-                    if (currentDate < this.state.lastKnownTime - 5000) {
-                        this.state.isTimeManipulated = true;
-                    }
-
-                    // Atualiza o último horário conhecido (apenas se for maior que o anterior)
                     if (currentDate > this.state.lastKnownTime) {
                         this.state.lastKnownTime = currentDate;
                         localStorage.setItem('last_known_time', currentDate);
                     }
 
-                    if (this.state.isTimeManipulated && document.getElementById('match-screen').classList.contains('active')) {
+                    if (this.state.isTimeManipulated) {
                         this.applyMatchAvailability();
                     }
                 }, 5000);
@@ -675,15 +683,19 @@
                 if (diag) {
                     const now = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Recife"}));
                     diag.innerHTML = `
-                        🕒 ${now.toLocaleTimeString('pt-BR')} — 
-                        ${this.state.isTimeManipulated ? '🎈 Ops! Relógio desajustado' : '✨ Tudo certo com o horário'}
+                        <div style="display:flex; flex-direction:column; gap:4px">
+                            <span>🕒 Hora do App: ${now.toLocaleTimeString('pt-BR')}</span>
+                            <span style="color: ${this.state.isTimeManipulated ? '#fb7185' : '#22c55e'}">
+                                ${this.state.isTimeManipulated ? '❌ ALERTA: Relógio Adulterado' : '✅ Relógio Integrado'}
+                            </span>
+                        </div>
                     `;
                 }
             },
 
             async init() {
                 this.monitorTime();
-                await this.syncWithServerTime(); // Sincroniza logo no início
+                await this.syncTime(); // Sincroniza logo no início
                 
                 // Timer de segurança para fechamento automático
                 setInterval(() => {
