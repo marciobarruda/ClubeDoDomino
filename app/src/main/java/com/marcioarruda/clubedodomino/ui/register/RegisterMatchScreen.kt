@@ -39,9 +39,14 @@ fun RegisterMatchScreen(
         }
     }
 
-    // Handle Success Navigation (e.g. after Update)
+    // Handle Success Navigation (e.g. after Update or Auto-Close)
     LaunchedEffect(state.success) {
         if (state.success) {
+            // Se houver erro (provavelmente o de fechamento automático), esperamos 5 segundos 
+            // para o usuário conseguir ler o diagnóstico antes de fechar a tela.
+            if (state.error != null) {
+                kotlinx.coroutines.delay(5000)
+            }
             navController.popBackStack()
         }
     }
@@ -117,7 +122,7 @@ fun RegisterMatchScreen(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = RoyalGold),
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isLoading
+                enabled = !state.isLoading && state.isModuleAvailable
             ) {
                 if (state.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.Black)

@@ -34,7 +34,7 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
-    private val matchAvailabilityManager = MatchAvailabilityManager(HolidayRepository)
+    private val matchAvailabilityManager = com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
     private val dateFormatter = SimpleDateFormat("EEEE, dd 'de' MMMM", Locale("pt", "BR"))
 
 
@@ -161,8 +161,10 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
         // tickerFlow emite um valor a cada 60 segundos (1 minuto)
         tickerFlow(periodMillis = 60_000, initialDelayMillis = 0)
             .onEach {
+                matchAvailabilityManager.initialize(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
+                
                 // Recalcula a visibilidade a cada emissão
-                val isAvailable = matchAvailabilityManager.isModuleAvailable()
+                val isAvailable = matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
                 _uiState.update { it.copy(isNewMatchVisible = isAvailable) }
             }
             .launchIn(viewModelScope) // Lança o flow no escopo do ViewModel

@@ -195,7 +195,8 @@ data class UpdateInfo(
     @SerializedName("version_code", alternate = ["versionCode"]) val versionCode: Int,
     @SerializedName("version_name", alternate = ["versionName"]) val versionName: String,
     @SerializedName("apk_url", alternate = ["apkUrl", "url"]) val apkUrl: String,
-    @SerializedName("release_notes", alternate = ["releaseNotes", "notes"]) val releaseNotes: String?
+    @SerializedName("release_notes", alternate = ["releaseNotes", "notes"]) val releaseNotes: String?,
+    @SerializedName("min_version", alternate = ["minVersion"]) val minVersionCode: Int? = 0
 )
 
 data class DeleteRequest(

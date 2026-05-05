@@ -33,7 +33,8 @@ data class MatchRegistrationState(
     val success: Boolean = false,
     val editingMatchId: String? = null,
     val editingMatchDate: java.util.Date? = null,
-    val editingMatchRegisteredBy: User? = null
+    val editingMatchRegisteredBy: User? = null,
+    val isModuleAvailable: Boolean = true
 )
 
 class MatchViewModel(
@@ -48,25 +49,32 @@ class MatchViewModel(
 
     init {
         loadPlayers()
-        syncTime()
         startAutoCloseTimer()
     }
 
-    private fun syncTime() {
-        viewModelScope.launch {
-            matchAvailabilityManager.syncWithServer(RetrofitClient.instance)
-        }
-    }
+
 
     private fun startAutoCloseTimer() {
         viewModelScope.launch {
             while (true) {
                 kotlinx.coroutines.delay(10000) // Check every 10 seconds
-                if (!matchAvailabilityManager.isModuleAvailable()) {
+                
+                // Regra: Só fecha automaticamente se NÃO estiver editando uma partida antiga
+                // e se o módulo não estiver mais disponível.
+                val context = com.marcioarruda.clubedodomino.DominoClubApplication.instance
+                if (_uiState.value.editingMatchId == null && !matchAvailabilityManager.isModuleAvailable(context)) {
+                    
+                    val diagInfo = matchAvailabilityManager.getExtendedDiagnosticInfo(context)
                     _uiState.update { 
-                        if (it.success) it else it.copy(error = "Módulo fechado pontualmente às 14:00.", success = true) 
+                        if (it.success) it else it.copy(
+                            error = "MÓDULO BLOQUEADO\n$diagInfo\n\nCertifique-se de que 'Data e Hora Automáticas' está ATIVA nas configurações do sistema.", 
+                            success = false,
+                            isModuleAvailable = false
+                        ) 
                     }
-                    break
+                } else if (_uiState.value.editingMatchId == null && !_uiState.value.isModuleAvailable && matchAvailabilityManager.isModuleAvailable(context)) {
+                    // Se voltou a ficar disponível (ex: sincronizou e viu que estava certo)
+                    _uiState.update { it.copy(error = null, isModuleAvailable = true) }
                 }
             }
         }
@@ -265,13 +273,14 @@ class MatchViewModel(
         val s1 = state.score1
         val s2 = state.score2
         if (s1 < 6 && s2 < 6) {
-            _uiState.update { it.copy(isLoading = false, error = "O placar mínimo de uma das duplas deve ser pelo menos 6.") }
+            _uiState.update { it.copy(isLoading = false, error = "Placar de criança? Pelo menos uma dupla tem que ter 6 pontos. Joguem de verdade!") }
             return
         }
 
         // Regra: Bloqueio por horário
-        if (!matchAvailabilityManager.isModuleAvailable()) {
-            _uiState.update { it.copy(isLoading = false, error = "Fora do horário permitido para registro (Limite: 14h00).") }
+        if (!matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance)) {
+            val diag = matchAvailabilityManager.getExtendedDiagnosticInfo(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
+            _uiState.update { it.copy(isLoading = false, error = "MÓDULO BLOQUEADO\n$diag") }
             return
         }
 
@@ -380,10 +389,10 @@ class MatchViewModel(
         }
     }
 
-    private val matchAvailabilityManager = com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager(com.marcioarruda.clubedodomino.data.HolidayRepository)
+    private val matchAvailabilityManager = com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
 
     fun onRepeatMatch(repeat: Boolean) {
-        if (repeat && !matchAvailabilityManager.isModuleAvailable()) {
+        if (repeat && !matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance)) {
             _uiState.update { 
                 it.copy(
                     showRepeatDialog = false, 

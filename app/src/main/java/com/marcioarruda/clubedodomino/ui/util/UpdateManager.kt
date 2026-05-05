@@ -19,7 +19,7 @@ import java.io.File
 
 class UpdateManager(private val context: Context) {
 
-    fun checkForUpdate(onUpdateAvailable: (String, String) -> Unit) {
+    fun checkForUpdate(onUpdateAvailable: (url: String, notes: String, isMandatory: Boolean) -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 withContext(Dispatchers.Main) {
@@ -33,8 +33,9 @@ class UpdateManager(private val context: Context) {
                 }
 
                 if (updateInfo.versionCode > BuildConfig.VERSION_CODE) {
+                    val isMandatory = (updateInfo.minVersionCode ?: 0) > BuildConfig.VERSION_CODE
                     withContext(Dispatchers.Main) {
-                        onUpdateAvailable(updateInfo.apkUrl, updateInfo.releaseNotes ?: "Nova versão disponível!")
+                        onUpdateAvailable(updateInfo.apkUrl, updateInfo.releaseNotes ?: "Nova versão disponível!", isMandatory)
                     }
                 } else {
                      withContext(Dispatchers.Main) {

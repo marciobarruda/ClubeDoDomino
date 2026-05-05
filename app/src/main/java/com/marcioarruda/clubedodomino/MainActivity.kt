@@ -24,30 +24,35 @@ class MainActivity : ComponentActivity() {
                 val updateUrl = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
                 val releaseNotes = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
 
+                val isMandatory = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                
                 androidx.compose.runtime.LaunchedEffect(Unit) {
-                    updateManager.checkForUpdate { url, notes ->
+                    updateManager.checkForUpdate { url, notes, mandatory ->
                         updateUrl.value = url
                         releaseNotes.value = notes
+                        isMandatory.value = mandatory
                         showDialog.value = true
                     }
                 }
-
+                
                 if (showDialog.value) {
                     androidx.compose.material3.AlertDialog(
-                        onDismissRequest = { showDialog.value = false },
-                        title = { androidx.compose.material3.Text("Nova Versão Disponível 🚀") },
+                        onDismissRequest = { if (!isMandatory.value) showDialog.value = false },
+                        title = { androidx.compose.material3.Text(if (isMandatory.value) "Atualização Obrigatória ⚠️" else "Nova Versão Disponível 🚀") },
                         text = { androidx.compose.material3.Text(releaseNotes.value) },
                         confirmButton = {
                             androidx.compose.material3.Button(onClick = {
                                 updateManager.downloadAndInstall(updateUrl.value)
-                                showDialog.value = false
+                                if (!isMandatory.value) showDialog.value = false
                             }) {
                                 androidx.compose.material3.Text("Atualizar Agora")
                             }
                         },
                         dismissButton = {
-                            androidx.compose.material3.TextButton(onClick = { showDialog.value = false }) {
-                                androidx.compose.material3.Text("Depois")
+                            if (!isMandatory.value) {
+                                androidx.compose.material3.TextButton(onClick = { showDialog.value = false }) {
+                                    androidx.compose.material3.Text("Depois")
+                                }
                             }
                         }
                     )
