@@ -413,7 +413,7 @@
             </div>
 
             <!-- Formulário de partida (dentro do horário) -->
-            <div id="match-form">
+            <div id="match-form" style="display: none">
                 <h2 style="text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 24px">Nova Partida</h2>
 
                 <div class="team-group">
@@ -591,27 +591,29 @@
                 isTimeManipulated: false
             },
 
-            // Sincronização robusta (Internet -> Servidor -> Local)
+            // Sincronização Robusta (Internet -> Servidor -> Local)
             async syncTime() {
-                this.setLoading(true);
+                const diag = document.getElementById('time-diag');
+                if (diag) diag.innerHTML = "⏳ Verificando horário real...";
+                
                 try {
-                    // 1. Tenta API pública de tempo (Recife)
+                    // 1. Tenta WorldTimeAPI
                     const res = await fetch('https://worldtimeapi.org/api/timezone/America/Recife');
+                    if (!res.ok) throw new Error("WorldTimeAPI Offline");
+                    
                     const data = await res.json();
-                    if (data && data.datetime) {
-                        const trueDate = new Date(data.datetime);
-                        const localDate = new Date();
-                        const diff = Math.abs(trueDate - localDate);
-                        
-                        if (diff > 300000) { // 5 min
-                            this.state.isTimeManipulated = true;
-                        }
+                    const trueDate = new Date(data.datetime);
+                    const localDate = new Date();
+                    const diff = Math.abs(trueDate - localDate);
+                    
+                    if (diff > 300000) {
+                        this.state.isTimeManipulated = true;
                     }
+                    console.log("Sync via WorldTimeAPI: OK");
                 } catch (e) {
-                    console.warn("WorldTimeAPI falhou, tentando header do servidor...");
-                    // 2. Fallback para o header do n8n
+                    console.warn("Fallback 1: Header do Servidor");
                     try {
-                        const res = await fetch(API_BASE + 'webhook/buscar-jogadores', { method: 'HEAD' });
+                        const res = await fetch(API_BASE + 'webhook/buscar-jogadores', { method: 'HEAD', cache: 'no-store' });
                         const serverDateStr = res.headers.get('Date');
                         if (serverDateStr) {
                             const serverDate = new Date(serverDateStr);
@@ -621,18 +623,20 @@
                             }
                         }
                     } catch (err) {
-                        console.error("Todas as sincronizações de tempo falharam");
+                        console.error("Todas as sincronizações falharam");
                     }
                 }
-                this.setLoading(false);
                 this.applyMatchAvailability();
             },
 
             // Monitora manipulação de tempo em tempo real
             monitorTime() {
+                this.state.baseDate = Date.now();
+                this.state.baseElapsed = performance.now();
+                
                 setInterval(() => {
-                    const currentElapsed = performance.now();
                     const currentDate = Date.now();
+                    const currentElapsed = performance.now();
                     const expectedDate = this.state.baseDate + (currentElapsed - this.state.baseElapsed);
                     const drift = Math.abs(currentDate - expectedDate);
 
@@ -647,7 +651,7 @@
                     if (this.state.isTimeManipulated) {
                         this.applyMatchAvailability();
                     }
-                }, 5000);
+                }, 3000);
             },
 
             getSyncedDate() {
@@ -677,17 +681,20 @@
                 const diag = document.getElementById('time-diag');
 
                 if (navBtn) navBtn.style.opacity = available ? '1' : '0.4';
+                
+                // IMPORTANTE: Garantir visibilidade apenas se verificado
                 if (locked) locked.style.display = available ? 'none' : 'flex';
                 if (form)   form.style.display   = available ? 'block' : 'none';
 
                 if (diag) {
                     const now = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Recife"}));
                     diag.innerHTML = `
-                        <div style="display:flex; flex-direction:column; gap:4px">
-                            <span>🕒 Hora do App: ${now.toLocaleTimeString('pt-BR')}</span>
+                        <div style="display:flex; flex-direction:column; gap:6px; text-align:left; font-family:monospace; font-size:11px">
+                            <span>📱 Relógio Celular: ${now.toLocaleTimeString('pt-BR')}</span>
                             <span style="color: ${this.state.isTimeManipulated ? '#fb7185' : '#22c55e'}">
-                                ${this.state.isTimeManipulated ? '❌ ALERTA: Relógio Adulterado' : '✅ Relógio Integrado'}
+                                🛡️ Status: ${this.state.isTimeManipulated ? 'MANIPULADO' : 'ÍNTEGRO'}
                             </span>
+                            <span>📅 Janela: 11:45 - 14:00 (Seg-Sex)</span>
                         </div>
                     `;
                 }
