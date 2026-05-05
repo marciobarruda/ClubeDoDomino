@@ -254,12 +254,12 @@
         }
         .slot-avatar { width: 50px; height: 50px; border-radius: 16px; background: #fff; border: 2px solid #e2e8f0; }
 
-        .score-input { display: flex; align-items: center; justify-content: center; gap: 24px; margin: 24px 0; }
+        .score-input { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px 0; }
         .score-box { 
-            width: 84px; height: 84px; background: #fff; border-radius: 24px;
-            display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 900;
-            color: var(--primary); border: 3px solid #eff6ff;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.03);
+            width: 60px; height: 60px; background: #fff; border-radius: 18px;
+            display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900;
+            color: var(--primary); border: 2px solid #eff6ff;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.03);
         }
 
         /* --- Modal --- */
@@ -591,6 +591,26 @@
                 isTimeManipulated: false
             },
 
+            // Sincroniza com o servidor no carregamento (HEAD request rápido)
+            async syncWithServerTime() {
+                try {
+                    const res = await fetch(API_BASE + 'webhook/buscar-jogadores', { method: 'HEAD' });
+                    const serverDateStr = res.headers.get('Date');
+                    if (serverDateStr) {
+                        const serverDate = new Date(serverDateStr);
+                        const localDate = new Date();
+                        const diff = Math.abs(serverDate - localDate);
+                        
+                        // Se a diferença for maior que 5 minutos, bloqueia
+                        if (diff > 300000) {
+                            this.state.isTimeManipulated = true;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Sync failed:", e);
+                }
+            },
+
             // Monitora manipulação de tempo em tempo real
             monitorTime() {
                 setInterval(() => {
@@ -663,6 +683,7 @@
 
             async init() {
                 this.monitorTime();
+                await this.syncWithServerTime(); // Sincroniza logo no início
                 
                 // Timer de segurança para fechamento automático
                 setInterval(() => {
