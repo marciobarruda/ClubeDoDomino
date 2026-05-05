@@ -413,7 +413,7 @@
             </div>
 
             <!-- Formulário de partida (dentro do horário) -->
-            <div id="match-form" style="display: none">
+            <div id="match-form">
                 <h2 style="text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 24px">Nova Partida</h2>
 
                 <div class="team-group">
@@ -588,42 +588,38 @@
                 lastKnownTime: parseInt(localStorage.getItem('last_known_time')) || 0,
                 baseElapsed: performance.now(),
                 baseDate: Date.now(),
-                isTimeManipulated: false
+                isTimeManipulated: false,
+                serverOffset: 0,
+                syncStatus: "Iniciando..."
             },
 
-            // Sincronização Robusta (Internet -> Servidor -> Local)
+            // Sincronização Definitiva (v1.23)
             async syncTime() {
-                const diag = document.getElementById('time-diag');
-                if (diag) diag.innerHTML = "⏳ Verificando horário real...";
+                this.state.syncStatus = "Sincronizando...";
+                this.applyMatchAvailability();
                 
                 try {
-                    // 1. Tenta WorldTimeAPI
                     const res = await fetch('https://worldtimeapi.org/api/timezone/America/Recife');
-                    if (!res.ok) throw new Error("WorldTimeAPI Offline");
-                    
                     const data = await res.json();
-                    const trueDate = new Date(data.datetime);
-                    const localDate = new Date();
-                    const diff = Math.abs(trueDate - localDate);
-                    
-                    if (diff > 300000) {
-                        this.state.isTimeManipulated = true;
+                    if (data && data.datetime) {
+                        const trueDate = new Date(data.datetime);
+                        const localDate = new Date();
+                        // Guardamos a diferença (offset) entre a internet e o celular
+                        this.state.serverOffset = trueDate - localDate;
+                        this.state.syncStatus = "✅ Sincronizado (Internet)";
                     }
-                    console.log("Sync via WorldTimeAPI: OK");
                 } catch (e) {
-                    console.warn("Fallback 1: Header do Servidor");
+                    this.state.syncStatus = "⚠️ Sincronização Alternativa...";
                     try {
-                        const res = await fetch(API_BASE + 'webhook/buscar-jogadores', { method: 'HEAD', cache: 'no-store' });
+                        const res = await fetch(API_BASE + 'webhook/buscar-jogadores', { method: 'HEAD' });
                         const serverDateStr = res.headers.get('Date');
                         if (serverDateStr) {
                             const serverDate = new Date(serverDateStr);
-                            const localDate = new Date();
-                            if (Math.abs(serverDate - localDate) > 300000) {
-                                this.state.isTimeManipulated = true;
-                            }
+                            this.state.serverOffset = serverDate - new Date();
+                            this.state.syncStatus = "✅ Sincronizado (Servidor)";
                         }
                     } catch (err) {
-                        console.error("Todas as sincronizações falharam");
+                        this.state.syncStatus = "❌ Falha na Sincronização";
                     }
                 }
                 this.applyMatchAvailability();
@@ -640,28 +636,26 @@
                     const expectedDate = this.state.baseDate + (currentElapsed - this.state.baseElapsed);
                     const drift = Math.abs(currentDate - expectedDate);
 
-                    if (drift > 30000) this.state.isTimeManipulated = true;
-                    if (currentDate < this.state.lastKnownTime - 5000) this.state.isTimeManipulated = true;
+                    if (drift > 30000 || currentDate < this.state.lastKnownTime - 5000) {
+                        this.state.isTimeManipulated = true;
+                    }
 
                     if (currentDate > this.state.lastKnownTime) {
                         this.state.lastKnownTime = currentDate;
                         localStorage.setItem('last_known_time', currentDate);
                     }
 
-                    if (this.state.isTimeManipulated) {
-                        this.applyMatchAvailability();
-                    }
-                }, 3000);
-            },
-
-            getSyncedDate() {
-                return new Date();
+                    if (this.state.isTimeManipulated) this.applyMatchAvailability();
+                }, 5000);
             },
 
             isMatchAvailable() {
                 if (this.state.isTimeManipulated) return false;
 
-                const nowRecife = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Recife"}));
+                // Calculamos a "Hora Real" somando o offset ao relógio do celular
+                const trueTime = new Date(Date.now() + (this.state.serverOffset || 0));
+                
+                const nowRecife = new Date(trueTime.toLocaleString("en-US", {timeZone: "America/Recife"}));
                 const dow = nowRecife.getDay();
                 const hours = nowRecife.getHours();
                 const minutes = nowRecife.getMinutes();
@@ -681,20 +675,24 @@
                 const diag = document.getElementById('time-diag');
 
                 if (navBtn) navBtn.style.opacity = available ? '1' : '0.4';
-                
-                // IMPORTANTE: Garantir visibilidade apenas se verificado
                 if (locked) locked.style.display = available ? 'none' : 'flex';
                 if (form)   form.style.display   = available ? 'block' : 'none';
 
                 if (diag) {
-                    const now = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Recife"}));
+                    const trueTime = new Date(Date.now() + (this.state.serverOffset || 0));
                     diag.innerHTML = `
-                        <div style="display:flex; flex-direction:column; gap:6px; text-align:left; font-family:monospace; font-size:11px">
-                            <span>📱 Relógio Celular: ${now.toLocaleTimeString('pt-BR')}</span>
-                            <span style="color: ${this.state.isTimeManipulated ? '#fb7185' : '#22c55e'}">
-                                🛡️ Status: ${this.state.isTimeManipulated ? 'MANIPULADO' : 'ÍNTEGRO'}
-                            </span>
-                            <span>📅 Janela: 11:45 - 14:00 (Seg-Sex)</span>
+                        <div style="display:flex; flex-direction:column; gap:6px; font-size:11px">
+                            <div style="display:flex; justify-content:space-between">
+                                <span>🌐 Status Sync:</span>
+                                <span style="color:${this.state.syncStatus.includes('✅') ? '#22c55e' : '#f59e0b'}">${this.state.syncStatus}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between">
+                                <span>⌚ Hora Validada:</span>
+                                <strong>${trueTime.toLocaleTimeString('pt-BR')}</strong>
+                            </div>
+                            <div style="margin-top:4px; padding-top:4px; border-top:1px solid #e2e8f0; font-size:10px; color:#94a3b8">
+                                v1.23 — Proteção Ativa
+                            </div>
                         </div>
                     `;
                 }
