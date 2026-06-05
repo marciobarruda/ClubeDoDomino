@@ -83,33 +83,13 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
     }
 
     suspend fun calcularPontosAno(usuarioLogado: User): Int {
-        if (allMatchDTOs.isEmpty()) {
-            getMatches()
+        return try {
+            val ranking = apiService.getRanking()
+            val cleanName = usuarioLogado.name.trim()
+            ranking.find { it.jogador.equals(cleanName, ignoreCase = true) || it.jogador.equals(usuarioLogado.displayName.trim(), ignoreCase = true) }?.pontos_ano ?: 0
+        } catch (e: Exception) {
+            0
         }
-        
-        val normalizedUserName = usuarioLogado.name.trim()
-        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-        
-        return allMatchDTOs.filter { match ->
-            // Critério A: Dupla Vencedora contains name
-            val winnerPair = match.dupla_vencedora ?: ""
-            val isUserWinner = winnerPair.contains(normalizedUserName, ignoreCase = true)
-            
-            // Critério B: Temporal
-            var matchYear = -1
-            match.data?.let {
-                 try {
-                     val date = dateFormat.parse(it)
-                     if (date != null) {
-                         val cal = Calendar.getInstance()
-                         cal.time = date
-                         matchYear = cal.get(Calendar.YEAR)
-                     }
-                 } catch (e: Exception) { }
-            }
-            
-            isUserWinner && matchYear == currentYear
-        }.sumOf { it.pts ?: 0 }
     }
 
     suspend fun getPlayers(): List<User> {
@@ -188,6 +168,10 @@ class ClubRepository(private val apiService: ApiService = RetrofitClient.instanc
 
     suspend fun getMensalidadesResult(): Result<List<MensalidadeDto>> {
         return safeApiCall { apiService.getMensalidades() }
+    }
+
+    suspend fun getRankingResult(): Result<List<RankingDto>> {
+        return safeApiCall { apiService.getRanking() }
     }
 
     suspend fun createMensalidade(playerName: String, month: Int? = null, year: Int? = null) {

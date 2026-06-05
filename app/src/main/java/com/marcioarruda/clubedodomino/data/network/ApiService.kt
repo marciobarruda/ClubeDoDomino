@@ -59,6 +59,17 @@ data class MensalidadeDto(
     val ano: Int? = null
 )
 
+// DTO para Ranking (listar-ranking)
+data class RankingDto(
+    val jogador: String,
+    val partidas_dia: Int,
+    val pontos_dia: Int,
+    val partidas_mes: Int,
+    val pontos_mes: Int,
+    val partidas_ano: Int,
+    val pontos_ano: Int
+)
+
 data class DebitRequest(
     val data: String,
     val jogador: String,
@@ -138,6 +149,9 @@ interface ApiService {
 
     @POST("webhook/partidas")
     suspend fun registerMatch(@Body match: MatchDTO): retrofit2.Response<Unit>
+
+    @GET("webhook/listar-ranking")
+    suspend fun getRanking(): List<RankingDto>
 
     @POST("webhook/gravar-buchos")
     suspend fun registerDebit(@Body debit: DebitRequest): retrofit2.Response<Unit>

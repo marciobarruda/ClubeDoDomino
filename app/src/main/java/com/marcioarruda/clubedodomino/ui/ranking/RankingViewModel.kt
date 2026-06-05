@@ -36,85 +36,34 @@ class RankingViewModel(private val repository: ClubRepository) : ViewModel() {
 
             try {
                 val usersDeferred = async { repository.getPlayers() }
-                val matchesResult = repository.getRawMatchesResult()
+                val rankingResult = repository.getRankingResult()
                 val users = usersDeferred.await()
 
-                matchesResult.onSuccess { rawMatches ->
-                    if (rawMatches.isEmpty() || users.isEmpty()) {
+                rankingResult.onSuccess { rawRanking ->
+                    if (rawRanking.isEmpty()) {
                         _uiState.update { it.copy(isLoading = false, rankingList = emptyList()) }
                         return@onSuccess
                     }
 
-                    // De-duplicate matches based on ID to avoid double counting
-                    val matches = rawMatches.distinctBy { it.id }
-
-                    val cal = Calendar.getInstance()
-                    val currentYear = cal.get(Calendar.YEAR)
-                    val currentMonth = cal.get(Calendar.MONTH)
-                    val currentDayOfYear = cal.get(Calendar.DAY_OF_YEAR)
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-
-                    val statsMap = users.associate {
-                        it.name.lowercase() to MutableRankingStats(it.name, it.photoUrl)
-                    }.toMutableMap()
-
-                    matches.forEach { match ->
-                        // Etapa 1: Parse Seguro da Data
-                        val matchDate = try {
-                            match.data?.let { dateFormat.parse(it) }
-                        } catch (e: Exception) {
-                            null
-                        } ?: return@forEach // Pula para a próxima partida se a data for inválida
-
-                        cal.time = matchDate
-                        val matchYear = cal.get(Calendar.YEAR)
-
-                        // Etapa 2: Filtro Temporal (Condição B)
-                        // Processa apenas partidas do ano corrente.
-                        if (matchYear == currentYear) {
-                            val allPlayersInMatch = listOfNotNull(
-                                match.jogador1, match.jogador2, match.jogador3, match.jogador4
-                            ).map { it.trim().lowercase() }
-                            
-                            val matchMonth = cal.get(Calendar.MONTH)
-                            val matchDayOfYear = cal.get(Calendar.DAY_OF_YEAR)
-                            val isThisMonth = matchMonth == currentMonth
-                            val isToday = matchDayOfYear == currentDayOfYear
-
-                            // A contagem de partidas está correta e é feita para todos os participantes.
-                            allPlayersInMatch.forEach { playerName ->
-                                statsMap[playerName]?.let { stats ->
-                                    stats.yearlyMatches++
-                                    if (isThisMonth) stats.monthlyMatches++
-                                    if (isToday) stats.dailyMatches++
-                                }
-                            }
-
-                            // Etapa 3: Filtro de Vitória (Condição A) e Operação de Soma
-                            // Split by both '/' and '&' to handle different separators
-                            val winnerNames = match.dupla_vencedora?.split(Regex("[/&]"))
-                                ?.map { it.trim().lowercase() } ?: emptyList()
-                            
-                            val points = match.pts ?: 0 // Trata nulos como 0
-
-                            // A soma de pontos é feita APENAS para os vencedores.
-                            winnerNames.forEach { winnerName ->
-                                if (allPlayersInMatch.contains(winnerName)) {
-                                    statsMap[winnerName]?.let { stats ->
-                                        // Aplica a soma para o acumulado do ano, mês e dia.
-                                        stats.yearlyPoints += points
-                                        if (isThisMonth) stats.monthlyPoints += points
-                                        if (isToday) stats.dailyPoints += points
-                                    }
-                                }
-                            }
-                        }
+                    val statsMap = rawRanking.mapNotNull { dto ->
+                        if (dto.jogador.contains("NÃO MEMBRO", ignoreCase = true)) return@mapNotNull null
+                        val user = users.find { it.name.equals(dto.jogador.trim(), ignoreCase = true) || it.displayName.equals(dto.jogador.trim(), ignoreCase = true) }
+                        val photoUrl = user?.photoUrl ?: ""
+                        
+                        RankingPlayer(
+                            playerName = dto.jogador,
+                            photoUrl = photoUrl,
+                            dailyPoints = dto.pontos_dia,
+                            dailyMatches = dto.partidas_dia,
+                            monthlyPoints = dto.pontos_mes,
+                            monthlyMatches = dto.partidas_mes,
+                            yearlyPoints = dto.pontos_ano,
+                            yearlyMatches = dto.partidas_ano
+                        )
                     }
 
-                    val rankingList = statsMap.values
-                        .map { it.toRankingPlayer() }
-                        .filter { it.yearlyMatches > 0 }
-                        .sortedByDescending { it.yearlyPoints } // Ordenação mantida
+                    val rankingList = statsMap
+                        .sortedWith(compareByDescending<RankingPlayer> { it.monthlyPoints }.thenByDescending { it.yearlyPoints })
 
                     _uiState.update {
                         it.copy(isLoading = false, rankingList = rankingList)
@@ -128,27 +77,5 @@ class RankingViewModel(private val repository: ClubRepository) : ViewModel() {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
-    }
-
-    private data class MutableRankingStats(
-        val name: String,
-        val photoUrl: String,
-        var dailyPoints: Long = 0,
-        var dailyMatches: Long = 0,
-        var monthlyPoints: Long = 0,
-        var monthlyMatches: Long = 0,
-        var yearlyPoints: Long = 0,
-        var yearlyMatches: Long = 0
-    ) {
-        fun toRankingPlayer() = RankingPlayer(
-            playerName = name,
-            photoUrl = photoUrl,
-            dailyPoints = dailyPoints.toInt(),
-            dailyMatches = dailyMatches.toInt(),
-            monthlyPoints = monthlyPoints.toInt(),
-            monthlyMatches = monthlyMatches.toInt(),
-            yearlyPoints = yearlyPoints.toInt(),
-            yearlyMatches = yearlyMatches.toInt()
-        )
     }
 }

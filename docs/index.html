@@ -576,6 +576,7 @@
                 user: JSON.parse(localStorage.getItem('user')) || null,
                 players: [],
                 matches: [],
+                ranking: [],
                 debts: [],
                 selectedPlayers: [null, null, null, null],
                 score1: 0,
@@ -837,11 +838,12 @@
             async loadData() {
                 this.setLoading(true);
                 try {
-                    const [players, matches, buchos, mensalidades] = await Promise.all([
+                    const [players, matches, buchos, mensalidades, ranking] = await Promise.all([
                         fetch(`${API_BASE}webhook/buscar-jogadores`).then(r => r.json()).catch(() => []),
                         fetch(`${API_BASE}webhook/partidas`).then(r => r.json()).catch(() => []),
                         fetch(`${API_BASE}webhook/gravar-buchos`).then(r => r.json()).catch(() => []),
-                        fetch(`${API_BASE}webhook/buscar-info-mensalidade`).then(r => r.json()).catch(() => [])
+                        fetch(`${API_BASE}webhook/buscar-info-mensalidade`).then(r => r.json()).catch(() => []),
+                        fetch(`${API_BASE}webhook/listar-ranking`).then(r => r.json()).catch(() => [])
                     ]);
 
                     this.state.players = Array.isArray(players) ? players : [];
@@ -849,6 +851,7 @@
                         this.state.players.push({ jogador: 'JOGADOR NÃO MEMBRO', email: '7', avatar: '' });
                     }
                     this.state.matches = Array.isArray(matches) ? matches : [];
+                    this.state.ranking = Array.isArray(ranking) ? ranking : [];
                     
 
 
@@ -1054,11 +1057,8 @@
                 if (playerDetail) {
                     myMonthlyMatches = playerDetail.partidas;
                 } else {
-                    myMonthlyMatches = this.state.matches.filter(m => {
-                        const d = new Date(m.data);
-                        const isMyMatch = [m.jogador1, m.jogador2, m.jogador3, m.jogador4].includes(this.state.user.name);
-                        return isMyMatch && d.getMonth() === curMonth && d.getFullYear() === curYear;
-                    }).length;
+                    const myRanking = this.state.ranking?.find(r => r.jogador === this.state.user.name);
+                    myMonthlyMatches = myRanking ? (myRanking.partidas_mes || 0) : 0;
                 }
 
                 const globalAvg = this.state.globalStats?.resumo_membros?.media_partidas_por_membro;
@@ -1066,17 +1066,10 @@
 
                 // Real Points in the Year
                 let totalPts = 0;
-                this.state.matches.forEach(m => {
-                    const d = new Date(m.data);
-                    if (d.getFullYear() !== curYear) return;
-
-                    const pts = m.pts || 0;
-                    if (m.scored1 > m.scored2) {
-                        if (m.jogador1 === this.state.user.name || m.jogador2 === this.state.user.name) totalPts += pts;
-                    } else if (m.scored2 > m.scored1) {
-                        if (m.jogador3 === this.state.user.name || m.jogador4 === this.state.user.name) totalPts += pts;
-                    }
-                });
+                const myRanking = this.state.ranking?.find(r => r.jogador === this.state.user.name);
+                if (myRanking) {
+                    totalPts = myRanking.pontos_ano || 0;
+                }
                 document.getElementById('stats-points').innerText = totalPts;
             },
 
@@ -1165,56 +1158,13 @@
                 const table = document.getElementById('ranking-table');
                 table.innerHTML = '';
 
-                const now = new Date();
-                const todayStr = now.toISOString().split('T')[0]; // 'YYYY-MM-DD'
-                const curMonth = now.getMonth();
-                const curYear = now.getFullYear();
+                // Sort ranking array by pontos_mes (descending), and if tied, by pontos_ano (descending)
+                const sortedRanking = [...(this.state.ranking || [])]
+                    .filter(r => !r.jogador.includes('NÃO MEMBRO'))
+                    .sort((a, b) => (b.pontos_mes - a.pontos_mes) || (b.pontos_ano - a.pontos_ano));
 
-                // Initialise per-player scoreboards
-                const scoreDay   = {};
-                const scoreMonth = {};
-                const scoreYear  = {};
-                this.state.players
-                    .filter(p => !p.jogador.includes('NÃO MEMBRO'))
-                    .forEach(p => {
-                        scoreDay[p.jogador]   = 0;
-                        scoreMonth[p.jogador] = 0;
-                        scoreYear[p.jogador]  = 0;
-                    });
-
-                this.state.matches.forEach(m => {
-                    const d = new Date(m.data);
-                    const matchDate = m.data ? m.data.split('T')[0] : '';
-                    const pts = m.pts || 0;
-
-                    const winners = m.scored1 > m.scored2
-                        ? [m.jogador1, m.jogador2]
-                        : [m.jogador3, m.jogador4];
-
-                    winners.forEach(name => {
-                        if (!name || name.includes('NÃO MEMBRO')) return;
-
-                        // Year
-                        if (d.getFullYear() === curYear) {
-                            scoreYear[name] = (scoreYear[name] || 0) + pts;
-                        }
-                        // Month
-                        if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
-                            scoreMonth[name] = (scoreMonth[name] || 0) + pts;
-                        }
-                        // Today
-                        if (matchDate === todayStr) {
-                            scoreDay[name] = (scoreDay[name] || 0) + pts;
-                        }
-                    });
-                });
-
-                // Sort by month score (main column), then year as tiebreaker
-                const players = Object.keys(scoreMonth)
-                    .filter(n => n && !n.includes('NÃO MEMBRO'))
-                    .sort((a, b) => (scoreMonth[b] - scoreMonth[a]) || (scoreYear[b] - scoreYear[a]));
-
-                players.forEach((name, idx) => {
+                sortedRanking.forEach((r, idx) => {
+                    const name = r.jogador;
                     const tr = document.createElement('tr');
                     const isMe = this.state.user && name === this.state.user.name;
                     const rowStyle = isMe ? 'background: rgba(99,102,241,0.12); border-radius: 8px;' : '';
@@ -1227,9 +1177,9 @@
                                 <span style="font-size: 13px">${this.firstName(name)}</span>
                             </div>
                         </td>
-                        <td style="padding: 10px 4px; text-align: right; font-size: 13px; color: ${scoreDay[name] > 0 ? 'var(--success)' : 'var(--text-muted)'}">${scoreDay[name] || 0}</td>
-                        <td style="padding: 10px 4px; text-align: right; font-weight: 700; font-size: 13px; color: var(--primary)">${scoreMonth[name] || 0}</td>
-                        <td style="padding: 10px 4px; text-align: right; font-size: 13px; color: var(--text-muted)">${scoreYear[name] || 0}</td>
+                        <td style="padding: 10px 4px; text-align: right; font-size: 13px; color: ${r.pontos_dia > 0 ? 'var(--success)' : 'var(--text-muted)'}">${r.pontos_dia || 0}</td>
+                        <td style="padding: 10px 4px; text-align: right; font-weight: 700; font-size: 13px; color: var(--primary)">${r.pontos_mes || 0}</td>
+                        <td style="padding: 10px 4px; text-align: right; font-size: 13px; color: var(--text-muted)">${r.pontos_ano || 0}</td>
                     `;
                     table.appendChild(tr);
                 });
