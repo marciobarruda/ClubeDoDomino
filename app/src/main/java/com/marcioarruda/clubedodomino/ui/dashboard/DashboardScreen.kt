@@ -448,7 +448,7 @@ private fun DailyAwardsCard(bestPlayers: List<BestPlayer>, worstPlayers: List<Be
 
             if (worstPlayers.isNotEmpty()) {
                 AwardSection(
-                    title = "PIOR DO DIA",
+                    title = "PIORZINHO",
                     players = worstPlayers,
                     icon = Icons.Default.EmojiEvents,
                     iconColor = Color.Red

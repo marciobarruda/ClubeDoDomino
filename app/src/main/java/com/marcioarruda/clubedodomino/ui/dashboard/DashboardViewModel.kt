@@ -65,49 +65,29 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 val groupedMatches = matches.groupBy { dateFormatter.format(it.date) }
 
 
-                // Calculate Best and Worst Players of the Day
-                val todayStr = dateFormatter.format(java.util.Date())
-                val todayMatches = groupedMatches[todayStr] ?: emptyList()
-                
+                // Calculate Best and Worst Players of the Day using Ranking API
                 var topPlayers = emptyList<BestPlayer>()
                 var bottomPlayers = emptyList<BestPlayer>()
 
-                if (todayMatches.isNotEmpty()) {
-                    val playerPoints = mutableMapOf<User, Int>()
+                val rankingResult = repository.getRankingResult()
+                val allPlayers = repository.getPlayers()
+
+                rankingResult.onSuccess { ranking ->
+                    val playedToday = ranking.filter { it.partidas_dia > 0 && !it.jogador.contains("NÃO MEMBRO", ignoreCase = true) }
                     
-                    // Initialize all players who played today with 0 points
-                    todayMatches.forEach { match ->
-                        listOf(match.team1Player1, match.team1Player2, match.team2Player1, match.team2Player2).forEach { p ->
-                            if (!playerPoints.containsKey(p)) {
-                                playerPoints[p] = 0
-                            }
-                        }
-                    }
+                    if (playedToday.isNotEmpty()) {
+                        val maxPoints = playedToday.maxOf { it.pontos_dia }
+                        val minPoints = playedToday.minOf { it.pontos_dia }
 
-                    todayMatches.forEach { match ->
-                        val winnerScore = if (match.score1 > match.score2) match.score1 else match.score2
-                        val loserScore = if (match.score1 > match.score2) match.score2 else match.score1
-                        val isBucho = (winnerScore == 6 && loserScore == 0)
-                        val points = if (match.wasBuchoRe) winnerScore + 2 else if (isBucho) winnerScore + 1 else java.lang.Math.abs(match.score1 - match.score2)
-
-                        val winners = if (match.score1 > match.score2) listOf(match.team1Player1, match.team1Player2) else listOf(match.team2Player1, match.team2Player2)
-                        
-                        winners.forEach { w ->
-                            val current = playerPoints.keys.find { it.id == w.id } ?: w
-                            playerPoints[current] = (playerPoints[current] ?: 0) + points
-                        }
-                    }
-                    
-                    if (playerPoints.isNotEmpty()) {
-                        val maxPoints = playerPoints.values.maxOrNull() ?: 0
-                        val minPoints = playerPoints.values.minOrNull() ?: 0
-
-                        if (maxPoints > 0) {
-                            topPlayers = playerPoints.filterValues { it == maxPoints }.map { BestPlayer(it.key, it.value) }
+                        topPlayers = playedToday.filter { it.pontos_dia == maxPoints }.mapNotNull { r ->
+                            val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
+                            playerUser?.let { BestPlayer(it, r.pontos_dia) }
                         }
                         
-                        // Worst players are those with minimum points (could be 0)
-                        bottomPlayers = playerPoints.filterValues { it == minPoints }.map { BestPlayer(it.key, it.value) }
+                        bottomPlayers = playedToday.filter { it.pontos_dia == minPoints }.mapNotNull { r ->
+                            val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
+                            playerUser?.let { BestPlayer(it, r.pontos_dia) }
+                        }
                     }
                 }
 
