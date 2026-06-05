@@ -490,15 +490,10 @@ private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
         ) {
             // Team 1
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                Row(horizontalArrangement = Arrangement.Center) {
-                    AvatarImage(url = match.team1Player1.photoUrl, size = 36.dp, borderWidth = 1.dp)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    AvatarImage(url = match.team1Player2.photoUrl, size = 36.dp, borderWidth = 1.dp)
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                val t1n1 = match.team1Player1.name.substringBefore(" ")
-                val t1n2 = match.team1Player2.name.substringBefore(" ")
-                Text("$t1n1 / $t1n2", fontSize = 10.sp, color = Color.LightGray, textAlign = TextAlign.Center, maxLines = 1)
+                val t1n1 = match.team1Player1.displayName.substringBefore(" ")
+                val t1n2 = match.team1Player2.displayName.substringBefore(" ")
+                Text(t1n1, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center, maxLines = 1)
+                Text(t1n2, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center, maxLines = 1)
             }
             
             // Score and Status
@@ -522,15 +517,10 @@ private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
             
             // Team 2
              Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                Row(horizontalArrangement = Arrangement.Center) {
-                    AvatarImage(url = match.team2Player1.photoUrl, size = 36.dp, borderWidth = 1.dp)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    AvatarImage(url = match.team2Player2.photoUrl, size = 36.dp, borderWidth = 1.dp)
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                val t2n1 = match.team2Player1.name.substringBefore(" ")
-                val t2n2 = match.team2Player2.name.substringBefore(" ")
-                Text("$t2n1 / $t2n2", fontSize = 10.sp, color = Color.LightGray, textAlign = TextAlign.Center, maxLines = 1)
+                val t2n1 = match.team2Player1.displayName.substringBefore(" ")
+                val t2n2 = match.team2Player2.displayName.substringBefore(" ")
+                Text(t2n1, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center, maxLines = 1)
+                Text(t2n2, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center, maxLines = 1)
             }
         }
     }
