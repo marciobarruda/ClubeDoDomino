@@ -3,7 +3,6 @@ package com.marcioarruda.clubedodomino.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,7 +24,6 @@ import com.marcioarruda.clubedodomino.ui.finance.FinanceScreen
 import com.marcioarruda.clubedodomino.ui.login.LoginScreen
 import com.marcioarruda.clubedodomino.ui.ranking.RankingScreen
 import com.marcioarruda.clubedodomino.ui.register.RegisterMatchScreen
-import com.marcioarruda.clubedodomino.ui.theme.DominoGold
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -45,10 +43,7 @@ fun AppNavigation() {
     ) {
         when (val state = authState) {
             is AuthState.Loading -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = DominoGold
-                )
+                SplashScreen()
             }
             is AuthState.Authenticated -> {
                 AppNavHost(navController, startDestination = "dashboard/{userId}", session = state.session)

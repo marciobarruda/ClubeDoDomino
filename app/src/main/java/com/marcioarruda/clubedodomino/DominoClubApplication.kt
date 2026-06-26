@@ -12,6 +12,7 @@ class DominoClubApplication : Application() {
         super.onCreate()
         instance = this
         sessionManager = UserSessionManager(this)
+        com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager.initialize(this)
     }
 
     companion object {

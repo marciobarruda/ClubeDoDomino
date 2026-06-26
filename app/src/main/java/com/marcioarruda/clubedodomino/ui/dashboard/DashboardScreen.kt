@@ -8,62 +8,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MonetizationOn
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.HorizontalDivider
-import com.marcioarruda.clubedodomino.ui.theme.RoyalGold
-import com.marcioarruda.clubedodomino.ui.theme.DominoGold
-import com.marcioarruda.clubedodomino.ui.theme.GlassyColor
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.Date
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -77,24 +35,18 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.marcioarruda.clubedodomino.data.BestPlayer
 import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.data.User
-import com.marcioarruda.clubedodomino.ui.theme.DominoGold
-import com.marcioarruda.clubedodomino.ui.theme.GlassyColor
+import com.marcioarruda.clubedodomino.ui.theme.*
 import com.marcioarruda.clubedodomino.ui.util.AvatarImage
 import java.io.ByteArrayOutputStream
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(
-    navController: NavController,
-    userId: String,
-    viewModel: DashboardViewModel
-) {
-    LaunchedEffect(key1 = userId) {
-        viewModel.loadDashboardData(userId)
-    }
+fun DashboardScreen(navController: NavController, userId: String, viewModel: DashboardViewModel) {
+    LaunchedEffect(key1 = userId) { viewModel.loadDashboardData(userId) }
 
     val uiState by viewModel.uiState.collectAsState()
-
     var showProfileDialog by remember { mutableStateOf(false) }
     var selectedMatch by remember { mutableStateOf<Match?>(null) }
 
@@ -102,19 +54,8 @@ fun DashboardScreen(
         ProfileDialog(
             user = uiState.user!!,
             onDismiss = { showProfileDialog = false },
-            onImageSelected = { base64 -> 
-                viewModel.updateProfileImage(userId, base64) {
-                    showProfileDialog = false
-                }
-            },
-            onLogout = {
-                // viewModel.logout()
-                navController.navigate("login") {
-                    popUpTo(navController.graph.id) {
-                        inclusive = true
-                    }
-                }
-            }
+            onImageSelected = { base64 -> viewModel.updateProfileImage(userId, base64) { showProfileDialog = false } },
+            onLogout = { navController.navigate("login") { popUpTo(navController.graph.id) { inclusive = true } } }
         )
     }
 
@@ -130,34 +71,12 @@ fun DashboardScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(Brush.verticalGradient(listOf(Color(0xFF071020), DominoBg)))
                 .padding(padding)
         ) {
             when {
-                uiState.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = DominoGold
-                    )
-                }
-                uiState.error != null -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = uiState.error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadDashboardData(userId) }) {
-                            Text("Tentar novamente")
-                        }
-                    }
-                }
+                uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = DominoGreen)
+                uiState.error != null -> ErrorView(uiState.error!!) { viewModel.loadDashboardData(userId) }
                 uiState.user != null -> {
                     PullToRefreshBox(
                         isRefreshing = uiState.isRefreshing,
@@ -168,67 +87,67 @@ fun DashboardScreen(
                             state = uiState,
                             navController = navController,
                             onAvatarClick = { showProfileDialog = true },
-                            onMatchClick = { matchId ->
-                                selectedMatch = uiState.groupedMatches.values.flatten().find { it.id == matchId }
-                            }
+                            onMatchClick = { matchId -> selectedMatch = uiState.groupedMatches.values.flatten().find { it.id == matchId } }
                         )
                     }
                 }
             }
- 
-            selectedMatch?.let { match ->
-                MatchDetailsDialog(match = match, onDismiss = { selectedMatch = null })
-            }
+            selectedMatch?.let { MatchDetailsDialog(it) { selectedMatch = null } }
         }
     }
 }
 
 @Composable
-private fun ProfileDialog(
-    user: User,
-    onDismiss: () -> Unit,
-    onImageSelected: (String) -> Unit,
-    onLogout: () -> Unit
-) {
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            try {
-                val inputStream = context.contentResolver.openInputStream(it)
-                val bitmap = BitmapFactory.decodeStream(inputStream)
-                val outputStream = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-                onImageSelected(Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT))
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+private fun ErrorView(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(12.dp))
+        Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)) {
+            Text("Tentar novamente", color = Color.Black)
         }
     }
-    
+}
+
+@Composable
+private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (String) -> Unit, onLogout: () -> Unit) {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            try {
+                val bmp = BitmapFactory.decodeStream(context.contentResolver.openInputStream(it))
+                val out = ByteArrayOutputStream()
+                bmp.compress(Bitmap.CompressFormat.JPEG, 70, out)
+                onImageSelected(Base64.encodeToString(out.toByteArray(), Base64.DEFAULT))
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
     var showReleaseNotes by remember { mutableStateOf(false) }
-    var releaseInfo by remember { mutableStateOf<Triple<String, String, String>?>(null) } // Local, Server, Notes
+    var releaseInfo by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
     if (showReleaseNotes) {
         AlertDialog(
             onDismissRequest = { showReleaseNotes = false },
-            title = { Text("Notas da Versão") },
+            containerColor = DominoSurface,
+            title = { Text("Notas da Versão", color = DominoLight) },
             text = {
                 Column {
-                    Text("Sua Versão: ${com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME} (${com.marcioarruda.clubedodomino.BuildConfig.VERSION_CODE})", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Text("Sua Versão: ${com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME} (${com.marcioarruda.clubedodomino.BuildConfig.VERSION_CODE})", fontWeight = FontWeight.Bold, color = DominoLight)
                     if (releaseInfo != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Última disponível: v${releaseInfo?.second}", color = DominoGold)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("O que mudou:", fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-                        Text(releaseInfo?.third ?: "Nenhuma nota disponível.", color = Color.White)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Última: v${releaseInfo?.second}", color = DominoGreen)
+                        Spacer(Modifier.height(12.dp))
+                        Text(releaseInfo?.third ?: "", color = DominoMuted)
                     } else {
-                        CircularProgressIndicator(modifier = Modifier.padding(16.dp).align(androidx.compose.ui.Alignment.CenterHorizontally))
+                        CircularProgressIndicator(modifier = Modifier.padding(16.dp), color = DominoGreen)
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showReleaseNotes = false }) { Text("Fechar") }
-            }
+            confirmButton = { TextButton(onClick = { showReleaseNotes = false }) { Text("Fechar", color = DominoGreen) } }
         )
     }
 
@@ -245,178 +164,143 @@ private fun ProfileDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Perfil do Jogador") },
+        containerColor = DominoSurface,
+        title = { Text("Perfil do Jogador", color = DominoLight) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Box {
-                    AvatarImage(
-                        url = user.photoUrl,
-                        size = 120.dp,
-                        borderWidth = 2.dp
-                    )
+                    AvatarImage(url = user.photoUrl, size = 120.dp, borderWidth = 3.dp)
                     IconButton(
                         onClick = { launcher.launch("image/*") },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .background(DominoGold, CircleShape)
-                            .size(32.dp)
+                        modifier = Modifier.align(Alignment.BottomEnd).background(DominoGreen, CircleShape).size(36.dp)
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar Foto", tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, contentDescription = "Editar Foto", tint = Color.Black, modifier = Modifier.size(18.dp))
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(user.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text(user.id, fontSize = 14.sp, color = Color.Gray)
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
+                Text(user.name, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = DominoLight)
+                Text(user.id, fontSize = 13.sp, color = DominoMuted)
+                Spacer(Modifier.height(16.dp))
                 OutlinedButton(
                     onClick = { showReleaseNotes = true },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DominoGold),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DominoGreen),
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Notas da Versão")
-                }
+                ) { Text("Notas da Versão") }
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = DominoGold)) {
+            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)) {
                 Text("Fechar", color = Color.Black)
             }
         },
-        dismissButton = {
-            TextButton(onClick = onLogout) {
-                Text("Sair", color = Color.Red)
-            }
-        }
+        dismissButton = { TextButton(onClick = onLogout) { Text("Sair", color = DominoError) } }
     )
 }
 
 @Composable
-private fun DashboardContent(
-    state: DashboardUiState,
-    navController: NavController,
-    onAvatarClick: () -> Unit,
-    onMatchClick: (String) -> Unit
-) {
+private fun DashboardContent(state: DashboardUiState, navController: NavController, onAvatarClick: () -> Unit, onMatchClick: (String) -> Unit) {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
             TopBar(state.user!!, onAvatarClick)
         }
-        
+
         item {
             Button(
                 onClick = { navController.navigate("admin") },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7F1D1D)),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("ÁREA ADMINISTRATIVA", color = Color.White)
+                Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("ÁREA ADMINISTRATIVA", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
 
         if (state.bestPlayers.isNotEmpty() || state.worstPlayers.isNotEmpty()) {
-            item {
-                DailyAwardsCard(
-                    bestPlayers = state.bestPlayers,
-                    worstPlayers = state.worstPlayers
-                )
-            }
+            item { DailyAwardsCard(state.bestPlayers, state.worstPlayers) }
         }
 
         item {
-            Text("ÚLTIMAS PARTIDAS", style = MaterialTheme.typography.titleMedium, color = Color.White)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(4.dp, 20.dp).background(DominoGreen, RoundedCornerShape(2.dp)))
+                Spacer(Modifier.width(8.dp))
+                Text("ÚLTIMAS PARTIDAS", style = MaterialTheme.typography.titleMedium, color = DominoLight, fontWeight = FontWeight.Bold)
+            }
         }
 
         state.groupedMatches.forEach { (date, matches) ->
             item {
                 Text(
-                    text = date,
+                    text = "📅 $date",
                     style = MaterialTheme.typography.labelLarge,
-                    color = DominoGold,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    color = DominoCyan,
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
-            items(matches) {
-                MatchItem(it, onMatchClick)
-            }
+            items(matches) { MatchItem(it, onMatchClick) }
         }
-        
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-        }
+
+        item { Spacer(Modifier.height(16.dp)) }
     }
 }
 
 @Composable
 private fun TopBar(user: User, onAvatarClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text("Olá, ${user.name}", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Column {
+            Text("Olá, ${user.name.split(" ").first()} 👋", style = MaterialTheme.typography.headlineSmall, color = DominoLight, fontWeight = FontWeight.Bold)
+            Text("Bora jogar!", color = DominoGreen, fontSize = 13.sp)
+        }
         IconButton(onClick = onAvatarClick) {
-             AvatarImage(
-                url = user.photoUrl,
-                size = 70.dp,
-                borderWidth = 2.dp
-            )
+            AvatarImage(url = user.photoUrl, size = 56.dp, borderWidth = 3.dp)
         }
     }
 }
 
 @Composable
-private fun BottomNavigationBar(
-    navController: NavController,
-    currentUserId: String,
-    isNewMatchVisible: Boolean
-) {
+private fun BottomNavigationBar(navController: NavController, currentUserId: String, isNewMatchVisible: Boolean) {
     val baseItems = listOf(
         BottomNavItem("Início", Icons.Default.Home, "dashboard/$currentUserId"),
-        BottomNavItem("Financeiro", Icons.Default.MonetizationOn, "finance/$currentUserId"),
+        BottomNavItem("Finanças", Icons.Default.MonetizationOn, "finance/$currentUserId"),
         BottomNavItem("Ranking", Icons.Default.BarChart, "ranking")
     )
-
     val allItems = remember(isNewMatchVisible) {
-        if (isNewMatchVisible) {
-            baseItems + BottomNavItem("Nova Partida", Icons.Default.Add, "register_match")
-        } else {
-            baseItems
-        }
+        if (isNewMatchVisible) baseItems + BottomNavItem("Jogar!", Icons.Default.Add, "register_match")
+        else baseItems
     }
 
-    NavigationBar(containerColor = GlassyColor.copy(alpha = 0.2f)) {
+    NavigationBar(
+        containerColor = DominoSurface,
+        tonalElevation = 0.dp,
+        modifier = Modifier.clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+    ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
 
         allItems.forEach { item ->
             val isSelected = currentRoute?.startsWith(item.route.substringBefore('/')) == true
-
             NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.title, tint = Color.White) },
-                label = { Text(item.title, color = Color.White, fontSize = 10.sp) },
+                icon = { Icon(item.icon, contentDescription = item.title) },
+                label = { Text(item.title, fontSize = 10.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                 selected = isSelected,
                 onClick = {
-                    if (!isSelected) {
-                        navController.navigate(item.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+                    if (!isSelected) navController.navigate(item.route) {
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = DominoGold,
-                    unselectedIconColor = Color.Gray,
-                    selectedTextColor = DominoGold,
-                    unselectedTextColor = Color.Gray,
-                    indicatorColor = GlassyColor
+                    selectedIconColor = DominoGreen,
+                    unselectedIconColor = DominoMuted,
+                    selectedTextColor = DominoGreen,
+                    unselectedTextColor = DominoMuted,
+                    indicatorColor = DominoGreen.copy(alpha = 0.15f)
                 )
             )
         }
@@ -427,100 +311,95 @@ private fun BottomNavigationBar(
 private fun DailyAwardsCard(bestPlayers: List<BestPlayer>, worstPlayers: List<BestPlayer>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = GlassyColor)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            if (bestPlayers.isNotEmpty()) {
-                AwardSection(
-                    title = "CRAQUE DO DIA",
-                    players = bestPlayers,
-                    icon = Icons.Default.EmojiEvents,
-                    iconColor = DominoGold
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(listOf(Color(0xFF1A2F45), Color(0xFF0F2030)))
                 )
-            }
-            
-            if (bestPlayers.isNotEmpty() && worstPlayers.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            if (worstPlayers.isNotEmpty()) {
-                AwardSection(
-                    title = "PIORZINHO",
-                    players = worstPlayers,
-                    icon = Icons.Default.EmojiEvents,
-                    iconColor = Color.Red
-                )
+                .padding(16.dp)
+        ) {
+            Column {
+                if (bestPlayers.isNotEmpty()) {
+                    AwardSection(
+                        title = "🏆 CRAQUE DO DIA",
+                        players = bestPlayers,
+                        nameColor = DominoYellow,
+                        pointsColor = DominoGreen
+                    )
+                }
+                if (bestPlayers.isNotEmpty() && worstPlayers.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    Spacer(Modifier.height(12.dp))
+                }
+                if (worstPlayers.isNotEmpty()) {
+                    AwardSection(
+                        title = "😬 PIORZINHO",
+                        players = worstPlayers,
+                        nameColor = DominoOrange,
+                        pointsColor = DominoOrange.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun AwardSection(title: String, players: List<BestPlayer>, icon: ImageVector, iconColor: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(32.dp))
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(title, color = Color.Gray, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            val names = players.joinToString(", ") { it.player.name }
-            Text(names, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            if (players.isNotEmpty()) {
-                Text("${players[0].points} pontos hoje", color = DominoGold, fontSize = 12.sp)
-            }
+private fun AwardSection(title: String, players: List<BestPlayer>, nameColor: Color, pointsColor: Color) {
+    Column {
+        Text(title, color = DominoMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp)
+        Spacer(Modifier.height(4.dp))
+        val names = players.joinToString(", ") { it.player.name.split(" ").first() }
+        Text(names, color = nameColor, fontWeight = FontWeight.Black, fontSize = 18.sp)
+        if (players.isNotEmpty()) {
+            Text("${players[0].points} pontos hoje", color = pointsColor, fontSize = 12.sp)
         }
     }
 }
 
 @Composable
 private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
+    val isTeam1Winner = match.score1 > match.score2
+    val accentColor = if (match.wasBuchoRe) DominoOrange else DominoGreen.copy(alpha = 0.6f)
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onMatchClick(match.id) },
+        modifier = Modifier.fillMaxWidth().clickable { onMatchClick(match.id) },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = GlassyColor)
+        colors = CardDefaults.cardColors(containerColor = DominoSurface)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            // Left accent bar
+            Box(modifier = Modifier.width(3.dp).height(40.dp).background(accentColor, RoundedCornerShape(2.dp)))
+            Spacer(Modifier.width(10.dp))
+
             // Team 1
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                val t1n1 = match.team1Player1.displayName.substringBefore(" ")
-                val t1n2 = match.team1Player2.displayName.substringBefore(" ")
-                Text(t1n1, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center, maxLines = 1)
-                Text(t1n2, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center, maxLines = 1)
+                Text(match.team1Player1.displayName.substringBefore(" "), fontSize = 11.sp, color = if (isTeam1Winner) DominoGreen else DominoMuted, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
+                Text(match.team1Player2.displayName.substringBefore(" "), fontSize = 11.sp, color = if (isTeam1Winner) DominoGreen else DominoMuted, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
             }
-            
-            // Score and Status
+
+            // Score
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
-                Text(
-                    "${match.score1} x ${match.score2}", 
-                    style = MaterialTheme.typography.titleLarge, 
-                    fontWeight = FontWeight.Bold, 
-                    color = Color.White
-                )
+                Text("${match.score1} × ${match.score2}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = DominoLight)
                 if (match.wasBuchoRe) {
-                    Text(
-                        "🔥 BUCHO DE RÉ",
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Black,
-                        color = DominoGold, // RoyalGold equivalent or DominoGold
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
+                    Text("🔥 BUCHO DE RÉ", fontSize = 8.sp, fontWeight = FontWeight.Black, color = DominoOrange)
+                } else {
+                    Text("${match.pts} pts", fontSize = 10.sp, color = DominoMuted)
                 }
             }
-            
+
             // Team 2
-             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                val t2n1 = match.team2Player1.displayName.substringBefore(" ")
-                val t2n2 = match.team2Player2.displayName.substringBefore(" ")
-                Text(t2n1, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center, maxLines = 1)
-                Text(t2n2, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center, maxLines = 1)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                Text(match.team2Player1.displayName.substringBefore(" "), fontSize = 11.sp, color = if (!isTeam1Winner) DominoGreen else DominoMuted, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (!isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
+                Text(match.team2Player2.displayName.substringBefore(" "), fontSize = 11.sp, color = if (!isTeam1Winner) DominoGreen else DominoMuted, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (!isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
             }
         }
     }
@@ -530,52 +409,36 @@ private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
 private fun MatchDetailsDialog(match: Match, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Fechar", color = RoyalGold)
-            }
-        },
-        containerColor = Color(0xFF1E293B), // Slate 800
-        title = { Text("Detalhes da Partida", color = Color.White) },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Fechar", color = DominoGreen) } },
+        containerColor = DominoSurface,
+        title = { Text("Detalhes da Partida", color = DominoLight) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                MatchDetailRow(label = "Data", value = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(match.date))
-                
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Time 1 (Vencedor: ${if(match.score1 > match.score2) "Sim" else "Não"})", fontSize = 12.sp, color = Color.Gray)
-                    Text("${match.team1Player1.name} / ${match.team1Player2.name}", color = Color.White, fontWeight = FontWeight.Bold)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                DetailRow("Data", SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(match.date))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Time 1 ${if (match.score1 > match.score2) "🏆" else ""}", fontSize = 11.sp, color = DominoMuted)
+                    Text("${match.team1Player1.name} / ${match.team1Player2.name}", color = if (match.score1 > match.score2) DominoGreen else DominoLight, fontWeight = FontWeight.Bold)
                 }
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Time 2 (Vencedor: ${if(match.score2 > match.score1) "Sim" else "Não"})", fontSize = 12.sp, color = Color.Gray)
-                    Text("${match.team2Player1.name} / ${match.team2Player2.name}", color = Color.White, fontWeight = FontWeight.Bold)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Time 2 ${if (match.score2 > match.score1) "🏆" else ""}", fontSize = 11.sp, color = DominoMuted)
+                    Text("${match.team2Player1.name} / ${match.team2Player2.name}", color = if (match.score2 > match.score1) DominoGreen else DominoLight, fontWeight = FontWeight.Bold)
                 }
-                
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-
-                MatchDetailRow(label = "Placar Final", value = "${match.score1} x ${match.score2}", isHighLight = true)
-                if (match.wasBuchoRe) {
-                    MatchDetailRow(label = "Status", value = "🔥 BUCHO DE RÉ", isHighLight = true)
-                }
-                MatchDetailRow(label = "Pontos Conquistados", value = "${match.pts} pts")
-                MatchDetailRow(label = "Cadastrado por", value = match.registeredBy.name)
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                DetailRow("Placar Final", "${match.score1} × ${match.score2}", highlight = true)
+                if (match.wasBuchoRe) DetailRow("Status", "🔥 BUCHO DE RÉ", highlight = true)
+                DetailRow("Pontos", "${match.pts} pts")
+                DetailRow("Registrado por", match.registeredBy.name)
             }
         }
     )
 }
 
 @Composable
-private fun MatchDetailRow(label: String, value: String, isHighLight: Boolean = false) {
+private fun DetailRow(label: String, value: String, highlight: Boolean = false) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = Color.Gray, fontSize = 14.sp)
-        Text(
-            value, 
-            color = if (isHighLight) RoyalGold else Color.White, 
-            fontWeight = if (isHighLight) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 14.sp
-        )
+        Text(label, color = DominoMuted, fontSize = 13.sp)
+        Text(value, color = if (highlight) DominoGreen else DominoLight, fontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp)
     }
 }
 

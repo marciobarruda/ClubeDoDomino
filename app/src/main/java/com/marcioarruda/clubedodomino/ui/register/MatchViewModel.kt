@@ -52,30 +52,28 @@ class MatchViewModel(
         startAutoCloseTimer()
     }
 
-
-
     private fun startAutoCloseTimer() {
         viewModelScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(10000) // Check every 10 seconds
-                
-                // Regra: Só fecha automaticamente se NÃO estiver editando uma partida antiga
-                // e se o módulo não estiver mais disponível.
                 val context = com.marcioarruda.clubedodomino.DominoClubApplication.instance
-                if (_uiState.value.editingMatchId == null && !matchAvailabilityManager.isModuleAvailable(context)) {
-                    
-                    val diagInfo = matchAvailabilityManager.getExtendedDiagnosticInfo(context)
-                    _uiState.update { 
-                        if (it.success) it else it.copy(
-                            error = "MÓDULO BLOQUEADO\n$diagInfo\n\nCertifique-se de que 'Data e Hora Automáticas' está ATIVA nas configurações do sistema.", 
-                            success = false,
-                            isModuleAvailable = false
-                        ) 
+                if (_uiState.value.editingMatchId == null) {
+                    val available = matchAvailabilityManager.isModuleAvailable(context)
+                    if (!available) {
+                        val diagInfo = matchAvailabilityManager.getExtendedDiagnosticInfo(context)
+                        _uiState.update {
+                            if (it.success) it else it.copy(
+                                error = "MÓDULO BLOQUEADO\n$diagInfo\n\nCertifique-se de que 'Data e Hora Automáticas' está ATIVA nas configurações do sistema.",
+                                success = false,
+                                isModuleAvailable = false
+                            )
+                        }
+                    } else if (!_uiState.value.isModuleAvailable) {
+                        _uiState.update { it.copy(error = null, isModuleAvailable = true) }
+                    } else {
+                        _uiState.update { it.copy(isModuleAvailable = true) }
                     }
-                } else if (_uiState.value.editingMatchId == null && !_uiState.value.isModuleAvailable && matchAvailabilityManager.isModuleAvailable(context)) {
-                    // Se voltou a ficar disponível (ex: sincronizou e viu que estava certo)
-                    _uiState.update { it.copy(error = null, isModuleAvailable = true) }
                 }
+                kotlinx.coroutines.delay(10000)
             }
         }
     }

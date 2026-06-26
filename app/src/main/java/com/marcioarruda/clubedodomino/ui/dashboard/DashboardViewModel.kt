@@ -138,16 +138,12 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
     }
 
     private fun startAvailabilityMonitoring() {
-        // tickerFlow emite um valor a cada 60 segundos (1 minuto)
-        tickerFlow(periodMillis = 60_000, initialDelayMillis = 0)
+        tickerFlow(periodMillis = 30_000, initialDelayMillis = 0)
             .onEach {
-                matchAvailabilityManager.initialize(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
-                
-                // Recalcula a visibilidade a cada emissão
                 val isAvailable = matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
                 _uiState.update { it.copy(isNewMatchVisible = isAvailable) }
             }
-            .launchIn(viewModelScope) // Lança o flow no escopo do ViewModel
+            .launchIn(viewModelScope)
     }
 
     // Helper para criar um ticker flow

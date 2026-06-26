@@ -1,11 +1,11 @@
 {
   "name": "Clube do Dominó",
-  "short_name": "Domino",
-  "description": "Gestão de partidas e finanças do Clube do Dominó",
+  "short_name": "Dominó",
+  "description": "Registre partidas e acompanhe o ranking do Clube do Dominó Emprel",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#6366f1",
+  "background_color": "#0B1426",
+  "theme_color": "#00C896",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3206/3206213.png",
