@@ -1,8 +1,9 @@
 package com.marcioarruda.clubedodomino.data.database
 
 import com.marcioarruda.clubedodomino.BuildConfig
+import org.mariadb.jdbc.Driver
 import java.sql.Connection
-import java.sql.DriverManager
+import java.util.Properties
 
 object MySqlDatabase {
 
@@ -10,12 +11,17 @@ object MySqlDatabase {
         "jdbc:mariadb://${BuildConfig.DB_HOST}:${BuildConfig.DB_PORT}/${BuildConfig.DB_NAME}" +
         "?useSSL=false" +
         "&characterEncoding=UTF-8" +
-        "&serverTimezone=America/Recife" +
         "&connectTimeout=10000" +
         "&socketTimeout=20000"
 
+    private val driver by lazy { Driver() }
+
     fun connect(): Connection {
-        Class.forName("org.mariadb.jdbc.Driver")
-        return DriverManager.getConnection(jdbcUrl, BuildConfig.DB_USER, BuildConfig.DB_PASS)
+        val props = Properties().apply {
+            setProperty("user", BuildConfig.DB_USER)
+            setProperty("password", BuildConfig.DB_PASS)
+        }
+        return driver.connect(jdbcUrl, props)
+            ?: throw Exception("Driver retornou conexão nula para: $jdbcUrl")
     }
 }
