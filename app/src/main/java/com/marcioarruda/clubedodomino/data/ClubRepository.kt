@@ -31,7 +31,7 @@ class ClubRepository {
 
     private suspend fun <T> safeDbCall(block: suspend () -> T): Result<T> =
         withContext(Dispatchers.IO) {
-            try { Result.success(block()) } catch (e: Exception) { Result.failure(e) }
+            try { Result.success(block()) } catch (t: Throwable) { Result.failure(Exception(t)) }
         }
 
     // ─── Players ──────────────────────────────────────────────────────────
@@ -47,42 +47,51 @@ class ClubRepository {
     }
 
     suspend fun getPlayers(): List<User> = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val rs = conn.prepareStatement(
-                "SELECT jogador, avatar, email, senha FROM jogadores"
-            ).executeQuery()
-            val users = mutableListOf<User>()
-            while (rs.next()) {
-                val email = rs.getString("email") ?: continue
-                val name  = rs.getString("jogador") ?: continue
-                users.add(User(
-                    id          = email.trim(),
-                    name        = name.trim(),
-                    displayName = name.trim(),
-                    photoUrl    = rs.getString("avatar") ?: "",
-                    clubId      = "c1",
-                    isMember    = true,
-                    password    = rs.getString("senha")?.trim()
-                ))
+        try {
+            MySqlDatabase.connect().use { conn ->
+                val rs = conn.prepareStatement(
+                    "SELECT jogador, avatar, email, senha FROM jogadores"
+                ).executeQuery()
+                val users = mutableListOf<User>()
+                while (rs.next()) {
+                    val email = rs.getString("email") ?: continue
+                    val name  = rs.getString("jogador") ?: continue
+                    users.add(User(
+                        id          = email.trim(),
+                        name        = name.trim(),
+                        displayName = name.trim(),
+                        photoUrl    = rs.getString("avatar") ?: "",
+                        clubId      = "c1",
+                        isMember    = true,
+                        password    = rs.getString("senha")?.trim()
+                    ))
+                }
+                if (users.none { it.name.contains("NÃO MEMBRO", ignoreCase = true) }) {
+                    users.add(User("7", "JOGADOR NÃO MEMBRO", "NÃO MEMBRO", "", "c1", false))
+                }
+                allUsers = users
+                users
             }
-            if (users.none { it.name.contains("NÃO MEMBRO", ignoreCase = true) }) {
-                users.add(User("7", "JOGADOR NÃO MEMBRO", "NÃO MEMBRO", "", "c1", false))
-            }
-            allUsers = users
-            users
+        } catch (t: Throwable) {
+            throw Exception("Erro ao buscar jogadores: ${t.message}", t)
         }
     }
 
     suspend fun login(email: String, pass: String): LoginResponse = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement(
-                "SELECT email FROM jogadores WHERE email = ? AND senha = ?"
-            )
-            ps.setString(1, email)
-            ps.setString(2, pass)
-            val rs = ps.executeQuery()
-            if (rs.next()) LoginResponse("success")
-            else throw Exception("Email ou senha inválidos")
+        try {
+            MySqlDatabase.connect().use { conn ->
+                val ps = conn.prepareStatement(
+                    "SELECT email FROM jogadores WHERE email = ? AND senha = ?"
+                )
+                ps.setString(1, email)
+                ps.setString(2, pass)
+                val rs = ps.executeQuery()
+                if (rs.next()) LoginResponse("Login bem sucedido")
+                else throw Exception("Email ou senha inválidos")
+            }
+        } catch (t: Throwable) {
+            if (t is Exception) throw t
+            throw Exception("Erro ao autenticar: ${t.message}", t)
         }
     }
 
@@ -132,30 +141,34 @@ class ClubRepository {
     suspend fun getRawMatchesResult(): Result<List<MatchDTO>> = safeDbCall { getMatchDTOsFromDb() }
 
     private suspend fun getMatchDTOsFromDb(): List<MatchDTO> = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val rs = conn.prepareStatement(
-                "SELECT id, data, jogador1, jogador2, jogador3, jogador4, " +
-                "scored1, scored2, buchore, pts, dupla_vencedora, cadastrado_por " +
-                "FROM partidas ORDER BY id DESC"
-            ).executeQuery()
-            val list = mutableListOf<MatchDTO>()
-            while (rs.next()) {
-                list.add(MatchDTO(
-                    id             = rs.getLong("id"),
-                    data           = rs.getString("data"),
-                    jogador1       = rs.getString("jogador1"),
-                    jogador2       = rs.getString("jogador2"),
-                    jogador3       = rs.getString("jogador3"),
-                    jogador4       = rs.getString("jogador4"),
-                    scored1        = rs.getInt("scored1"),
-                    scored2        = rs.getInt("scored2"),
-                    buchore        = rs.getBoolean("buchore"),
-                    pts            = rs.getInt("pts"),
-                    dupla_vencedora = rs.getString("dupla_vencedora"),
-                    cadastrado_por = rs.getString("cadastrado_por")
-                ))
+        try {
+            MySqlDatabase.connect().use { conn ->
+                val rs = conn.prepareStatement(
+                    "SELECT id, data, jogador1, jogador2, jogador3, jogador4, " +
+                    "scored1, scored2, buchore, pts, dupla_vencedora, cadastrado_por " +
+                    "FROM partidas ORDER BY id DESC"
+                ).executeQuery()
+                val list = mutableListOf<MatchDTO>()
+                while (rs.next()) {
+                    list.add(MatchDTO(
+                        id             = rs.getLong("id"),
+                        data           = rs.getString("data"),
+                        jogador1       = rs.getString("jogador1"),
+                        jogador2       = rs.getString("jogador2"),
+                        jogador3       = rs.getString("jogador3"),
+                        jogador4       = rs.getString("jogador4"),
+                        scored1        = rs.getInt("scored1"),
+                        scored2        = rs.getInt("scored2"),
+                        buchore        = rs.getBoolean("buchore"),
+                        pts            = rs.getInt("pts"),
+                        dupla_vencedora = rs.getString("dupla_vencedora"),
+                        cadastrado_por = rs.getString("cadastrado_por")
+                    ))
+                }
+                list.distinctBy { it.id }
             }
-            list.distinctBy { it.id }
+        } catch (t: Throwable) {
+            throw Exception("Erro ao buscar partidas: ${t.message}", t)
         }
     }
 

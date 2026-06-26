@@ -6,12 +6,13 @@ import java.sql.DriverManager
 
 object MySqlDatabase {
 
-    private val jdbcUrl = "jdbc:mariadb://${BuildConfig.DB_HOST}:${BuildConfig.DB_PORT}/${BuildConfig.DB_NAME}?" +
-        "serverTimezone=America/Recife&" +
-        "characterEncoding=UTF-8&" +
-        "connectTimeout=15000&" +
-        "socketTimeout=30000&" +
-        "autoReconnect=true"
+    private val jdbcUrl =
+        "jdbc:mariadb://${BuildConfig.DB_HOST}:${BuildConfig.DB_PORT}/${BuildConfig.DB_NAME}" +
+        "?useSSL=false" +
+        "&characterEncoding=UTF-8" +
+        "&serverTimezone=America/Recife" +
+        "&connectTimeout=10000" +
+        "&socketTimeout=20000"
 
     fun connect(): Connection {
         Class.forName("org.mariadb.jdbc.Driver")

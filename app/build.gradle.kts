@@ -149,8 +149,8 @@ dependencies {
     // Jetpack DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // MariaDB JDBC (compatível com MySQL e Android)
-    implementation("org.mariadb.jdbc:mariadb-java-client:3.3.3")
+    // MariaDB JDBC 2.x — Java 8 compatible (3.x requires Java 11 which Android doesn't support)
+    implementation("org.mariadb.jdbc:mariadb-java-client:2.7.9")
 
 
     testImplementation("junit:junit:4.13.2")
