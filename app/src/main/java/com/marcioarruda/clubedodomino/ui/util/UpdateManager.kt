@@ -9,8 +9,10 @@ import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.google.gson.Gson
 import com.marcioarruda.clubedodomino.BuildConfig
 import com.marcioarruda.clubedodomino.data.network.RetrofitClient
+import com.marcioarruda.clubedodomino.data.network.UpdateInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,17 +21,24 @@ import java.io.File
 
 class UpdateManager(private val context: Context) {
 
+    private val fallbackVersionUrl = "https://marciobarruda.github.io/ClubeDoDomino/version.json"
+
     fun checkForUpdate(onUpdateAvailable: (url: String, notes: String, isMandatory: Boolean) -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 withContext(Dispatchers.Main) {
-                     Toast.makeText(context, "Verificando atualizações...", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Verificando atualizações...", Toast.LENGTH_SHORT).show()
                 }
-                
-                val updateInfo = RetrofitClient.instance.checkUpdate()
-                
+
+                val updateInfo = try {
+                    RetrofitClient.instance.checkUpdate()
+                } catch (primary: Exception) {
+                    primary.printStackTrace()
+                    fetchFallbackVersionInfo() ?: throw primary
+                }
+
                 withContext(Dispatchers.Main) {
-                     Toast.makeText(context, "Local v${BuildConfig.VERSION_CODE} | Server v${updateInfo.versionCode}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Local v${BuildConfig.VERSION_CODE} | Server v${updateInfo.versionCode}", Toast.LENGTH_SHORT).show()
                 }
 
                 if (updateInfo.versionCode > BuildConfig.VERSION_CODE) {
@@ -38,17 +47,28 @@ class UpdateManager(private val context: Context) {
                         onUpdateAvailable(updateInfo.apkUrl, updateInfo.releaseNotes ?: "Nova versão disponível!", isMandatory)
                     }
                 } else {
-                     withContext(Dispatchers.Main) {
-                         Toast.makeText(context, "App atualizado (v${BuildConfig.VERSION_CODE})", Toast.LENGTH_SHORT).show()
-                     }
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "App atualizado (v${BuildConfig.VERSION_CODE})", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 reportError("CheckUpdateFailed", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Erro Update: ${e.message}", Toast.LENGTH_LONG).show()
-                }
+                // Falha silenciosa — não interromper o usuário por indisponibilidade do servidor de update
             }
+        }
+    }
+
+    private fun fetchFallbackVersionInfo(): UpdateInfo? {
+        return try {
+            val client = okhttp3.OkHttpClient()
+            val request = okhttp3.Request.Builder().url(fallbackVersionUrl).build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return null
+            val body = response.body?.string() ?: return null
+            Gson().fromJson(body, UpdateInfo::class.java)
+        } catch (e: Exception) {
+            null
         }
     }
 

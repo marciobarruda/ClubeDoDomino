@@ -1,0 +1,7 @@
+{
+  "version_code": 59,
+  "version_name": "1.24",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v59/clube_v_59.apk",
+  "release_notes": "v1.24: Redesign visual com tema ludico + correcao do bug do horario de liberacao (11h45-14h00).",
+  "min_version": 0
+}
