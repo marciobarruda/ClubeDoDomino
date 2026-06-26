@@ -1,7 +1,14 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     alias(libs.plugins.kotlin.compose)
+}
+
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
 }
 
 android {
@@ -28,6 +35,12 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        buildConfigField("String", "DB_HOST", "\"${localProps["db.host"] ?: ""}\"")
+        buildConfigField("String", "DB_PORT", "\"${localProps["db.port"] ?: "3248"}\"")
+        buildConfigField("String", "DB_NAME", "\"${localProps["db.name"] ?: "domino"}\"")
+        buildConfigField("String", "DB_USER", "\"${localProps["db.user"] ?: ""}\"")
+        buildConfigField("String", "DB_PASS", "\"${localProps["db.pass"] ?: ""}\"")
     }
 
     buildTypes {

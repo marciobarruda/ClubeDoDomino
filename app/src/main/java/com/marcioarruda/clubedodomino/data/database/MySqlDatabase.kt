@@ -1,16 +1,12 @@
 package com.marcioarruda.clubedodomino.data.database
 
+import com.marcioarruda.clubedodomino.BuildConfig
 import java.sql.Connection
 import java.sql.DriverManager
 
 object MySqlDatabase {
-    private const val HOST = "easypanel.devlogconsultoria.com.br"
-    private const val PORT = 3248
-    private const val DB   = "domino"
-    private const val USER = "root"
-    private const val PASS = "973574GaB*@"
 
-    private val jdbcUrl = "jdbc:mariadb://$HOST:$PORT/$DB?" +
+    private val jdbcUrl = "jdbc:mariadb://${BuildConfig.DB_HOST}:${BuildConfig.DB_PORT}/${BuildConfig.DB_NAME}?" +
         "serverTimezone=America/Recife&" +
         "characterEncoding=UTF-8&" +
         "connectTimeout=15000&" +
@@ -19,6 +15,6 @@ object MySqlDatabase {
 
     fun connect(): Connection {
         Class.forName("org.mariadb.jdbc.Driver")
-        return DriverManager.getConnection(jdbcUrl, USER, PASS)
+        return DriverManager.getConnection(jdbcUrl, BuildConfig.DB_USER, BuildConfig.DB_PASS)
     }
 }
