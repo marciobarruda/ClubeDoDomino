@@ -21,8 +21,8 @@ android {
         applicationId = "com.marcioarruda.clubedodomino"
         minSdk = 26
         targetSdk = 34
-        versionCode = 59
-        versionName = "1.24"
+        versionCode = 60
+        versionName = "1.25"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -56,7 +56,16 @@ android {
     }
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += setOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/DEPENDENCIES",
+                "META-INF/*.kotlin_module",
+                "META-INF/INDEX.LIST"
+            )
         }
     }
 
@@ -126,6 +135,9 @@ dependencies {
 
     // Jetpack DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // MariaDB JDBC (compatível com MySQL e Android)
+    implementation("org.mariadb.jdbc:mariadb-java-client:3.3.3")
 
 
     testImplementation("junit:junit:4.13.2")
