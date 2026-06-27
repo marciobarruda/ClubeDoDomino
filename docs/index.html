@@ -699,8 +699,8 @@
                                 <strong>${trueTime.toLocaleTimeString('pt-BR')}</strong>
                             </div>
                             <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.08); font-size:10px; color:#94a3b8">
-                                v1.24 — Proteção Ativa
-                            </div>
+                                 v1.28 — Proteção Ativa
+                             </div>
                         </div>
                     `;
                 }
@@ -1399,6 +1399,7 @@
  
             formatAvatar(avatar) {
                 if (!avatar) return '';
+                if (avatar.startsWith('avatar_')) return `./avatars/${avatar}.webp`;
                 if (avatar.startsWith('http') || avatar.startsWith('data:')) return avatar;
                 // Se não tem prefixo, assume que é um base64 de imagem
                 return `data:image/png;base64,${avatar}`;

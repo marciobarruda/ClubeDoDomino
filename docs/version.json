@@ -1,7 +1,7 @@
 {
-  "version_code": 60,
-  "version_name": "1.25",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v60/clube_v_60.apk",
-  "release_notes": "v1.25: Migração para banco de dados direto + tema visual mais azul.",
+  "version_code": 63,
+  "version_name": "1.28",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v63/clube_v_63.apk",
+  "release_notes": "* Avatares Pixar (v63): 9 avatares 3D locais (Seleção, Sport, Náutico, Santa Cruz e diversidade) integrados. Fim do Base64, deixando o app leve e rápido!\n* Tema da Copa (v62): Imagens e cores temáticas do Brasil aplicadas nos fundos de todos os módulos.\n* Lógica do Ranking (v62): Classificação corrigida localmente (idêntica ao n8n), somando apenas vitórias e ignorando usuários de teste.\n* Nova Conexão Direta (v61/v60): Migração para o driver oficial MySQL (v5.1.49), resolvendo travamentos e falhas de login.",
   "min_version": 0
 }
