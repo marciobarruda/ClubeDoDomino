@@ -155,7 +155,10 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
                         "avatar_4", "avatar_5", "avatar_6",
                         "avatar_7", "avatar_8", "avatar_9",
                         "avatar_10", "avatar_11", "avatar_12",
-                        "avatar_13", "avatar_14"
+                        "avatar_13", "avatar_14", "avatar_15",
+                        "avatar_16", "avatar_17", "avatar_18",
+                        "avatar_19", "avatar_20", "avatar_21",
+                        "avatar_22", "avatar_23", "avatar_24"
                     )
                     Column(
                         verticalArrangement = Arrangement.spacedBy(16.dp),

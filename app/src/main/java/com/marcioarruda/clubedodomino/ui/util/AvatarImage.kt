@@ -52,6 +52,16 @@ fun AvatarImage(
         "avatar_12" -> com.marcioarruda.clubedodomino.R.drawable.avatar_12
         "avatar_13" -> com.marcioarruda.clubedodomino.R.drawable.avatar_13
         "avatar_14" -> com.marcioarruda.clubedodomino.R.drawable.avatar_14
+        "avatar_15" -> com.marcioarruda.clubedodomino.R.drawable.avatar_15
+        "avatar_16" -> com.marcioarruda.clubedodomino.R.drawable.avatar_16
+        "avatar_17" -> com.marcioarruda.clubedodomino.R.drawable.avatar_17
+        "avatar_18" -> com.marcioarruda.clubedodomino.R.drawable.avatar_18
+        "avatar_19" -> com.marcioarruda.clubedodomino.R.drawable.avatar_19
+        "avatar_20" -> com.marcioarruda.clubedodomino.R.drawable.avatar_20
+        "avatar_21" -> com.marcioarruda.clubedodomino.R.drawable.avatar_21
+        "avatar_22" -> com.marcioarruda.clubedodomino.R.drawable.avatar_22
+        "avatar_23" -> com.marcioarruda.clubedodomino.R.drawable.avatar_23
+        "avatar_24" -> com.marcioarruda.clubedodomino.R.drawable.avatar_24
         else -> null
     }
 
