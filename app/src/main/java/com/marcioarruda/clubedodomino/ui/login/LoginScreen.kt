@@ -28,6 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import com.marcioarruda.clubedodomino.ui.theme.*
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -49,13 +52,28 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(listOf(Color(0xFF071020), DominoBg, Color(0xFF0D1E1A)))
-            ),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
+        Image(
+            painter = painterResource(id = com.marcioarruda.clubedodomino.R.drawable.bg_login),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Black.copy(alpha = 0.65f),
+                            DominoBg.copy(alpha = 0.85f),
+                            Color.Black.copy(alpha = 0.75f)
+                        )
+                    )
+                )
+        )
         // Decorative background dots
         Canvas(modifier = Modifier.fillMaxSize()) {
             val positions = listOf(

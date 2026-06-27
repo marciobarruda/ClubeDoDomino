@@ -73,7 +73,9 @@ class ClubRepository {
                 users
             }
         } catch (t: Throwable) {
-            throw Exception("Erro ao buscar jogadores: ${t.message}", t)
+            t.printStackTrace()
+            val rootCause = generateSequence(t) { it.cause }.lastOrNull() ?: t
+            throw Exception("Erro ao buscar jogadores: $t\nCausa: $rootCause\n${t.stackTrace.take(3).joinToString("\n")}", t)
         }
     }
 
@@ -90,8 +92,10 @@ class ClubRepository {
                 else throw Exception("Email ou senha inválidos")
             }
         } catch (t: Throwable) {
-            if (t is Exception) throw t
-            throw Exception("Erro ao autenticar: ${t.message}", t)
+            t.printStackTrace()
+            if (t is Exception && t.message == "Email ou senha inválidos") throw t
+            val rootCause = generateSequence(t) { it.cause }.lastOrNull() ?: t
+            throw Exception("Erro ao autenticar: $t\nCausa: $rootCause\n${t.stackTrace.take(3).joinToString("\n")}", t)
         }
     }
 
@@ -144,9 +148,9 @@ class ClubRepository {
         try {
             MySqlDatabase.connect().use { conn ->
                 val rs = conn.prepareStatement(
-                    "SELECT id, data, jogador1, jogador2, jogador3, jogador4, " +
-                    "scored1, scored2, buchore, pts, dupla_vencedora, cadastrado_por " +
-                    "FROM partidas ORDER BY id DESC"
+                    "SELECT id_tabela as id, data, jogador1, jogador2, jogador3, jogador4, " +
+                    "scored1, scored2, buchore, pts, dupla_vencedora, cadastrador " +
+                    "FROM partidas ORDER BY id_tabela DESC"
                 ).executeQuery()
                 val list = mutableListOf<MatchDTO>()
                 while (rs.next()) {
@@ -157,12 +161,12 @@ class ClubRepository {
                         jogador2       = rs.getString("jogador2"),
                         jogador3       = rs.getString("jogador3"),
                         jogador4       = rs.getString("jogador4"),
-                        scored1        = rs.getInt("scored1"),
-                        scored2        = rs.getInt("scored2"),
-                        buchore        = rs.getBoolean("buchore"),
-                        pts            = rs.getInt("pts"),
+                        scored1        = rs.getString("scored1")?.toIntOrNull() ?: 0,
+                        scored2        = rs.getString("scored2")?.toIntOrNull() ?: 0,
+                        buchore        = rs.getString("buchore")?.toBoolean() ?: (rs.getString("buchore") == "true" || rs.getString("buchore") == "1"),
+                        pts            = rs.getString("pts")?.toIntOrNull() ?: 0,
                         dupla_vencedora = rs.getString("dupla_vencedora"),
-                        cadastrado_por = rs.getString("cadastrado_por")
+                        cadastrado_por = rs.getString("cadastrador")
                     ))
                 }
                 list.distinctBy { it.id }
@@ -177,7 +181,7 @@ class ClubRepository {
         MySqlDatabase.connect().use { conn ->
             val ps = conn.prepareStatement(
                 "INSERT INTO partidas (data, jogador1, jogador2, jogador3, jogador4, " +
-                "scored1, scored2, buchore, pts, dupla_vencedora, cadastrado_por) " +
+                "scored1, scored2, buchore, pts, dupla_vencedora, cadastrador) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )
             ps.setString(1, dto.data)
@@ -185,10 +189,10 @@ class ClubRepository {
             ps.setString(3, dto.jogador2)
             ps.setString(4, dto.jogador3)
             ps.setString(5, dto.jogador4)
-            ps.setInt(6, dto.scored1 ?: 0)
-            ps.setInt(7, dto.scored2 ?: 0)
-            ps.setBoolean(8, dto.buchore ?: false)
-            ps.setInt(9, dto.pts ?: 0)
+            ps.setString(6, (dto.scored1 ?: 0).toString())
+            ps.setString(7, (dto.scored2 ?: 0).toString())
+            ps.setString(8, (dto.buchore ?: false).toString())
+            ps.setString(9, (dto.pts ?: 0).toString())
             ps.setString(10, dto.dupla_vencedora)
             ps.setString(11, dto.cadastrado_por)
             ps.executeUpdate()
@@ -200,18 +204,18 @@ class ClubRepository {
         MySqlDatabase.connect().use { conn ->
             val ps = conn.prepareStatement(
                 "UPDATE partidas SET data=?, jogador1=?, jogador2=?, jogador3=?, jogador4=?, " +
-                "scored1=?, scored2=?, buchore=?, pts=?, dupla_vencedora=?, cadastrado_por=? " +
-                "WHERE id=?"
+                "scored1=?, scored2=?, buchore=?, pts=?, dupla_vencedora=?, cadastrador=? " +
+                "WHERE id_tabela=?"
             )
             ps.setString(1, dto.data)
             ps.setString(2, dto.jogador1)
             ps.setString(3, dto.jogador2)
             ps.setString(4, dto.jogador3)
             ps.setString(5, dto.jogador4)
-            ps.setInt(6, dto.scored1 ?: 0)
-            ps.setInt(7, dto.scored2 ?: 0)
-            ps.setBoolean(8, dto.buchore ?: false)
-            ps.setInt(9, dto.pts ?: 0)
+            ps.setString(6, (dto.scored1 ?: 0).toString())
+            ps.setString(7, (dto.scored2 ?: 0).toString())
+            ps.setString(8, (dto.buchore ?: false).toString())
+            ps.setString(9, (dto.pts ?: 0).toString())
             ps.setString(10, dto.dupla_vencedora)
             ps.setString(11, dto.cadastrado_por)
             ps.setLong(12, match.id.toLongOrNull() ?: throw Exception("ID de partida inválido: ${match.id}"))
@@ -221,7 +225,7 @@ class ClubRepository {
 
     suspend fun deleteMatch(id: String, buttonName: String = "Excluir"): Unit = withContext(Dispatchers.IO) {
         MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("DELETE FROM partidas WHERE id = ?")
+            val ps = conn.prepareStatement("DELETE FROM partidas WHERE id_tabela = ?")
             ps.setLong(1, id.toLong())
             ps.executeUpdate()
         }
@@ -233,8 +237,8 @@ class ClubRepository {
         withContext(Dispatchers.IO) {
             MySqlDatabase.connect().use { conn ->
                 val rs = conn.prepareStatement(
-                    "SELECT id, data, jogador, valor, pago, placar, dupla_vencedora, " +
-                    "dupla_perdedora, obs, cadastrado_por, buchore FROM buchos"
+                    "SELECT id_tabela as id, data, jogador, valor, pago, placar, dupla_vencedora, " +
+                    "dupla_perdedora, obs FROM buchos"
                 ).executeQuery()
                 val list = mutableListOf<BuchoDto>()
                 while (rs.next()) {
@@ -242,14 +246,14 @@ class ClubRepository {
                         id              = rs.getLong("id"),
                         data            = rs.getString("data"),
                         jogador         = rs.getString("jogador"),
-                        valor           = rs.getDouble("valor"),
-                        pago            = rs.getBoolean("pago"),
+                        valor           = rs.getString("valor")?.toDoubleOrNull() ?: 0.0,
+                        pago            = rs.getString("pago")?.toBoolean() ?: (rs.getString("pago") == "true" || rs.getString("pago") == "1"),
                         placar          = rs.getString("placar"),
                         dupla_vencedora = rs.getString("dupla_vencedora"),
                         dupla_perdedora = rs.getString("dupla_perdedora"),
                         obs             = rs.getString("obs"),
-                        cadastrado_por  = rs.getString("cadastrado_por"),
-                        buchore         = rs.getBoolean("buchore")
+                        cadastrado_por  = null,
+                        buchore         = null
                     ))
                 }
                 list
@@ -261,25 +265,28 @@ class ClubRepository {
         MySqlDatabase.connect().use { conn ->
             val ps = conn.prepareStatement(
                 "INSERT INTO buchos (data, jogador, valor, pago, placar, dupla_vencedora, " +
-                "dupla_perdedora, obs, cadastrado_por, buchore) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "dupla_perdedora, obs) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             )
             ps.setString(1, debitRequest.data)
             ps.setString(2, debitRequest.jogador)
-            ps.setDouble(3, debitRequest.valor)
-            ps.setBoolean(4, debitRequest.pago)
+            ps.setString(3, debitRequest.valor.toString())
+            ps.setString(4, debitRequest.pago.toString())
             ps.setString(5, debitRequest.placar)
             ps.setString(6, debitRequest.dupla_vencedora)
             ps.setString(7, debitRequest.dupla_perdedora)
-            ps.setString(8, debitRequest.obs)
-            ps.setString(9, debitRequest.cadastrado_por)
-            ps.setBoolean(10, debitRequest.wasBuchoRe ?: false)
+            val finalObs = if (debitRequest.wasBuchoRe == true) {
+                "[BUCHO DE RÉ] ${debitRequest.obs ?: ""}".trim()
+            } else {
+                debitRequest.obs
+            }
+            ps.setString(8, finalObs)
             ps.executeUpdate()
         }
     }
 
     suspend fun deleteBucho(id: String, buttonName: String = "Excluir"): Unit = withContext(Dispatchers.IO) {
         MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("DELETE FROM buchos WHERE id = ?")
+            val ps = conn.prepareStatement("DELETE FROM buchos WHERE id_tabela = ?")
             ps.setLong(1, id.toLong())
             ps.executeUpdate()
         }
@@ -291,7 +298,7 @@ class ClubRepository {
         withContext(Dispatchers.IO) {
             MySqlDatabase.connect().use { conn ->
                 val rs = conn.prepareStatement(
-                    "SELECT id, mensalidade, jogador, pago, ano FROM mensalidades"
+                    "SELECT id_tabela as id, mensalidade, jogador, pago FROM mensalidades"
                 ).executeQuery()
                 val list = mutableListOf<MensalidadeDto>()
                 while (rs.next()) {
@@ -299,8 +306,8 @@ class ClubRepository {
                         id          = rs.getLong("id"),
                         mensalidade = rs.getString("mensalidade"),
                         jogador     = rs.getString("jogador"),
-                        pago        = rs.getBoolean("pago"),
-                        ano         = rs.getInt("ano")
+                        pago        = rs.getString("pago")?.toBoolean() ?: (rs.getString("pago") == "true" || rs.getString("pago") == "1"),
+                        ano         = null
                     ))
                 }
                 list
@@ -310,18 +317,18 @@ class ClubRepository {
 
     suspend fun createMensalidade(playerName: String, month: Int? = null, year: Int? = null): Unit =
         withContext(Dispatchers.IO) {
-            val cal = Calendar.getInstance()
-            if (year != null) cal.set(Calendar.YEAR, year)
-            if (month != null) cal.set(Calendar.MONTH, month)
-            val monthName = monthIndexToName[cal.get(Calendar.MONTH)] ?: "Janeiro"
-            val ano = cal.get(Calendar.YEAR)
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_MONTH, 10)
+                if (year != null) set(Calendar.YEAR, year)
+                if (month != null) set(Calendar.MONTH, month)
+            }
+            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
             MySqlDatabase.connect().use { conn ->
                 val ps = conn.prepareStatement(
-                    "INSERT INTO mensalidades (mensalidade, jogador, pago, ano) VALUES (?, ?, FALSE, ?)"
+                    "INSERT INTO mensalidades (mensalidade, jogador, pago) VALUES (?, ?, 'false')"
                 )
-                ps.setString(1, monthName)
+                ps.setString(1, dateStr)
                 ps.setString(2, playerName)
-                ps.setInt(3, ano)
                 ps.executeUpdate()
             }
         }
@@ -350,32 +357,72 @@ class ClubRepository {
             var partidas_mes: Int = 0, var pontos_mes: Int = 0,
             var partidas_ano: Int = 0, var pontos_ano: Int = 0
         )
-        val today = Calendar.getInstance()
-        val map   = mutableMapOf<String, Stats>()
+        // Brazilian Timezone
+        val tz = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
+        val format = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply { timeZone = tz }
+        val todayStr = format.format(java.util.Date())
+        val dateParts = todayStr.split("-").mapNotNull { it.toIntOrNull() }
+        if (dateParts.size < 3) return emptyList()
+        val anoAtual = dateParts[0]
+        val mesAtual = dateParts[1]
+        val diaAtual = dateParts[2]
+
+        val ignorados = setOf("ÍNDIO", "XAMÃ", "EX-MEMBRO", "JOSELITRO", "JOGADOR NÃO MEMBRO", "POLÍCIA FEMININA", "YAN")
+        val map = mutableMapOf<String, Stats>()
 
         for (m in matches) {
-            val date = parseAnyDate(m.data) ?: continue
-            val mc   = Calendar.getInstance().apply { time = date }
-            if (mc.get(Calendar.YEAR) != today.get(Calendar.YEAR)) continue
+            val dataStr = m.data?.split("T")?.firstOrNull() ?: continue
+            val parts = dataStr.split("-")
+            if (parts.size < 3) continue
+            val anoPartida = parts[0].toIntOrNull() ?: continue
+            val mesPartida = parts[1].toIntOrNull() ?: continue
+            val diaPartida = parts[2].toIntOrNull() ?: continue
 
-            val isToday = mc.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
-            val isMonth = mc.get(Calendar.MONTH) == today.get(Calendar.MONTH)
-            val pts     = m.pts ?: 0
-            val venc    = m.dupla_vencedora ?: ""
+            val vencedores = m.dupla_vencedora
+                ?.split("&", "/")
+                ?.map { it.trim().uppercase() }
+                ?: emptyList()
+                
+            val pontos = m.pts ?: 0
 
-            listOfNotNull(m.jogador1, m.jogador2, m.jogador3, m.jogador4).forEach { raw ->
-                val name = raw.trim().ifBlank { return@forEach }
-                val isWinner = venc.contains(name, ignoreCase = true)
-                val p = if (isWinner) pts else -pts
-                val s = map.getOrPut(name) { Stats() }
-                s.partidas_ano++; s.pontos_ano += p
-                if (isMonth) { s.partidas_mes++; s.pontos_mes += p }
-                if (isToday) { s.partidas_dia++; s.pontos_dia += p }
+            val participantes = listOfNotNull(m.jogador1, m.jogador2, m.jogador3, m.jogador4)
+                .map { it.trim().uppercase() }
+                .filter { it.isNotBlank() && it !in ignorados }
+
+            participantes.forEach { jogador ->
+                val s = map.getOrPut(jogador) { Stats() }
+                if (anoPartida == anoAtual) {
+                    s.partidas_ano++
+                    if (vencedores.contains(jogador)) {
+                        s.pontos_ano += pontos
+                    }
+                    if (mesPartida == mesAtual) {
+                        s.partidas_mes++
+                        if (vencedores.contains(jogador)) {
+                            s.pontos_mes += pontos
+                        }
+                        if (diaPartida == diaAtual) {
+                            s.partidas_dia++
+                            if (vencedores.contains(jogador)) {
+                                s.pontos_dia += pontos
+                            }
+                        }
+                    }
+                }
             }
         }
+
         return map.map { (name, s) ->
-            RankingDto(name, s.partidas_dia, s.pontos_dia, s.partidas_mes, s.pontos_mes, s.partidas_ano, s.pontos_ano)
-        }.sortedByDescending { it.pontos_mes }
+            RankingDto(
+                jogador = name,
+                partidas_dia = s.partidas_dia,
+                pontos_dia = s.pontos_dia,
+                partidas_mes = s.partidas_mes,
+                pontos_mes = s.pontos_mes,
+                partidas_ano = s.partidas_ano,
+                pontos_ano = s.pontos_ano
+            )
+        }.sortedByDescending { it.pontos_ano }
     }
 
     // ─── Finance ──────────────────────────────────────────────────────────
@@ -397,23 +444,7 @@ class ClubRepository {
     }
 
     suspend fun uploadComprovante(request: ComprovanteRequest): Unit = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            if (request.buchoIds.isNotEmpty()) {
-                val ph = request.buchoIds.joinToString(",") { "?" }
-                val ps = conn.prepareStatement("UPDATE buchos SET pago = TRUE WHERE id IN ($ph)")
-                request.buchoIds.forEachIndexed { i, id -> ps.setLong(i + 1, id) }
-                ps.executeUpdate()
-            }
-            if (request.mensalidadeIds.isNotEmpty()) {
-                val ids = request.mensalidadeIds.mapNotNull { it.toLongOrNull() }
-                if (ids.isNotEmpty()) {
-                    val ph = ids.joinToString(",") { "?" }
-                    val ps = conn.prepareStatement("UPDATE mensalidades SET pago = TRUE WHERE id IN ($ph)")
-                    ids.forEachIndexed { i, id -> ps.setLong(i + 1, id) }
-                    ps.executeUpdate()
-                }
-            }
-        }
+        RetrofitClient.instance.uploadComprovante(request)
     }
 
     suspend fun triggerTaxasExtras() { /* migrado para banco direto — sem operação pendente */ }

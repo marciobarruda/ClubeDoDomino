@@ -28,8 +28,8 @@ android {
         applicationId = "com.marcioarruda.clubedodomino"
         minSdk = 26
         targetSdk = 34
-        versionCode = 60
-        versionName = "1.25"
+        versionCode = 62
+        versionName = "1.27"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -149,8 +149,8 @@ dependencies {
     // Jetpack DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // MariaDB JDBC 2.x — Java 8 compatible (3.x requires Java 11 which Android doesn't support)
-    implementation("org.mariadb.jdbc:mariadb-java-client:2.7.9")
+    // MySQL JDBC driver 5.1.x — compatible with Android (does not use java.sql.DriverAction)
+    implementation("mysql:mysql-connector-java:5.1.49")
 
 
     testImplementation("junit:junit:4.13.2")

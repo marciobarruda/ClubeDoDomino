@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -116,9 +117,26 @@ fun RankingScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
+            Image(
+                painter = painterResource(id = com.marcioarruda.clubedodomino.R.drawable.bg_ranking),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Black.copy(alpha = 0.5f),
+                                com.marcioarruda.clubedodomino.ui.theme.DominoBg.copy(alpha = 0.8f)
+                            )
+                        )
+                    )
+            )
             when {
                 uiState.isLoading -> RankingShimmerList()
                 uiState.error != null -> {
@@ -156,11 +174,16 @@ fun RankingItem(player: RankingPlayer, position: Int) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "$position",
+                    text = when(position) {
+                        1 -> "🏆"
+                        2 -> "🥈"
+                        3 -> "🥉"
+                        else -> "$position"
+                    },
                     color = if (position <= 3) RoyalGold else Color.Gray,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    modifier = Modifier.width(24.dp)
+                    fontSize = if (position <= 3) 20.sp else 16.sp,
+                    modifier = Modifier.width(28.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 AvatarFromBase64(player = player)

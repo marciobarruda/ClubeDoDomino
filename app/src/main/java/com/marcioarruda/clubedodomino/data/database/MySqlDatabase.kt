@@ -1,14 +1,14 @@
 package com.marcioarruda.clubedodomino.data.database
 
 import com.marcioarruda.clubedodomino.BuildConfig
-import org.mariadb.jdbc.Driver
+import com.mysql.jdbc.Driver
 import java.sql.Connection
 import java.util.Properties
 
 object MySqlDatabase {
 
     private val jdbcUrl =
-        "jdbc:mariadb://${BuildConfig.DB_HOST}:${BuildConfig.DB_PORT}/${BuildConfig.DB_NAME}" +
+        "jdbc:mysql://${BuildConfig.DB_HOST}:${BuildConfig.DB_PORT}/${BuildConfig.DB_NAME}" +
         "?useSSL=false" +
         "&characterEncoding=UTF-8" +
         "&connectTimeout=10000" +

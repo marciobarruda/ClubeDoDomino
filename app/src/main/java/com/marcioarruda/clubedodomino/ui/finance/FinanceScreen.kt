@@ -37,10 +37,14 @@ import com.marcioarruda.clubedodomino.ui.ViewModelFactory
 import com.marcioarruda.clubedodomino.ui.theme.GlassyColor
 import com.marcioarruda.clubedodomino.ui.theme.RoyalGold
 import com.marcioarruda.clubedodomino.ui.util.LifecycleEffect
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Brush
+import java.text.SimpleDateFormat
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.text.SimpleDateFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,9 +151,26 @@ fun FinanceScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
+            Image(
+                painter = painterResource(id = com.marcioarruda.clubedodomino.R.drawable.bg_finance),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Black.copy(alpha = 0.5f),
+                                com.marcioarruda.clubedodomino.ui.theme.DominoBg.copy(alpha = 0.8f)
+                            )
+                        )
+                    )
+            )
             when {
                 uiState.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

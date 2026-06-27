@@ -86,7 +86,7 @@ fun RegisterMatchScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color(0xFF071020), DominoBg)))
+                .background(Brush.verticalGradient(listOf(Color(0xFF051C10), DominoBg)))
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),

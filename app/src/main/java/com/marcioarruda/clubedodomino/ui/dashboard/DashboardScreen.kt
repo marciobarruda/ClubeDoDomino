@@ -35,6 +35,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.marcioarruda.clubedodomino.data.BestPlayer
 import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.data.User
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import com.marcioarruda.clubedodomino.ui.theme.*
 import com.marcioarruda.clubedodomino.ui.util.AvatarImage
 import java.io.ByteArrayOutputStream
@@ -71,9 +74,26 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color(0xFF071020), DominoBg)))
                 .padding(padding)
         ) {
+            Image(
+                painter = painterResource(id = com.marcioarruda.clubedodomino.R.drawable.bg_dashboard),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Black.copy(alpha = 0.5f),
+                                DominoBg.copy(alpha = 0.8f)
+                            )
+                        )
+                    )
+            )
             when {
                 uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = DominoGreen)
                 uiState.error != null -> ErrorView(uiState.error!!) { viewModel.loadDashboardData(userId) }
@@ -318,7 +338,7 @@ private fun DailyAwardsCard(bestPlayers: List<BestPlayer>, worstPlayers: List<Be
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.linearGradient(listOf(Color(0xFF1A2F45), Color(0xFF0F2030)))
+                    Brush.linearGradient(listOf(Color(0xFF1B5E20), Color(0xFF0C381E)))
                 )
                 .padding(16.dp)
         ) {
