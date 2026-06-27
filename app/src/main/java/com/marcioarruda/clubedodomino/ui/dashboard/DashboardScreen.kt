@@ -8,6 +8,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -151,18 +153,22 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
                     val avatars = listOf(
                         "avatar_1", "avatar_2", "avatar_3",
                         "avatar_4", "avatar_5", "avatar_6",
-                        "avatar_7", "avatar_8", "avatar_9"
+                        "avatar_7", "avatar_8", "avatar_9",
+                        "avatar_10", "avatar_11", "avatar_12",
+                        "avatar_13", "avatar_14"
                     )
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        for (row in 0 until 3) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier
+                            .heightIn(max = 300.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        avatars.chunked(3).forEach { rowAvatars ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                for (col in 0 until 3) {
-                                    val idx = row * 3 + col
-                                    val avatarId = avatars[idx]
-                                    
+                                rowAvatars.forEach { avatarId ->
                                     Box(
                                         modifier = Modifier
                                             .clickable {
@@ -177,6 +183,11 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
                                             borderWidth = if (user.photoUrl == avatarId) 3.dp else 1.dp,
                                             borderColor = if (user.photoUrl == avatarId) DominoGreen else Color.Gray
                                         )
+                                    }
+                                }
+                                if (rowAvatars.size < 3) {
+                                    for (i in 0 until (3 - rowAvatars.size)) {
+                                        Spacer(modifier = Modifier.size(72.dp).padding(4.dp))
                                     }
                                 }
                             }
