@@ -54,38 +54,10 @@ fun base64ToBitmap(base64Str: String?): Bitmap? {
 
 @Composable
 fun AvatarFromBase64(player: RankingPlayer) {
-    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-    LaunchedEffect(player.photoUrl) {
-        withContext(Dispatchers.Default) {
-            bitmap = base64ToBitmap(player.photoUrl)
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(Color.Gray.copy(alpha = 0.3f)),
-        contentAlignment = Alignment.Center
-    ) {
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap!!.asImageBitmap(),
-                contentDescription = "Avatar de ${player.playerName}",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            val initial = player.playerName.firstOrNull()?.uppercaseChar() ?: '?'
-            Text(
-                text = initial.toString(),
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp
-            )
-        }
-    }
+    com.marcioarruda.clubedodomino.ui.util.AvatarImage(
+        url = player.photoUrl,
+        size = 48.dp
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

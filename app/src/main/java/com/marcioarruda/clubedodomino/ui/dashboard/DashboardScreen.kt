@@ -134,20 +134,63 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (String) -> Unit, onLogout: () -> Unit) {
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            try {
-                val bmp = BitmapFactory.decodeStream(context.contentResolver.openInputStream(it))
-                val out = ByteArrayOutputStream()
-                bmp.compress(Bitmap.CompressFormat.JPEG, 70, out)
-                onImageSelected(Base64.encodeToString(out.toByteArray(), Base64.DEFAULT))
-            } catch (e: Exception) { e.printStackTrace() }
-        }
-    }
-
     var showReleaseNotes by remember { mutableStateOf(false) }
     var releaseInfo by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+    var showAvatarSelector by remember { mutableStateOf(false) }
+
+    if (showAvatarSelector) {
+        AlertDialog(
+            onDismissRequest = { showAvatarSelector = false },
+            containerColor = DominoSurface,
+            title = { Text("Escolha seu Avatar 🏆", color = DominoLight, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text("Selecione um avatar inspirado no Clube nas cores do Brasil 🇧🇷:", color = DominoMuted, fontSize = 13.sp)
+                    Spacer(Modifier.height(16.dp))
+                    
+                    val avatars = listOf(
+                        "avatar_1", "avatar_2", "avatar_3",
+                        "avatar_4", "avatar_5", "avatar_6",
+                        "avatar_7", "avatar_8", "avatar_9"
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        for (row in 0 until 3) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                for (col in 0 until 3) {
+                                    val idx = row * 3 + col
+                                    val avatarId = avatars[idx]
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .clickable {
+                                                onImageSelected(avatarId)
+                                                showAvatarSelector = false
+                                            }
+                                            .padding(4.dp)
+                                    ) {
+                                        AvatarImage(
+                                            url = avatarId,
+                                            size = 72.dp,
+                                            borderWidth = if (user.photoUrl == avatarId) 3.dp else 1.dp,
+                                            borderColor = if (user.photoUrl == avatarId) DominoGreen else Color.Gray
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAvatarSelector = false }) {
+                    Text("Cancelar", color = DominoError)
+                }
+            }
+        )
+    }
 
     if (showReleaseNotes) {
         AlertDialog(
@@ -191,7 +234,7 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
                 Box {
                     AvatarImage(url = user.photoUrl, size = 120.dp, borderWidth = 3.dp)
                     IconButton(
-                        onClick = { launcher.launch("image/*") },
+                        onClick = { showAvatarSelector = true },
                         modifier = Modifier.align(Alignment.BottomEnd).background(DominoGreen, CircleShape).size(36.dp)
                     ) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar Foto", tint = Color.Black, modifier = Modifier.size(18.dp))

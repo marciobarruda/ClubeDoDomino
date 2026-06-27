@@ -37,6 +37,29 @@ fun AvatarImage(
         .border(borderWidth, borderColor, CircleShape)
         .background(Color.Gray)
 
+    val resId = when (url) {
+        "avatar_1" -> com.marcioarruda.clubedodomino.R.drawable.avatar_1
+        "avatar_2" -> com.marcioarruda.clubedodomino.R.drawable.avatar_2
+        "avatar_3" -> com.marcioarruda.clubedodomino.R.drawable.avatar_3
+        "avatar_4" -> com.marcioarruda.clubedodomino.R.drawable.avatar_4
+        "avatar_5" -> com.marcioarruda.clubedodomino.R.drawable.avatar_5
+        "avatar_6" -> com.marcioarruda.clubedodomino.R.drawable.avatar_6
+        "avatar_7" -> com.marcioarruda.clubedodomino.R.drawable.avatar_7
+        "avatar_8" -> com.marcioarruda.clubedodomino.R.drawable.avatar_8
+        "avatar_9" -> com.marcioarruda.clubedodomino.R.drawable.avatar_9
+        else -> null
+    }
+
+    if (resId != null) {
+        Image(
+            painter = androidx.compose.ui.res.painterResource(id = resId),
+            contentDescription = "Avatar",
+            modifier = finalModifier,
+            contentScale = ContentScale.Crop
+        )
+        return
+    }
+
     if (url.isNullOrBlank()) {
         Icon(
             imageVector = Icons.Default.Person,
