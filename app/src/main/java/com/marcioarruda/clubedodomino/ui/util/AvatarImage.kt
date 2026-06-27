@@ -49,21 +49,21 @@ fun AvatarImage(
         "avatar_9" -> com.marcioarruda.clubedodomino.R.drawable.avatar_9
         "avatar_10" -> com.marcioarruda.clubedodomino.R.drawable.avatar_10
         "avatar_11" -> com.marcioarruda.clubedodomino.R.drawable.avatar_11
-        "avatar_12" -> com.marcioarruda.clubedodomino.R.drawable.avatar_12
+        "tenorio" -> com.marcioarruda.clubedodomino.R.drawable.tenorio
         "avatar_13" -> com.marcioarruda.clubedodomino.R.drawable.avatar_13
         "avatar_14" -> com.marcioarruda.clubedodomino.R.drawable.avatar_14
-        "avatar_15" -> com.marcioarruda.clubedodomino.R.drawable.avatar_15
-        "avatar_16" -> com.marcioarruda.clubedodomino.R.drawable.avatar_16
-        "avatar_17" -> com.marcioarruda.clubedodomino.R.drawable.avatar_17
-        "avatar_18" -> com.marcioarruda.clubedodomino.R.drawable.avatar_18
-        "avatar_19" -> com.marcioarruda.clubedodomino.R.drawable.avatar_19
-        "avatar_20" -> com.marcioarruda.clubedodomino.R.drawable.avatar_20
-        "avatar_21" -> com.marcioarruda.clubedodomino.R.drawable.avatar_21
-        "avatar_22" -> com.marcioarruda.clubedodomino.R.drawable.avatar_22
-        "avatar_23" -> com.marcioarruda.clubedodomino.R.drawable.avatar_23
-        "avatar_24" -> com.marcioarruda.clubedodomino.R.drawable.avatar_24
-        "avatar_25" -> com.marcioarruda.clubedodomino.R.drawable.avatar_25
-        "avatar_26" -> com.marcioarruda.clubedodomino.R.drawable.avatar_26
+        "tercio" -> com.marcioarruda.clubedodomino.R.drawable.tercio
+        "arnaldo" -> com.marcioarruda.clubedodomino.R.drawable.arnaldo
+        "tatu" -> com.marcioarruda.clubedodomino.R.drawable.tatu
+        "calabria" -> com.marcioarruda.clubedodomino.R.drawable.calabria
+        "sakaki" -> com.marcioarruda.clubedodomino.R.drawable.sakaki
+        "breno" -> com.marcioarruda.clubedodomino.R.drawable.breno
+        "molinho" -> com.marcioarruda.clubedodomino.R.drawable.molinho
+        "ruan" -> com.marcioarruda.clubedodomino.R.drawable.ruan
+        "pedro" -> com.marcioarruda.clubedodomino.R.drawable.pedro
+        "marcio" -> com.marcioarruda.clubedodomino.R.drawable.marcio
+        "amilton" -> com.marcioarruda.clubedodomino.R.drawable.amilton
+        "frodo" -> com.marcioarruda.clubedodomino.R.drawable.frodo
         else -> null
     }
 

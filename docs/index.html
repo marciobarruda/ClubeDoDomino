@@ -203,9 +203,36 @@
             justify-content: center;
             align-items: center;
             padding: 24px;
-            background: linear-gradient(160deg, #071020 0%, #0B1426 50%, #0D1E1A 100%);
+            background-image: linear-gradient(rgba(11, 20, 38, 0.8), rgba(11, 20, 38, 0.8)), url('./bg_login.webp');
+            background-size: cover;
+            background-position: center;
         }
         #login-screen.active { display: flex; }
+        
+        #dashboard-screen {
+            background-image: linear-gradient(rgba(11, 20, 38, 0.85), rgba(11, 20, 38, 0.85)), url('./bg_dashboard.webp');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        #match-screen {
+            background-image: linear-gradient(rgba(11, 20, 38, 0.85), rgba(11, 20, 38, 0.85)), url('./bg_dashboard.webp');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        #finance-screen {
+            background-image: linear-gradient(rgba(11, 20, 38, 0.85), rgba(11, 20, 38, 0.85)), url('./bg_finance.webp');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        #ranking-screen {
+            background-image: linear-gradient(rgba(11, 20, 38, 0.85), rgba(11, 20, 38, 0.85)), url('./bg_ranking.webp');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
         .logo-container { margin-bottom: 32px; text-align: center; }
         .logo-container h1 {
             font-size: 36px; margin: 12px 0 0; color: var(--primary); letter-spacing: -1px; font-weight: 900;
@@ -453,16 +480,24 @@
 
                 <div class="card">
                     <div style="display: flex; justify-content: space-around; align-items: center">
-                        <div style="text-align: center">
-                            <span style="font-size: 12px; color: var(--text-muted)">TIME 1</span>
+                        <div style="text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 120px;">
+                            <div id="team1-avatars" style="display: flex; justify-content: center; align-items: center; margin-bottom: 6px;">
+                                <div id="t1p1-avatar-img" style="width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--success); background-size: cover; background-position: center; margin-right: -12px; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"></div>
+                                <div id="t1p2-avatar-img" style="width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--success); background-size: cover; background-position: center; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"></div>
+                            </div>
+                            <span id="team1-text-label" style="font-size: 12px; color: var(--text-muted); font-weight: 700;">TIME 1</span>
                             <div class="score-input">
                                 <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, -1)">-</button>
                                 <div class="score-box" id="score-1">0</div>
                                 <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(1, 1)">+</button>
                             </div>
                         </div>
-                        <div style="text-align: center">
-                            <span style="font-size: 12px; color: var(--text-muted)">TIME 2</span>
+                        <div style="text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 120px;">
+                            <div id="team2-avatars" style="display: flex; justify-content: center; align-items: center; margin-bottom: 6px;">
+                                <div id="t2p1-avatar-img" style="width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--secondary); background-size: cover; background-position: center; margin-right: -12px; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"></div>
+                                <div id="t2p2-avatar-img" style="width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--secondary); background-size: cover; background-position: center; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"></div>
+                            </div>
+                            <span id="team2-text-label" style="font-size: 12px; color: var(--text-muted); font-weight: 700;">TIME 2</span>
                             <div class="score-input">
                                 <button class="btn btn-ghost" style="padding: 10px" onclick="app.adjustScore(2, -1)">-</button>
                                 <div class="score-box" id="score-2">0</div>
@@ -1229,7 +1264,7 @@
                     const row = document.createElement('div');
                     row.className = `player-row ${isBlocked ? 'blocked' : ''}`;
                     row.innerHTML = `
-                        <img src="${p.avatar || 'https://ui-avatars.com/api/?name='+p.jogador}" style="width: 32px; height: 32px; border-radius: 50%">
+                        <img src="${p.avatar ? this.formatAvatar(p.avatar) : 'https://ui-avatars.com/api/?name='+p.jogador}" style="width: 32px; height: 32px; border-radius: 50%">
                         <div style="flex:1">
                             <div>${p.jogador}</div>
                             ${isBlocked ? '<span class="status-badge">BLOQUEADO FINANCEIRO</span>' : ''}
@@ -1244,11 +1279,67 @@
                 this.state.selectedPlayers[this.state.activePicker] = player;
                 const slot = document.getElementById(`slot-${this.state.activePicker}`);
                 slot.innerHTML = `
-                    <div class="slot-avatar" style="background: url(${player.avatar || ''}) center/cover"></div>
+                    <div class="slot-avatar" style="background: url(${this.formatAvatar(player.avatar) || ''}) center/cover"></div>
                     <span style="font-size: 11px; text-align: center">${this.firstName(player.jogador)}</span>
                 `;
                 slot.classList.add('filled');
+                this.updateScoreboardAvatars();
                 this.closeModal();
+            },
+
+            updateScoreboardAvatars() {
+                const t1p1 = this.state.selectedPlayers[0];
+                const t1p2 = this.state.selectedPlayers[1];
+                const t2p1 = this.state.selectedPlayers[2];
+                const t2p2 = this.state.selectedPlayers[3];
+
+                const t1p1Img = document.getElementById('t1p1-avatar-img');
+                const t1p2Img = document.getElementById('t1p2-avatar-img');
+                const t2p1Img = document.getElementById('t2p1-avatar-img');
+                const t2p2Img = document.getElementById('t2p2-avatar-img');
+
+                const t1Label = document.getElementById('team1-text-label');
+                const t2Label = document.getElementById('team2-text-label');
+
+                if (t1p1) {
+                    t1p1Img.style.backgroundImage = `url(${this.formatAvatar(t1p1.avatar)})`;
+                    t1p1Img.style.display = 'block';
+                } else {
+                    t1p1Img.style.display = 'none';
+                }
+
+                if (t1p2) {
+                    t1p2Img.style.backgroundImage = `url(${this.formatAvatar(t1p2.avatar)})`;
+                    t1p2Img.style.display = 'block';
+                } else {
+                    t1p2Img.style.display = 'none';
+                }
+
+                if (t2p1) {
+                    t2p1Img.style.backgroundImage = `url(${this.formatAvatar(t2p1.avatar)})`;
+                    t2p1Img.style.display = 'block';
+                } else {
+                    t2p1Img.style.display = 'none';
+                }
+
+                if (t2p2) {
+                    t2p2Img.style.backgroundImage = `url(${this.formatAvatar(t2p2.avatar)})`;
+                    t2p2Img.style.display = 'block';
+                } else {
+                    t2p2Img.style.display = 'none';
+                }
+
+                if (t1p1 || t1p2) {
+                    t1Label.style.display = 'none';
+                } else {
+                    t1Label.style.display = 'inline';
+                }
+
+                if (t2p1 || t2p2) {
+                    t2Label.style.display = 'none';
+                } else {
+                    t2Label.style.display = 'inline';
+                }
             },
 
             closeModal() { document.getElementById('modal').classList.remove('active'); },
@@ -1399,10 +1490,18 @@
  
             formatAvatar(avatar) {
                 if (!avatar) return '';
-                if (avatar.startsWith('avatar_')) return `./avatars/${avatar}.webp`;
                 if (avatar.startsWith('http') || avatar.startsWith('data:')) return avatar;
-                // Se não tem prefixo, assume que é um base64 de imagem
-                return `data:image/png;base64,${avatar}`;
+                const predefined = [
+                    'avatar_1', 'avatar_2', 'avatar_3', 'avatar_4', 'avatar_5', 'avatar_6', 'avatar_7', 'avatar_8', 'avatar_9', 'avatar_10', 'avatar_11', 'avatar_13', 'avatar_14',
+                    'tenorio', 'tercio', 'arnaldo', 'tatu', 'calabria', 'sakaki', 'breno', 'molinho', 'ruan', 'pedro', 'marcio', 'amilton', 'frodo'
+                ];
+                if (predefined.includes(avatar) || avatar.startsWith('avatar_')) {
+                    return `./avatars/${avatar}.webp`;
+                }
+                if (avatar.length > 100) {
+                    return `data:image/png;base64,${avatar}`;
+                }
+                return `./avatars/${avatar}.webp`;
             },
             getAvatar(name) { 
                 const p = this.state.players.find(p => p.jogador === name);
