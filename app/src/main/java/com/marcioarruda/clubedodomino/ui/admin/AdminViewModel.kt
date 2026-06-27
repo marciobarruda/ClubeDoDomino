@@ -48,7 +48,7 @@ class AdminViewModel(
                 val buchosResult = repository.getBuchosResult()
                 val users = repository.getPlayers()
 
-                val buchos = buchosResult.getOrNull()?.sortedByDescending { it.id } ?: emptyList()
+                val buchos = buchosResult.getOrNull()?.filter { it.pago != true }?.sortedByDescending { it.id } ?: emptyList()
 
                 // Calculate Stats safely
                 val stats = try {
@@ -108,6 +108,20 @@ class AdminViewModel(
                 _uiState.update { it.copy(message = "Bucho excluído com sucesso.") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao excluir bucho: ${e.message}") }
+            }
+        }
+    }
+
+    fun markBuchoAsPaid(buchoId: Long?) {
+        if (buchoId == null) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                repository.markBuchoAsPaid(buchoId)
+                loadData() // Refresh
+                _uiState.update { it.copy(message = "Bucho marcado como pago.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao marcar bucho como pago: ${e.message}") }
             }
         }
     }

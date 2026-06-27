@@ -127,7 +127,9 @@ fun AdminScreen(
                         1 -> BuchosList(
                             buchos = uiState.buchos, 
                             onDelete = { viewModel.deleteBucho(it) },
-                            canEdit = canEdit 
+                            onMarkPaid = { viewModel.markBuchoAsPaid(it) },
+                            canEdit = canEdit,
+                            isMarcio = userName.equals("MÁRCIO", ignoreCase = true)
                         )
                         2 -> PlayersList(
                             players = uiState.players,
@@ -191,7 +193,7 @@ fun MatchesList(
                                  Text("✏️") 
                             }
                             IconButton(onClick = { onDelete(match.id) }) {
-                                Text("🗑️") 
+                                 Text("🗑️") 
                             }
                         }
                     }
@@ -202,7 +204,13 @@ fun MatchesList(
 }
 
 @Composable
-fun BuchosList(buchos: List<com.marcioarruda.clubedodomino.data.network.BuchoDto>, onDelete: (Long?) -> Unit, canEdit: Boolean) {
+fun BuchosList(
+    buchos: List<com.marcioarruda.clubedodomino.data.network.BuchoDto>,
+    onDelete: (Long?) -> Unit,
+    onMarkPaid: (Long) -> Unit,
+    canEdit: Boolean,
+    isMarcio: Boolean
+) {
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
         items(buchos) { bucho ->
             Card(
@@ -228,9 +236,16 @@ fun BuchosList(buchos: List<com.marcioarruda.clubedodomino.data.network.BuchoDto
                             Text("Cadastrado por: ${bucho.cadastrado_por}", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                         }
                     }
-                    if (canEdit) {
-                        IconButton(onClick = { onDelete(bucho.id) }) {
-                            Text("🗑️")
+                    Row {
+                        if (isMarcio) {
+                            IconButton(onClick = { bucho.id?.let { onMarkPaid(it) } }) {
+                                Text("✔️")
+                            }
+                        }
+                        if (canEdit) {
+                            IconButton(onClick = { onDelete(bucho.id) }) {
+                                Text("🗑️")
+                            }
                         }
                     }
                 }

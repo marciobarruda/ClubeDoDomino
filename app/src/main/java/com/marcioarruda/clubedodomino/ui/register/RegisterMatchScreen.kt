@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.marcioarruda.clubedodomino.data.User
 import com.marcioarruda.clubedodomino.ui.theme.*
+import com.marcioarruda.clubedodomino.ui.util.AvatarImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -229,27 +230,93 @@ private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewMo
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        val t1Names = listOfNotNull(state.selectedPlayers[0]?.displayName?.substringBefore(" "), state.selectedPlayers[1]?.displayName?.substringBefore(" "))
-        val t2Names = listOfNotNull(state.selectedPlayers[2]?.displayName?.substringBefore(" "), state.selectedPlayers[3]?.displayName?.substringBefore(" "))
-        val t1Label = if (t1Names.isNotEmpty()) t1Names.joinToString(" / ") else "Time 1"
-        val t2Label = if (t2Names.isNotEmpty()) t2Names.joinToString(" / ") else "Time 2"
-
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ScoreControl(t1Label, state.score1, { viewModel.onScoreChange(1, it) }, DominoGreen, Modifier.weight(1f))
+            ScoreControl(
+                p1 = state.selectedPlayers[0],
+                p2 = state.selectedPlayers[1],
+                score = state.score1,
+                onScoreChange = { viewModel.onScoreChange(1, it) },
+                accentColor = DominoGreen,
+                modifier = Modifier.weight(1f)
+            )
             Text("×", fontSize = 28.sp, color = DominoMuted, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp))
-            ScoreControl(t2Label, state.score2, { viewModel.onScoreChange(2, it) }, DominoOrange, Modifier.weight(1f))
+            ScoreControl(
+                p1 = state.selectedPlayers[2],
+                p2 = state.selectedPlayers[3],
+                score = state.score2,
+                onScoreChange = { viewModel.onScoreChange(2, it) },
+                accentColor = DominoOrange,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
 @Composable
-private fun ScoreControl(label: String, score: Int, onScoreChange: (Int) -> Unit, accentColor: Color, modifier: Modifier = Modifier) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp), modifier = modifier) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = DominoMuted, textAlign = TextAlign.Center, lineHeight = 16.sp, maxLines = 2)
+private fun ScoreControl(
+    p1: User?,
+    p2: User?,
+    score: Int,
+    onScoreChange: (Int) -> Unit,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier
+    ) {
+        // Avatars Row
+        Row(
+            horizontalArrangement = Arrangement.spacedBy((-12).dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color.DarkGray, CircleShape)
+            ) {
+                if (p1 != null) {
+                    AvatarImage(
+                        url = p1.photoUrl,
+                        size = 44.dp,
+                        borderWidth = 1.5.dp,
+                        borderColor = accentColor
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color.DarkGray, CircleShape)
+            ) {
+                if (p2 != null) {
+                    AvatarImage(
+                        url = p2.photoUrl,
+                        size = 44.dp,
+                        borderWidth = 1.5.dp,
+                        borderColor = accentColor
+                    )
+                }
+            }
+        }
+
+        val name1 = p1?.displayName?.substringBefore(" ") ?: "Time"
+        val name2 = p2?.displayName?.substringBefore(" ") ?: ""
+        val label = if (name2.isNotEmpty()) "$name1 / $name2" else name1
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = DominoMuted,
+            textAlign = TextAlign.Center,
+            lineHeight = 14.sp,
+            maxLines = 2
+        )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(
                 onClick = { if (score > 0) onScoreChange(score - 1) },

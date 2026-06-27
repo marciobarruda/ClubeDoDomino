@@ -292,6 +292,14 @@ class ClubRepository {
         }
     }
 
+    suspend fun markBuchoAsPaid(id: Long): Unit = withContext(Dispatchers.IO) {
+        MySqlDatabase.connect().use { conn ->
+            val ps = conn.prepareStatement("UPDATE buchos SET pago = 'true' WHERE id_tabela = ?")
+            ps.setLong(1, id)
+            ps.executeUpdate()
+        }
+    }
+
     // ─── Mensalidades ─────────────────────────────────────────────────────
 
     suspend fun getMensalidadesResult(): Result<List<MensalidadeDto>> = safeDbCall {
