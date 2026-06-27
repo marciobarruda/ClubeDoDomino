@@ -2,6 +2,6 @@
   "version_code": 64,
   "version_name": "1.29",
   "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v64/clube_v_64.apk",
-  "release_notes": "* Avatares Pixar (v64): 10 novos avatares 3D modelados inspirados nos membros reais do clube integrados ao app!\n* Otimizações de Avatares (v63): Grade interativa com rolagem de 24 opções de avatares locais.\n* Tema da Copa (v62): Imagens e cores temáticas do Brasil aplicadas nos fundos de todos os módulos.\n* Lógica do Ranking (v62): Classificação corrigida localmente (idêntica ao n8n), somando apenas vitórias e ignorando usuários de teste.",
+  "release_notes": "* Novos Avatares Reais (v64): 11 novos avatares 3D Pixar, incluindo 10 inspirados em membros reais do clube e 1 especial com máscara preta!\n* Novo Fundo do Início (v64): Nova imagem premium de feltro de dominó verde e taça do mundo no Dashboard!\n* Grade de 25 Avatares (v64): Grade interativa com rolagem de 25 opções locais (leve, sem Base64!).",
   "min_version": 0
 }
