@@ -1,5 +1,6 @@
 package com.marcioarruda.clubedodomino.ui.admin
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -124,13 +125,70 @@ fun AdminScreen(
                             onEdit = { matchId -> onEditMatch(matchId) },
                             canEdit = canEdit 
                         )
-                        1 -> BuchosList(
-                            buchos = uiState.buchos, 
-                            onDelete = { viewModel.deleteBucho(it) },
-                            onMarkPaid = { viewModel.markBuchoAsPaid(it) },
-                            canEdit = canEdit,
-                            isMarcio = userName.equals("MÁRCIO", ignoreCase = true)
-                        )
+                        1 -> {
+                            var expanded by remember { mutableStateOf(false) }
+                            var selectedPlayerName by remember { mutableStateOf("Todos os Jogadores") }
+                            val playerNames = remember(uiState.players) {
+                                listOf("Todos os Jogadores") + uiState.players.map { it.user.name }.distinct().sorted()
+                            }
+
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()) {
+                                    ExposedDropdownMenuBox(
+                                        expanded = expanded,
+                                        onExpandedChange = { expanded = !expanded }
+                                    ) {
+                                        OutlinedTextField(
+                                            value = selectedPlayerName,
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Filtrar por Jogador", color = DominoGold) },
+                                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedTextColor = Color.White,
+                                                unfocusedTextColor = Color.White,
+                                                focusedContainerColor = Color(0xFF2C2C2C),
+                                                unfocusedContainerColor = Color(0xFF2C2C2C),
+                                                focusedBorderColor = DominoGold,
+                                                unfocusedBorderColor = Color.Gray
+                                            )
+                                        )
+                                        ExposedDropdownMenu(
+                                            expanded = expanded,
+                                            onDismissRequest = { expanded = false },
+                                            modifier = Modifier.background(Color(0xFF2C2C2C))
+                                        ) {
+                                            playerNames.forEach { name ->
+                                                DropdownMenuItem(
+                                                    text = { Text(name, color = Color.White) },
+                                                    onClick = {
+                                                        selectedPlayerName = name
+                                                        expanded = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                val filteredBuchos = remember(uiState.buchos, selectedPlayerName) {
+                                    if (selectedPlayerName == "Todos os Jogadores") {
+                                        uiState.buchos
+                                    } else {
+                                        uiState.buchos.filter { it.jogador?.trim()?.equals(selectedPlayerName.trim(), ignoreCase = true) == true }
+                                    }
+                                }
+
+                                BuchosList(
+                                    buchos = filteredBuchos,
+                                    onDelete = { viewModel.deleteBucho(it) },
+                                    onMarkPaid = { viewModel.markBuchoAsPaid(it) },
+                                    canEdit = canEdit,
+                                    isMarcio = userName.equals("MÁRCIO", ignoreCase = true)
+                                )
+                            }
+                        }
                         2 -> PlayersList(
                             players = uiState.players,
                             onToggleActive = { u, a -> viewModel.togglePlayerActive(u, a) },
