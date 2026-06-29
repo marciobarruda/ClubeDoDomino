@@ -1,7 +1,7 @@
 {
-  "version_code": 65,
-  "version_name": "1.30",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v65/clube_v_65.apk",
-  "release_notes": "* Novos Avatares Otimizados (v65): Ajustes aplicados aos avatares de Márcio, Tenório, Tércio e Arnaldo!\n* Correção do Diálogo (v65): Diálogo de perfil corrigido para carregar todos os novos avatares predefinidos locales!\n* Placar Dinâmico (v65): Exibição em tempo real de avatares das duplas no placar.",
+  "version_code": 66,
+  "version_name": "1.31",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v66/clube_v_66.apk",
+  "release_notes": "* Atualização de Avatar (v66): Nova versão do avatar do jogador Márcio com formato de rosto e cabelo mais realistas!",
   "min_version": 0
 }

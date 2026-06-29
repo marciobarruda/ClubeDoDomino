@@ -609,9 +609,13 @@
             <button class="btn btn-ghost" style="width: 100%; margin-top: 20px" onclick="document.getElementById('match-modal').classList.remove('active')">Fechar</button>
         </div>
     </div>
-
     <script>
-        const API_BASE = "https://n8ndev.devlogconsultoria.com.br/";
+        // Configuração da API:
+        // Se rodar localmente, usa a API local (Node.js). Em produção, altere a URL abaixo após o deploy no Easypanel.
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE = isLocal 
+            ? "http://localhost:3000/" 
+            : "https://n8ndev.devlogconsultoria.com.br/";
         
         const app = {
             state: {
