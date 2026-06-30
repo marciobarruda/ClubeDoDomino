@@ -176,7 +176,7 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
     private fun startAvailabilityMonitoring() {
         tickerFlow(periodMillis = 30_000, initialDelayMillis = 0)
             .onEach {
-                val isAvailable = matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
+                val isAvailable = matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, _uiState.value.user?.name)
                 _uiState.update { it.copy(isNewMatchVisible = isAvailable) }
             }
             .launchIn(viewModelScope)

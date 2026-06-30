@@ -48,6 +48,13 @@ class MatchViewModel(
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val matchAvailabilityManager = com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
 
+    var currentUserName: String? = null
+        private set
+
+    fun setCurrentUser(name: String?) {
+        currentUserName = name
+    }
+
     init {
         loadPlayers()
         startAutoCloseTimer()
@@ -58,7 +65,7 @@ class MatchViewModel(
             while (true) {
                 val context = com.marcioarruda.clubedodomino.DominoClubApplication.instance
                 if (_uiState.value.editingMatchId == null) {
-                    val available = matchAvailabilityManager.isModuleAvailable(context)
+                    val available = matchAvailabilityManager.isModuleAvailable(context, currentUserName)
                     if (!available) {
                         val diagInfo = matchAvailabilityManager.getExtendedDiagnosticInfo(context)
                         _uiState.update {
@@ -277,7 +284,7 @@ class MatchViewModel(
         }
 
         // Regra: Bloqueio por horário
-        if (!matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance)) {
+        if (!matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)) {
             val diag = matchAvailabilityManager.getExtendedDiagnosticInfo(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
             _uiState.update { it.copy(isLoading = false, error = "MÓDULO BLOQUEADO\n$diag") }
             return
@@ -389,7 +396,7 @@ class MatchViewModel(
     }
 
     fun onRepeatMatch(repeat: Boolean) {
-        if (repeat && !matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance)) {
+        if (repeat && !matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)) {
             _uiState.update { 
                 it.copy(
                     showRepeatDialog = false, 

@@ -77,7 +77,29 @@ object MatchAvailabilityManager {
                "Manipulação: ${if(isTimeManipulated) "Detectada" else "Não"}"
     }
 
-    fun isModuleAvailable(context: Context): Boolean {
+    private fun isBypassEnabled(context: Context, username: String?): Boolean {
+        if (username?.trim()?.uppercase() != "MÁRCIO") return false
+        val prefs = context.getSharedPreferences("club_domino_prefs", Context.MODE_PRIVATE)
+        return prefs.getBoolean("bypass_time_limit_marcio", false)
+    }
+
+    fun setBypassEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences("club_domino_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("bypass_time_limit_marcio", enabled).apply()
+    }
+
+    fun getBypassEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("club_domino_prefs", Context.MODE_PRIVATE)
+        return prefs.getBoolean("bypass_time_limit_marcio", false)
+    }
+
+    fun isModuleAvailable(context: Context, username: String? = null): Boolean {
+        // Se for o Márcio e o bypass estiver ativo, libera sem nenhuma validação!
+        if (username != null && isBypassEnabled(context, username)) {
+            Log.d("MatchAvailability", "Bypass active for MÁRCIO - match registration allowed.")
+            return true
+        }
+
         // 1. Verifica integridade primeiro
         if (!isAutoTimeEnabled(context)) {
             isTimeManipulated = true
@@ -87,13 +109,13 @@ object MatchAvailabilityManager {
         if (checkDrift()) {
             return false
         }
-
+ 
         // 2. Verifica horários
         val now = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), zoneId)
         val today = now.toLocalDate()
         val currentTime = now.toLocalTime()
         val dayOfWeek = now.dayOfWeek
-
+ 
         val isHoliday = holidayRepository.isHoliday(today)
         val isWorkingDay = dayOfWeek >= DayOfWeek.MONDAY && dayOfWeek <= DayOfWeek.FRIDAY
         
@@ -104,14 +126,14 @@ object MatchAvailabilityManager {
             endTime
         }
         val isWithinTimeWindow = !currentTime.isBefore(startTime) && currentTime.isBefore(currentEndTime)
-
+ 
         val result = isWorkingDay && isWithinTimeWindow && !isHoliday
-
+ 
         Log.d(
             "MatchAvailability",
             "Check: AutoTime=${!isTimeManipulated}, Time=${currentTime}, Result=${result}"
         )
-
+ 
         return result
     }
 }

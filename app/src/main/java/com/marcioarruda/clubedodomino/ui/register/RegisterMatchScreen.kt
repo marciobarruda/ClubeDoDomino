@@ -38,6 +38,7 @@ fun RegisterMatchScreen(
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(matchId) { if (matchId != null) viewModel.loadMatch(matchId) }
+    LaunchedEffect(session) { viewModel.setCurrentUser(session?.userName) }
 
     LaunchedEffect(state.success) {
         if (state.success) {

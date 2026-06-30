@@ -15,6 +15,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.marcioarruda.clubedodomino.ui.ViewModelFactory
 import com.marcioarruda.clubedodomino.ui.theme.DominoGold
+import androidx.compose.ui.platform.LocalContext
+import com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -101,9 +106,58 @@ fun AdminScreen(
             )
         },
         containerColor = Color.Black 
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+    ) { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             
+            val isMarcio = userName.equals("MÁRCIO", ignoreCase = true)
+            if (isMarcio) {
+                val context = LocalContext.current
+                var bypassEnabled by remember { 
+                    mutableStateOf(MatchAvailabilityManager.getBypassEnabled(context)) 
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Liberar Horário de Cadastro",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = "Permite que você cadastre partidas fora do horário padrão (11h45 às 14h)",
+                                color = Color.Gray,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Switch(
+                            checked = bypassEnabled,
+                            onCheckedChange = { checked ->
+                                MatchAvailabilityManager.setBypassEnabled(context, checked)
+                                bypassEnabled = checked
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = com.marcioarruda.clubedodomino.ui.theme.DominoGreen,
+                                checkedTrackColor = com.marcioarruda.clubedodomino.ui.theme.DominoGreen.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                }
+            }
+
             TabRow(selectedTabIndex = selectedTab, containerColor = Color.Transparent, contentColor = DominoGold) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
