@@ -380,6 +380,16 @@
                 <input type="password" id="login-pass" placeholder="••••••••">
             </div>
             <button class="btn btn-primary" style="width: 100%" onclick="app.login()">Entrar</button>
+            <div style="margin-top: 20px; text-align: center;">
+                <span id="btn-toggle-api" style="font-size: 11px; color: var(--text-muted); cursor: pointer; text-decoration: underline; font-weight: 600;" onclick="document.getElementById('api-config-container').style.display = document.getElementById('api-config-container').style.display === 'none' ? 'block' : 'none'">⚙️ Configurar Servidor (API)</span>
+                <div id="api-config-container" style="display: none; margin-top: 16px; text-align: left; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                    <label style="display:block; margin-bottom: 6px; font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Endereço da API Backend</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="api-base-url-input" style="padding: 10px 14px; font-size: 12px; border-radius: 10px;" placeholder="https://api.exemplo.com/">
+                        <button class="btn btn-primary" style="padding: 10px 14px; font-size: 12px; border-radius: 10px; font-weight: 800;" onclick="app.saveApiBaseUrl()">Salvar</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -611,11 +621,10 @@
     </div>
     <script>
         // Configuração da API:
-        // Se rodar localmente, usa a API local (Node.js). Em produção, altere a URL abaixo após o deploy no Easypanel.
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_BASE = isLocal 
-            ? "http://localhost:3000/" 
-            : "https://n8ndev.devlogconsultoria.com.br/";
+        // Prioriza o endereço salvo em localStorage. Se não houver, usa localhost para desenvolvimento ou a URL padrão.
+        const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const defaultApi = isLocalHost ? "http://localhost:3000/" : "https://n8ndev.devlogconsultoria.com.br/";
+        const API_BASE = localStorage.getItem('api_base_url') || defaultApi;
         
         const app = {
             state: {
@@ -771,6 +780,11 @@
             showLogin() {
                 document.getElementById('login-screen').classList.add('active');
                 document.getElementById('main-content').style.display = 'none';
+                
+                const apiInput = document.getElementById('api-base-url-input');
+                if (apiInput) {
+                    apiInput.value = API_BASE;
+                }
             },
 
             showMain() {
@@ -1572,6 +1586,22 @@
             },
             closeAlert() {
                 document.getElementById('alert-modal').classList.remove('active');
+            },
+            saveApiBaseUrl() {
+                const apiInput = document.getElementById('api-base-url-input');
+                if (apiInput) {
+                    let url = apiInput.value.trim();
+                    if (url) {
+                        if (!url.endsWith('/')) {
+                            url += '/';
+                        }
+                        localStorage.setItem('api_base_url', url);
+                        this.showAlert('Sucesso', 'Endereço da API atualizado! Recarregando...');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    }
+                }
             }
         };
 
