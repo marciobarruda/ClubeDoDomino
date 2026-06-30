@@ -46,6 +46,7 @@ class MatchViewModel(
     val uiState: StateFlow<MatchRegistrationState> = _uiState.asStateFlow()
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val matchAvailabilityManager = com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
 
     init {
         loadPlayers()
@@ -386,8 +387,6 @@ class MatchViewModel(
             }
         }
     }
-
-    private val matchAvailabilityManager = com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
 
     fun onRepeatMatch(repeat: Boolean) {
         if (repeat && !matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance)) {
