@@ -53,7 +53,6 @@ data class FinancialEntry(
     val originalReference: String? = null // For Mensalidades (Data/Ref)
 )
 
-// 5. Ranking (New Module)
 data class RankingPlayer(
     val playerName: String,
     val photoUrl: String = "", // Optional for UI
@@ -62,5 +61,19 @@ data class RankingPlayer(
     val monthlyPoints: Int = 0,
     val monthlyMatches: Int = 0,
     val yearlyPoints: Int = 0,
-    val yearlyMatches: Int = 0
+    val yearlyMatches: Int = 0,
+    val dailyBuchosApplied: Int = 0,
+    val dailyBuchosReceived: Int = 0,
+    val monthlyBuchosApplied: Int = 0,
+    val monthlyBuchosReceived: Int = 0,
+    val yearlyBuchosApplied: Int = 0,
+    val yearlyBuchosReceived: Int = 0,
+    val yearlyWins: Int = 0,
+    val yearlyLosses: Int = 0
+)
+
+data class ChampionCelebration(
+    val player: User,
+    val points: Int,
+    val monthName: String
 )

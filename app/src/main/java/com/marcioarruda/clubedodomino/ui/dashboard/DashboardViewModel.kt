@@ -15,6 +15,8 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+import com.marcioarruda.clubedodomino.data.ChampionCelebration
+
 data class DashboardUiState(
     val isLoading: Boolean = true,
     val user: User? = null,
@@ -26,7 +28,8 @@ data class DashboardUiState(
     val groupedMatches: Map<String, List<Match>> = emptyMap(),
     val bestPlayers: List<BestPlayer> = emptyList(),
     val worstPlayers: List<BestPlayer> = emptyList(),
-    val isRefreshing: Boolean = false
+    val isRefreshing: Boolean = false,
+    val championCelebration: ChampionCelebration? = null
 )
 
 class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
@@ -91,6 +94,38 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                     }
                 }
 
+                // Lógica de celebração do campeão do mês
+                var championCelebration: ChampionCelebration? = null
+                try {
+                    val tz = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
+                    val zoneId = tz.toZoneId()
+                    val today = java.time.LocalDate.now(zoneId)
+                    val currentTime = java.time.LocalTime.now(zoneId)
+
+                    var showCelebration = false
+                    var targetYear = today.year
+                    var targetMonth = today.monthValue
+
+                    if (today.dayOfMonth == today.lengthOfMonth()) {
+                        // Último dia do mês atual - ativa após o encerramento do cadastro (14h)
+                        if (currentTime.isAfter(java.time.LocalTime.of(14, 0))) {
+                            showCelebration = true
+                        }
+                    } else if (today.dayOfMonth in 1..7) {
+                        // Primeira semana do mês seguinte - ativa o dia todo para o mês anterior
+                        showCelebration = true
+                        val prevDate = today.minusMonths(1)
+                        targetYear = prevDate.year
+                        targetMonth = prevDate.monthValue
+                    }
+
+                    if (showCelebration) {
+                        championCelebration = repository.getChampionCelebration(targetYear, targetMonth)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -101,7 +136,8 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                         totalDebt = totalDebt,
                         groupedMatches = groupedMatches,
                         bestPlayers = topPlayers,
-                        worstPlayers = bottomPlayers
+                        worstPlayers = bottomPlayers,
+                        championCelebration = championCelebration
                     )
                 }
             } catch (e: Exception) {

@@ -45,6 +45,8 @@ import com.marcioarruda.clubedodomino.ui.util.AvatarImage
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.animation.core.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +56,7 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
     val uiState by viewModel.uiState.collectAsState()
     var showProfileDialog by remember { mutableStateOf(false) }
     var selectedMatch by remember { mutableStateOf<Match?>(null) }
+    var showCelebrationDialog by remember { mutableStateOf(true) }
 
     if (showProfileDialog && uiState.user != null) {
         ProfileDialog(
@@ -115,6 +118,9 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
                 }
             }
             selectedMatch?.let { MatchDetailsDialog(it) { selectedMatch = null } }
+            if (showCelebrationDialog && uiState.championCelebration != null) {
+                ChampionCelebrationDialog(uiState.championCelebration!!) { showCelebrationDialog = false }
+            }
         }
     }
 }
@@ -518,6 +524,164 @@ private fun DetailRow(label: String, value: String, highlight: Boolean = false) 
         Text(label, color = DominoMuted, fontSize = 13.sp)
         Text(value, color = if (highlight) DominoGreen else DominoLight, fontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp)
     }
+}
+
+@Composable
+fun ConfettiEffect(modifier: Modifier = Modifier) {
+    val particles = remember {
+        List(80) {
+            ConfettiParticle(
+                x = kotlin.random.Random.nextFloat(),
+                y = kotlin.random.Random.nextFloat() * -1f,
+                size = kotlin.random.Random.nextFloat() * 24f + 16f,
+                color = listOf(
+                    Color.Red, Color.Green, Color.Blue, Color.Yellow,
+                    Color.Cyan, Color.Magenta, Color(0xFFFFA500)
+                ).random(),
+                speed = kotlin.random.Random.nextFloat() * 0.15f + 0.05f,
+                rotationSpeed = kotlin.random.Random.nextFloat() * 360f,
+                shape = kotlin.random.Random.nextInt(2)
+            )
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition()
+    val progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    androidx.compose.foundation.Canvas(modifier = modifier.fillMaxSize()) {
+        particles.forEach { particle ->
+            val currentY = ((particle.y + progress * particle.speed * 10f) % 1.2f)
+            val yPos = currentY * size.height
+            val xPos = particle.x * size.width
+            val rotation = progress * particle.rotationSpeed
+
+            if (currentY > 0f) {
+                rotate(rotation, pivot = androidx.compose.ui.geometry.Offset(xPos, yPos)) {
+                    if (particle.shape == 0) {
+                        drawCircle(
+                            color = particle.color,
+                            radius = particle.size / 2,
+                            center = androidx.compose.ui.geometry.Offset(xPos, yPos)
+                        )
+                    } else {
+                        drawRect(
+                            color = particle.color,
+                            topLeft = androidx.compose.ui.geometry.Offset(xPos - particle.size / 2, yPos - particle.size / 2),
+                            size = androidx.compose.ui.geometry.Size(particle.size, particle.size / 2)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+data class ConfettiParticle(
+    val x: Float,
+    val y: Float,
+    val size: Float,
+    val color: Color,
+    val speed: Float,
+    val rotationSpeed: Float,
+    val shape: Int
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChampionCelebrationDialog(
+    celebration: com.marcioarruda.clubedodomino.data.ChampionCelebration,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DominoSurface,
+        title = {
+            Text(
+                text = "🏆 CAMPEÃO DE ${celebration.monthName.uppercase()} 🏆",
+                color = RoyalGold,
+                fontWeight = FontWeight.Black,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(260.dp)
+            ) {
+                ConfettiEffect(modifier = Modifier.fillMaxSize())
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        contentAlignment = Alignment.TopCenter,
+                        modifier = Modifier.size(140.dp)
+                    ) {
+                        AvatarImage(
+                            url = celebration.player.photoUrl,
+                            size = 120.dp,
+                            borderWidth = 4.dp,
+                            borderColor = RoyalGold
+                        )
+                        Text(
+                            text = "👑",
+                            fontSize = 32.sp,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .offset(y = (-20).dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = celebration.player.name,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "${celebration.points} pontos conquistados!",
+                        color = DominoGreen,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = DominoGreen),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) {
+                Text(
+                    text = "Reconhecer Campeão! 🤝",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+        }
+    )
 }
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val route: String)

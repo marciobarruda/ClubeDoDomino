@@ -67,7 +67,15 @@ data class RankingDto(
     val partidas_mes: Int,
     val pontos_mes: Int,
     val partidas_ano: Int,
-    val pontos_ano: Int
+    val pontos_ano: Int,
+    val buchos_aplicados_dia: Int = 0,
+    val buchos_sofridos_dia: Int = 0,
+    val buchos_aplicados_mes: Int = 0,
+    val buchos_sofridos_mes: Int = 0,
+    val buchos_aplicados_ano: Int = 0,
+    val buchos_sofridos_ano: Int = 0,
+    val vitorias_ano: Int = 0,
+    val derrotas_ano: Int = 0
 )
 
 data class DebitRequest(

@@ -11,6 +11,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -167,22 +168,51 @@ fun RankingItem(player: RankingPlayer, position: Int) {
                     fontSize = 20.sp,
                     modifier = Modifier.weight(1f)
                 )
+                
+                // Badge de Aproveitamento (% de vitórias)
+                val totalMatches = player.yearlyWins + player.yearlyLosses
+                val winRate = if (totalMatches > 0) {
+                    (player.yearlyWins.toDouble() / totalMatches.toDouble() * 100).toInt()
+                } else 0
+                
+                Column(horizontalAlignment = Alignment.End) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(com.marcioarruda.clubedodomino.ui.theme.DominoGreen.copy(alpha = 0.15f))
+                            .border(androidx.compose.foundation.BorderStroke(1.dp, com.marcioarruda.clubedodomino.ui.theme.DominoGreen), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "$winRate% apr",
+                            color = com.marcioarruda.clubedodomino.ui.theme.DominoGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "V:${player.yearlyWins} D:${player.yearlyLosses}",
+                        color = Color.Gray,
+                        fontSize = 10.sp
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                StatColumn("Dia", player.dailyPoints, player.dailyMatches)
-                StatColumn("Mês", player.monthlyPoints, player.monthlyMatches)
-                StatColumn("Ano", player.yearlyPoints, player.yearlyMatches, highlight = true)
+                StatColumn("Dia", player.dailyPoints, player.dailyMatches, player.dailyBuchosApplied, player.dailyBuchosReceived)
+                StatColumn("Mês", player.monthlyPoints, player.monthlyMatches, player.monthlyBuchosApplied, player.monthlyBuchosReceived)
+                StatColumn("Ano", player.yearlyPoints, player.yearlyMatches, player.yearlyBuchosApplied, player.yearlyBuchosReceived, highlight = true)
             }
         }
     }
 }
 
 @Composable
-fun StatColumn(period: String, points: Int, matches: Int, highlight: Boolean = false) {
+fun StatColumn(period: String, points: Int, matches: Int, applied: Int = 0, conceded: Int = 0, highlight: Boolean = false) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(period, color = Color.Gray, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(4.dp))
@@ -196,6 +226,12 @@ fun StatColumn(period: String, points: Int, matches: Int, highlight: Boolean = f
             text = "$matches jgs",
             color = Color.LightGray,
             fontSize = 12.sp
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = "🟢 $applied • 🔴 $conceded",
+            color = Color.Gray,
+            fontSize = 11.sp
         )
     }
 }

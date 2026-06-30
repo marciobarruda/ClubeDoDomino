@@ -58,7 +58,15 @@ class RankingViewModel(private val repository: ClubRepository) : ViewModel() {
                             monthlyPoints = dto.pontos_mes,
                             monthlyMatches = dto.partidas_mes,
                             yearlyPoints = dto.pontos_ano,
-                            yearlyMatches = dto.partidas_ano
+                            yearlyMatches = dto.partidas_ano,
+                            dailyBuchosApplied = dto.buchos_aplicados_dia,
+                            dailyBuchosReceived = dto.buchos_sofridos_dia,
+                            monthlyBuchosApplied = dto.buchos_aplicados_mes,
+                            monthlyBuchosReceived = dto.buchos_sofridos_mes,
+                            yearlyBuchosApplied = dto.buchos_aplicados_ano,
+                            yearlyBuchosReceived = dto.buchos_sofridos_ano,
+                            yearlyWins = dto.vitorias_ano,
+                            yearlyLosses = dto.derrotas_ano
                         )
                     }
 

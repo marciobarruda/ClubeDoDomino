@@ -363,7 +363,11 @@ class ClubRepository {
         data class Stats(
             var partidas_dia: Int = 0, var pontos_dia: Int = 0,
             var partidas_mes: Int = 0, var pontos_mes: Int = 0,
-            var partidas_ano: Int = 0, var pontos_ano: Int = 0
+            var partidas_ano: Int = 0, var pontos_ano: Int = 0,
+            var buchos_aplicados_dia: Int = 0, var buchos_sofridos_dia: Int = 0,
+            var buchos_aplicados_mes: Int = 0, var buchos_sofridos_mes: Int = 0,
+            var buchos_aplicados_ano: Int = 0, var buchos_sofridos_ano: Int = 0,
+            var vitorias_ano: Int = 0, var derrotas_ano: Int = 0
         )
         // Brazilian Timezone
         val tz = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
@@ -386,11 +390,17 @@ class ClubRepository {
             val mesPartida = parts[1].toIntOrNull() ?: continue
             val diaPartida = parts[2].toIntOrNull() ?: continue
 
-            val vencedores = m.dupla_vencedora
-                ?.split("&", "/")
-                ?.map { it.trim().uppercase() }
-                ?: emptyList()
-                
+            val team1 = listOfNotNull(m.jogador1, m.jogador2).map { it.trim().uppercase() }
+            val team2 = listOfNotNull(m.jogador3, m.jogador4).map { it.trim().uppercase() }
+            
+            val scored1 = m.scored1 ?: 0
+            val scored2 = m.scored2 ?: 0
+            val isTeam1Winner = scored1 > scored2
+            
+            val winnerTeam = if (isTeam1Winner) team1 else team2
+            val loserTeam = if (isTeam1Winner) team2 else team1
+            
+            val isBucho = (scored1 == 0 || scored2 == 0) || m.buchore == true
             val pontos = m.pts ?: 0
 
             val participantes = listOfNotNull(m.jogador1, m.jogador2, m.jogador3, m.jogador4)
@@ -399,20 +409,36 @@ class ClubRepository {
 
             participantes.forEach { jogador ->
                 val s = map.getOrPut(jogador) { Stats() }
+                val isWinner = winnerTeam.contains(jogador)
+
                 if (anoPartida == anoAtual) {
                     s.partidas_ano++
-                    if (vencedores.contains(jogador)) {
+                    if (isWinner) {
                         s.pontos_ano += pontos
+                        s.vitorias_ano++
+                    } else {
+                        s.derrotas_ano++
                     }
+                    if (isBucho) {
+                        if (isWinner) s.buchos_aplicados_ano++ else s.buchos_sofridos_ano++
+                    }
+
                     if (mesPartida == mesAtual) {
                         s.partidas_mes++
-                        if (vencedores.contains(jogador)) {
+                        if (isWinner) {
                             s.pontos_mes += pontos
                         }
+                        if (isBucho) {
+                            if (isWinner) s.buchos_aplicados_mes++ else s.buchos_sofridos_mes++
+                        }
+
                         if (diaPartida == diaAtual) {
                             s.partidas_dia++
-                            if (vencedores.contains(jogador)) {
+                            if (isWinner) {
                                 s.pontos_dia += pontos
+                            }
+                            if (isBucho) {
+                                if (isWinner) s.buchos_aplicados_dia++ else s.buchos_sofridos_dia++
                             }
                         }
                     }
@@ -428,9 +454,64 @@ class ClubRepository {
                 partidas_mes = s.partidas_mes,
                 pontos_mes = s.pontos_mes,
                 partidas_ano = s.partidas_ano,
-                pontos_ano = s.pontos_ano
+                pontos_ano = s.pontos_ano,
+                buchos_aplicados_dia = s.buchos_aplicados_dia,
+                buchos_sofridos_dia = s.buchos_sofridos_dia,
+                buchos_aplicados_mes = s.buchos_aplicados_mes,
+                buchos_sofridos_mes = s.buchos_sofridos_mes,
+                buchos_aplicados_ano = s.buchos_aplicados_ano,
+                buchos_sofridos_ano = s.buchos_sofridos_ano,
+                vitorias_ano = s.vitorias_ano,
+                derrotas_ano = s.derrotas_ano
             )
         }.sortedByDescending { it.pontos_ano }
+    }
+
+    suspend fun getChampionCelebration(year: Int, month: Int): ChampionCelebration? = withContext(Dispatchers.IO) {
+        try {
+            val matches = if (allMatchDTOs.isEmpty()) getMatchDTOsFromDb() else allMatchDTOs
+            val players = getPlayers()
+            val ignorados = setOf("ÍNDIO", "XAMÃ", "EX-MEMBRO", "JOSELITRO", "JOGADOR NÃO MEMBRO", "POLÍCIA FEMININA", "YAN")
+            
+            val pointsMap = mutableMapOf<String, Int>()
+            for (m in matches) {
+                val dataStr = m.data?.split("T")?.firstOrNull() ?: continue
+                val parts = dataStr.split("-")
+                if (parts.size < 3) continue
+                val anoPartida = parts[0].toIntOrNull() ?: continue
+                val mesPartida = parts[1].toIntOrNull() ?: continue
+                
+                if (anoPartida == year && mesPartida == month) {
+                    val vencedores = m.dupla_vencedora
+                        ?.split("&", "/")
+                        ?.map { it.trim().uppercase() }
+                        ?: emptyList()
+                    val pontos = m.pts ?: 0
+                    
+                    vencedores.forEach { jogador ->
+                        val name = jogador.trim().uppercase()
+                        if (name !in ignorados && name.isNotBlank()) {
+                            pointsMap[name] = (pointsMap[name] ?: 0) + pontos
+                        }
+                    }
+                }
+            }
+            
+            val entry = pointsMap.maxByOrNull { it.value }
+            if (entry != null) {
+                val champUser = players.find { it.name.trim().uppercase() == entry.key || it.displayName.trim().uppercase() == entry.key }
+                if (champUser != null) {
+                    val monthNamesPt = listOf(
+                        "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+                    )
+                    val monthName = monthNamesPt.getOrElse(month) { "" }
+                    ChampionCelebration(champUser, entry.value, monthName)
+                } else null
+            } else null
+        } catch (e: Exception) {
+            null
+        }
     }
 
     // ─── Finance ──────────────────────────────────────────────────────────
