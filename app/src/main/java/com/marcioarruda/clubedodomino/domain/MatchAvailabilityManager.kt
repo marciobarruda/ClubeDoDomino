@@ -96,7 +96,14 @@ object MatchAvailabilityManager {
 
         val isHoliday = holidayRepository.isHoliday(today)
         val isWorkingDay = dayOfWeek >= DayOfWeek.MONDAY && dayOfWeek <= DayOfWeek.FRIDAY
-        val isWithinTimeWindow = !currentTime.isBefore(startTime) && currentTime.isBefore(endTime)
+        
+        // Exceção para hoje (30/06/2026) estendendo o horário até 17h para testes
+        val currentEndTime = if (today.year == 2026 && today.monthValue == 6 && today.dayOfMonth == 30) {
+            LocalTime.of(17, 0)
+        } else {
+            endTime
+        }
+        val isWithinTimeWindow = !currentTime.isBefore(startTime) && currentTime.isBefore(currentEndTime)
 
         val result = isWorkingDay && isWithinTimeWindow && !isHoliday
 
