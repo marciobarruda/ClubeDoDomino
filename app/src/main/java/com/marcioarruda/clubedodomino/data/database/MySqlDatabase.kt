@@ -42,20 +42,28 @@ object MySqlDatabase {
         }
 
         try {
-            conn.createStatement().use { stmt ->
-                stmt.execute(
-                    "ALTER TABLE jogadores ADD COLUMN IF NOT EXISTS ativo TINYINT(1) NOT NULL DEFAULT 1"
-                )
+            val rs = conn.prepareStatement(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'jogadores' AND COLUMN_NAME = 'ativo'"
+            ).executeQuery()
+            if (rs.next() && rs.getInt(1) == 0) {
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE jogadores ADD COLUMN ativo TINYINT(1) NOT NULL DEFAULT 1")
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
         try {
-            conn.createStatement().use { stmt ->
-                stmt.execute(
-                    "ALTER TABLE jogadores ADD COLUMN IF NOT EXISTS ferias TINYINT(1) NOT NULL DEFAULT 0"
-                )
+            val rs = conn.prepareStatement(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'jogadores' AND COLUMN_NAME = 'ferias'"
+            ).executeQuery()
+            if (rs.next() && rs.getInt(1) == 0) {
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE jogadores ADD COLUMN ferias TINYINT(1) NOT NULL DEFAULT 0")
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
