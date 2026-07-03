@@ -673,4 +673,97 @@ class ClubRepository {
         java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
             .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
             .uppercase()
+
+    suspend fun getActiveMatches(): List<ActiveMatch> = withContext(Dispatchers.IO) {
+        try {
+            MySqlDatabase.connect().use { conn ->
+                val rs = conn.prepareStatement(
+                    "SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao " +
+                    "FROM partidas_em_andamento WHERE DATE(data_criacao) = CURDATE()"
+                ).executeQuery()
+                val list = mutableListOf<ActiveMatch>()
+                while (rs.next()) {
+                    list.add(ActiveMatch(
+                        id = rs.getString("id"),
+                        player1 = rs.getString("jogador1"),
+                        player2 = rs.getString("jogador2"),
+                        player3 = rs.getString("jogador3"),
+                        player4 = rs.getString("jogador4"),
+                        cadastrador = rs.getString("cadastrador"),
+                        createdAt = rs.getTimestamp("data_criacao") ?: java.util.Date()
+                    ))
+                }
+                list
+            }
+        } catch (t: Throwable) {
+            t.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun startActiveMatch(activeMatch: ActiveMatch): Boolean = withContext(Dispatchers.IO) {
+        try {
+            MySqlDatabase.connect().use { conn ->
+                val ps = conn.prepareStatement(
+                    "INSERT INTO partidas_em_andamento (id, jogador1, jogador2, jogador3, jogador4, cadastrador) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)"
+                )
+                ps.setString(1, activeMatch.id)
+                ps.setString(2, activeMatch.player1)
+                ps.setString(3, activeMatch.player2)
+                ps.setString(4, activeMatch.player3)
+                ps.setString(5, activeMatch.player4)
+                ps.setString(6, activeMatch.cadastrador)
+                ps.executeUpdate() > 0
+            }
+        } catch (t: Throwable) {
+            t.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun deleteActiveMatch(id: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            MySqlDatabase.connect().use { conn ->
+                val ps = conn.prepareStatement("DELETE FROM partidas_em_andamento WHERE id = ?")
+                ps.setString(1, id)
+                ps.executeUpdate() > 0
+            }
+        } catch (t: Throwable) {
+            t.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun getActiveMatchForUser(username: String): ActiveMatch? = withContext(Dispatchers.IO) {
+        try {
+            MySqlDatabase.connect().use { conn ->
+                val ps = conn.prepareStatement(
+                    "SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao " +
+                    "FROM partidas_em_andamento " +
+                    "WHERE (jogador1 = ? OR jogador2 = ? OR jogador3 = ? OR jogador4 = ?) " +
+                    "AND DATE(data_criacao) = CURDATE() LIMIT 1"
+                )
+                ps.setString(1, username)
+                ps.setString(2, username)
+                ps.setString(3, username)
+                ps.setString(4, username)
+                val rs = ps.executeQuery()
+                if (rs.next()) {
+                    ActiveMatch(
+                        id = rs.getString("id"),
+                        player1 = rs.getString("jogador1"),
+                        player2 = rs.getString("jogador2"),
+                        player3 = rs.getString("jogador3"),
+                        player4 = rs.getString("jogador4"),
+                        cadastrador = rs.getString("cadastrador"),
+                        createdAt = rs.getTimestamp("data_criacao") ?: java.util.Date()
+                    )
+                } else null
+            }
+        } catch (t: Throwable) {
+            t.printStackTrace()
+            null
+        }
+    }
 }

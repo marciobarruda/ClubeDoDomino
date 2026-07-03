@@ -21,7 +21,26 @@ object MySqlDatabase {
             setProperty("user", BuildConfig.DB_USER)
             setProperty("password", BuildConfig.DB_PASS)
         }
-        return driver.connect(jdbcUrl, props)
+        val conn = driver.connect(jdbcUrl, props)
             ?: throw Exception("Driver retornou conexão nula para: $jdbcUrl")
+
+        try {
+            conn.createStatement().use { stmt ->
+                stmt.execute(
+                    "CREATE TABLE IF NOT EXISTS partidas_em_andamento (" +
+                    "id VARCHAR(50) PRIMARY KEY, " +
+                    "jogador1 VARCHAR(100) NOT NULL, " +
+                    "jogador2 VARCHAR(100) NOT NULL, " +
+                    "jogador3 VARCHAR(100) NOT NULL, " +
+                    "jogador4 VARCHAR(100) NOT NULL, " +
+                    "cadastrador VARCHAR(100) NOT NULL, " +
+                    "data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return conn
     }
 }

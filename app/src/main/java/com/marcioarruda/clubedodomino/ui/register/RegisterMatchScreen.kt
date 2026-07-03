@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -94,11 +95,41 @@ fun RegisterMatchScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            PlayerSelectionCard(state, viewModel)
+            if (state.remainingSecondsToClose != null) {
+                val mins = state.remainingSecondsToClose!! / 60
+                val secs = state.remainingSecondsToClose!! % 60
+                val timeStr = String.format("%02d:%02d", mins, secs)
+                
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = DominoError.copy(alpha = 0.2f)),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Default.Warning, contentDescription = "Atenção", tint = DominoError)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Fechamento em: $timeStr",
+                            color = DominoError,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            }
+            
+            val isEditing = state.editingMatchId != null
+            val isGameplayEnabled = isEditing || state.isActiveMatchStarted
+
+            PlayerSelectionCard(state, viewModel, isEditing || !state.isActiveMatchStarted)
             Spacer(Modifier.height(16.dp))
-            ScoreInputCard(state, viewModel)
+            ScoreInputCard(state, viewModel, isGameplayEnabled)
             Spacer(Modifier.height(16.dp))
-            OptionsCard(state, viewModel)
+            OptionsCard(state, viewModel, isGameplayEnabled)
             Spacer(Modifier.height(24.dp))
 
             if (state.error != null) {
@@ -116,30 +147,59 @@ fun RegisterMatchScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            Button(
-                onClick = {
-                    if (state.editingMatchId != null) {
-                        viewModel.updateMatch(state.editingMatchId!!)
+            if (!isEditing && !state.isActiveMatchStarted) {
+                Button(
+                    onClick = { viewModel.startMatch() },
+                    colors = ButtonDefaults.buttonColors(containerColor = DominoGreen),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    enabled = !state.isLoading && state.isModuleAvailable
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.Black)
                     } else {
-                        val currentUser = state.availablePlayers.find { it.id == session?.userEmail }
-                            ?: state.availablePlayers.firstOrNull()
-                            ?: User("0", "User", "User", "", "c1")
-                        viewModel.saveMatch(registeredBy = currentUser)
+                        Text("🎮 Confirmar Abertura da Partida", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (state.isModuleAvailable) DominoGreen else DominoMuted
-                ),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(18.dp),
-                enabled = !state.isLoading && state.isModuleAvailable
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.Black)
-                } else if (!state.isModuleAvailable) {
-                    Text("⏰ Fora do Horário", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                } else {
-                    Text(if (state.editingMatchId != null) "✅ Atualizar Partida" else "🎮 Salvar Partida", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            } else {
+                Button(
+                    onClick = {
+                        if (isEditing) {
+                            viewModel.updateMatch(state.editingMatchId!!)
+                        } else {
+                            val currentUser = state.availablePlayers.find { it.id == session?.userEmail }
+                                ?: state.availablePlayers.firstOrNull()
+                                ?: User("0", "User", "User", "", "c1")
+                            viewModel.saveMatch(registeredBy = currentUser)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (state.isModuleAvailable) DominoGreen else DominoMuted
+                    ),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    enabled = !state.isLoading && state.isModuleAvailable
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.Black)
+                    } else if (!state.isModuleAvailable) {
+                        Text("⏰ Fora do Horário", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    } else {
+                        Text(if (isEditing) "✅ Atualizar Partida" else "🎮 Salvar Partida", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                }
+
+                if (!isEditing && state.isActiveMatchStarted) {
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = { viewModel.cancelActiveMatch() },
+                        colors = ButtonDefaults.buttonColors(containerColor = DominoError),
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        enabled = !state.isLoading
+                    ) {
+                        Text("❌ Cancelar Partida", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
             }
         }
@@ -147,7 +207,7 @@ fun RegisterMatchScreen(
 }
 
 @Composable
-private fun PlayerSelectionCard(state: MatchRegistrationState, viewModel: MatchViewModel) {
+private fun PlayerSelectionCard(state: MatchRegistrationState, viewModel: MatchViewModel, enabled: Boolean) {
     Card(
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         shape = RoundedCornerShape(20.dp),
@@ -159,8 +219,8 @@ private fun PlayerSelectionCard(state: MatchRegistrationState, viewModel: MatchV
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val p1List = state.availablePlayers.filter { it == state.selectedPlayers[0] || it !in state.selectedPlayers }
                 val p2List = state.availablePlayers.filter { it == state.selectedPlayers[1] || it !in state.selectedPlayers }
-                PlayerDropdown(p1List, state.selectedPlayers[0], { viewModel.onPlayerSelected(0, it) }, Modifier.weight(1f))
-                PlayerDropdown(p2List, state.selectedPlayers[1], { viewModel.onPlayerSelected(1, it) }, Modifier.weight(1f))
+                PlayerDropdown(p1List, state.selectedPlayers[0], { viewModel.onPlayerSelected(0, it) }, Modifier.weight(1f), enabled)
+                PlayerDropdown(p2List, state.selectedPlayers[1], { viewModel.onPlayerSelected(1, it) }, Modifier.weight(1f), enabled)
             }
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = DominoGreen.copy(alpha = 0.2f))
@@ -170,8 +230,8 @@ private fun PlayerSelectionCard(state: MatchRegistrationState, viewModel: MatchV
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val p3List = state.availablePlayers.filter { it == state.selectedPlayers[2] || it !in state.selectedPlayers }
                 val p4List = state.availablePlayers.filter { it == state.selectedPlayers[3] || it !in state.selectedPlayers }
-                PlayerDropdown(p3List, state.selectedPlayers[2], { viewModel.onPlayerSelected(2, it) }, Modifier.weight(1f))
-                PlayerDropdown(p4List, state.selectedPlayers[3], { viewModel.onPlayerSelected(3, it) }, Modifier.weight(1f))
+                PlayerDropdown(p3List, state.selectedPlayers[2], { viewModel.onPlayerSelected(2, it) }, Modifier.weight(1f), enabled)
+                PlayerDropdown(p4List, state.selectedPlayers[3], { viewModel.onPlayerSelected(3, it) }, Modifier.weight(1f), enabled)
             }
         }
     }
@@ -188,7 +248,13 @@ private fun TeamHeader(label: String, color: Color) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlayerDropdown(players: List<User>, selectedPlayer: User?, onPlayerSelected: (User) -> Unit, modifier: Modifier = Modifier) {
+fun PlayerDropdown(
+    players: List<User>,
+    selectedPlayer: User?,
+    onPlayerSelected: (User) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
     var expanded by remember { mutableStateOf(false) }
     var filterText by remember(selectedPlayer) { mutableStateOf(selectedPlayer?.displayName ?: "") }
 
@@ -197,6 +263,7 @@ fun PlayerDropdown(players: List<User>, selectedPlayer: User?, onPlayerSelected:
             value = filterText,
             onValueChange = { filterText = it; expanded = true },
             modifier = Modifier.menuAnchor(),
+            enabled = enabled,
             label = { Text("Jogador", fontSize = 12.sp) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = ExposedDropdownMenuDefaults.textFieldColors(
@@ -225,7 +292,7 @@ fun PlayerDropdown(players: List<User>, selectedPlayer: User?, onPlayerSelected:
 }
 
 @Composable
-private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewModel) {
+private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewModel, enabled: Boolean) {
     Card(
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         shape = RoundedCornerShape(20.dp),
@@ -242,7 +309,8 @@ private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewMo
                 score = state.score1,
                 onScoreChange = { viewModel.onScoreChange(1, it) },
                 accentColor = DominoGreen,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                enabled = enabled
             )
             Text("×", fontSize = 28.sp, color = DominoMuted, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp))
             ScoreControl(
@@ -251,7 +319,8 @@ private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewMo
                 score = state.score2,
                 onScoreChange = { viewModel.onScoreChange(2, it) },
                 accentColor = DominoOrange,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                enabled = enabled
             )
         }
     }
@@ -264,7 +333,8 @@ private fun ScoreControl(
     score: Int,
     onScoreChange: (Int) -> Unit,
     accentColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -321,28 +391,30 @@ private fun ScoreControl(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(
                 onClick = { if (score > 0) onScoreChange(score - 1) },
-                modifier = Modifier.size(36.dp).background(accentColor.copy(alpha = 0.12f), CircleShape)
+                enabled = enabled,
+                modifier = Modifier.size(36.dp).background(if (enabled) accentColor.copy(alpha = 0.12f) else Color.Transparent, CircleShape)
             ) {
-                Icon(Icons.Default.Remove, contentDescription = "-", tint = accentColor, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Remove, contentDescription = "-", tint = if (enabled) accentColor else DominoMuted, modifier = Modifier.size(18.dp))
             }
             Box(
                 modifier = Modifier.size(60.dp).background(accentColor.copy(alpha = 0.08f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(score.toString(), fontSize = 36.sp, textAlign = TextAlign.Center, color = accentColor, fontWeight = FontWeight.Black)
+                Text(score.toString(), fontSize = 36.sp, textAlign = TextAlign.Center, color = if (enabled) accentColor else DominoMuted, fontWeight = FontWeight.Black)
             }
             IconButton(
                 onClick = { onScoreChange(score + 1) },
-                modifier = Modifier.size(36.dp).background(accentColor.copy(alpha = 0.12f), CircleShape)
+                enabled = enabled,
+                modifier = Modifier.size(36.dp).background(if (enabled) accentColor.copy(alpha = 0.12f) else Color.Transparent, CircleShape)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "+", tint = accentColor, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Add, contentDescription = "+", tint = if (enabled) accentColor else DominoMuted, modifier = Modifier.size(18.dp))
             }
         }
     }
 }
 
 @Composable
-private fun OptionsCard(state: MatchRegistrationState, viewModel: MatchViewModel) {
+private fun OptionsCard(state: MatchRegistrationState, viewModel: MatchViewModel, enabled: Boolean) {
     Card(
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         shape = RoundedCornerShape(20.dp),
@@ -355,7 +427,7 @@ private fun OptionsCard(state: MatchRegistrationState, viewModel: MatchViewModel
             Checkbox(
                 checked = state.isBuchoRe,
                 onCheckedChange = { viewModel.onBuchoReChanged(it) },
-                enabled = state.isBuchoReEnabled,
+                enabled = state.isBuchoReEnabled && enabled,
                 colors = CheckboxDefaults.colors(
                     checkedColor = DominoOrange,
                     uncheckedColor = DominoMuted,

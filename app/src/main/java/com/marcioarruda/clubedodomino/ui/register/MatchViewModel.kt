@@ -6,6 +6,7 @@ import com.marcioarruda.clubedodomino.data.ClubRepository
 import com.marcioarruda.clubedodomino.data.FinancialEntryStatus
 import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.data.User
+import com.marcioarruda.clubedodomino.data.ActiveMatch
 import com.marcioarruda.clubedodomino.data.network.DebitRequest
 import com.marcioarruda.clubedodomino.data.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +35,10 @@ data class MatchRegistrationState(
     val editingMatchId: String? = null,
     val editingMatchDate: java.util.Date? = null,
     val editingMatchRegisteredBy: User? = null,
-    val isModuleAvailable: Boolean = true
+    val isModuleAvailable: Boolean = true,
+    val remainingSecondsToClose: Long? = null,
+    val isActiveMatchStarted: Boolean = false,
+    val activeMatchId: String? = null
 )
 
 class MatchViewModel(
@@ -66,22 +70,27 @@ class MatchViewModel(
                 val context = com.marcioarruda.clubedodomino.DominoClubApplication.instance
                 if (_uiState.value.editingMatchId == null) {
                     val available = matchAvailabilityManager.isModuleAvailable(context, currentUserName)
+                    val remainingSeconds = matchAvailabilityManager.getRemainingSecondsToClose(context, currentUserName)
+
                     if (!available) {
                         val diagInfo = matchAvailabilityManager.getExtendedDiagnosticInfo(context)
                         _uiState.update {
                             if (it.success) it else it.copy(
                                 error = "MÓDULO BLOQUEADO\n$diagInfo\n\nCertifique-se de que 'Data e Hora Automáticas' está ATIVA nas configurações do sistema.",
                                 success = false,
-                                isModuleAvailable = false
+                                isModuleAvailable = false,
+                                remainingSecondsToClose = null
                             )
                         }
-                    } else if (!_uiState.value.isModuleAvailable) {
-                        _uiState.update { it.copy(error = null, isModuleAvailable = true) }
                     } else {
-                        _uiState.update { it.copy(isModuleAvailable = true) }
+                        _uiState.update { it.copy(
+                            error = null, 
+                            isModuleAvailable = true,
+                            remainingSecondsToClose = remainingSeconds
+                        ) }
                     }
                 }
-                kotlinx.coroutines.delay(10000)
+                kotlinx.coroutines.delay(1000)
             }
         }
     }
@@ -220,6 +229,23 @@ class MatchViewModel(
                         isLoading = false
                     ) 
                 }
+
+                currentUserName?.let { username ->
+                    val activeMatch = repository.getActiveMatchForUser(username)
+                    if (activeMatch != null) {
+                        val p1 = eligiblePlayers.find { it.name == activeMatch.player1 }
+                        val p2 = eligiblePlayers.find { it.name == activeMatch.player2 }
+                        val p3 = eligiblePlayers.find { it.name == activeMatch.player3 }
+                        val p4 = eligiblePlayers.find { it.name == activeMatch.player4 }
+                        _uiState.update {
+                            it.copy(
+                                selectedPlayers = listOf(p1, p2, p3, p4),
+                                isActiveMatchStarted = true,
+                                activeMatchId = activeMatch.id
+                            )
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Falha ao carregar jogadores: ${e.message}") }
             }
@@ -283,15 +309,14 @@ class MatchViewModel(
             return
         }
 
-        // Regra: Bloqueio por horário
-        if (!matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)) {
-            val diag = matchAvailabilityManager.getExtendedDiagnosticInfo(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
-            _uiState.update { it.copy(isLoading = false, error = "MÓDULO BLOQUEADO\n$diag") }
-            return
-        }
-
         viewModelScope.launch {
             try {
+                if (!matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)) {
+                    val diag = matchAvailabilityManager.getExtendedDiagnosticInfo(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
+                    _uiState.update { it.copy(isLoading = false, error = "MÓDULO BLOQUEADO\n$diag") }
+                    return@launch
+                }
+
                 val p1 = state.selectedPlayers[0]!!
                 val p2 = state.selectedPlayers[1]!!
                 val p3 = state.selectedPlayers[2]!!
@@ -385,6 +410,10 @@ class MatchViewModel(
                     }
                 }
 
+                state.activeMatchId?.let { id ->
+                    repository.deleteActiveMatch(id)
+                }
+
                 // Regra 6: Atualizar lista e perguntar sobre repetição
                 repository.getMatches() // Força atualização cache
                 _uiState.update { it.copy(isLoading = false, showRepeatDialog = true) }
@@ -396,38 +425,141 @@ class MatchViewModel(
     }
 
     fun onRepeatMatch(repeat: Boolean) {
-        if (repeat && !matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)) {
-            _uiState.update { 
-                it.copy(
-                    showRepeatDialog = false, 
-                    error = "Fora do horário permitido para iniciar partidas!",
-                    success = false // Stay on screen to show error, or set true to close? 
-                                    // User said "inactivate", so just closing dialog + error is safer.
-                ) 
+        viewModelScope.launch {
+            if (repeat && !matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)) {
+                _uiState.update { 
+                    it.copy(
+                        showRepeatDialog = false, 
+                        error = "Fora do horário permitido para iniciar partidas!",
+                        success = false
+                    ) 
+                }
+                return@launch
             }
+
+            _uiState.update {
+                if (repeat) {
+                    it.copy(
+                        showRepeatDialog = false,
+                        score1 = 0,
+                        score2 = 0,
+                        isBuchoRe = false,
+                        isBuchoReEnabled = false,
+                        success = false
+                    )
+                } else {
+                    it.copy(
+                        showRepeatDialog = false,
+                        selectedPlayers = listOf(null, null, null, null),
+                        score1 = 0,
+                        score2 = 0,
+                        isBuchoRe = false,
+                        isBuchoReEnabled = false,
+                        success = true
+                    )
+                }
+            }
+        }
+    }
+
+    fun startMatch() {
+        val state = _uiState.value
+        if (state.selectedPlayers.any { it == null }) {
+            _uiState.update { it.copy(error = "Selecione todos os 4 jogadores.") }
             return
         }
 
-        _uiState.update {
-            if (repeat) {
-                it.copy(
-                    showRepeatDialog = false,
-                    score1 = 0,
-                    score2 = 0,
-                    isBuchoRe = false,
-                    isBuchoReEnabled = false,
-                    success = false // Reset success to allow editing again
+        val distinctPlayers = state.selectedPlayers.filterNotNull().map { it.id }.distinct()
+        if (distinctPlayers.size != 4) {
+            _uiState.update { it.copy(error = "Jogadores não podem ser repetidos.") }
+            return
+        }
+
+        _uiState.update { it.copy(isLoading = true, error = null) }
+
+        viewModelScope.launch {
+            try {
+                if (!matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)) {
+                    val diag = matchAvailabilityManager.getExtendedDiagnosticInfo(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
+                    _uiState.update { it.copy(isLoading = false, error = "MÓDULO BLOQUEADO\n$diag") }
+                    return@launch
+                }
+
+                val activeMatches = repository.getActiveMatches()
+                val selectedNames = state.selectedPlayers.filterNotNull().map { it.name }
+                
+                var conflictPlayer: String? = null
+                for (match in activeMatches) {
+                    val activePlayers = listOf(match.player1, match.player2, match.player3, match.player4)
+                    val overlap = selectedNames.find { it in activePlayers }
+                    if (overlap != null) {
+                        conflictPlayer = overlap
+                        break
+                    }
+                }
+
+                if (conflictPlayer != null) {
+                    _uiState.update { it.copy(isLoading = false, error = "O participante $conflictPlayer já está vinculado a uma partida em andamento!") }
+                    return@launch
+                }
+
+                val matchId = UUID.randomUUID().toString()
+                val newActiveMatch = ActiveMatch(
+                    id = matchId,
+                    player1 = state.selectedPlayers[0]!!.name,
+                    player2 = state.selectedPlayers[1]!!.name,
+                    player3 = state.selectedPlayers[2]!!.name,
+                    player4 = state.selectedPlayers[3]!!.name,
+                    cadastrador = currentUserName ?: "Desconhecido"
                 )
-            } else {
-                it.copy(
-                    showRepeatDialog = false,
-                    selectedPlayers = listOf(null, null, null, null),
-                    score1 = 0,
-                    score2 = 0,
-                    isBuchoRe = false,
-                    isBuchoReEnabled = false,
-                    success = true // Close screen
-                )
+
+                val success = repository.startActiveMatch(newActiveMatch)
+                if (success) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isActiveMatchStarted = true,
+                            activeMatchId = matchId,
+                            error = null
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar partida no banco de dados.") }
+                }
+
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar partida: ${e.message}") }
+            }
+        }
+    }
+
+    fun cancelActiveMatch() {
+        val state = _uiState.value
+        val matchId = state.activeMatchId ?: return
+        
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        
+        viewModelScope.launch {
+            try {
+                val success = repository.deleteActiveMatch(matchId)
+                if (success) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isActiveMatchStarted = false,
+                            activeMatchId = null,
+                            score1 = 0,
+                            score2 = 0,
+                            isBuchoRe = false,
+                            isBuchoReEnabled = false,
+                            selectedPlayers = listOf(null, null, null, null)
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Erro ao cancelar partida no banco de dados.") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao cancelar: ${e.message}") }
             }
         }
     }

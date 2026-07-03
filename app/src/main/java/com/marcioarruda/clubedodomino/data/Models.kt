@@ -77,3 +77,13 @@ data class ChampionCelebration(
     val points: Int,
     val monthName: String
 )
+
+data class ActiveMatch(
+    val id: String,
+    val player1: String,
+    val player2: String,
+    val player3: String,
+    val player4: String,
+    val cadastrador: String,
+    val createdAt: Date = Date()
+)

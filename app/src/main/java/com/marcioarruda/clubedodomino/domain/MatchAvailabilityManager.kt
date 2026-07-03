@@ -9,6 +9,9 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.marcioarruda.clubedodomino.data.database.MySqlDatabase
 
 object MatchAvailabilityManager {
     
@@ -93,7 +96,7 @@ object MatchAvailabilityManager {
         return prefs.getBoolean("bypass_time_limit_marcio", false)
     }
 
-    fun isModuleAvailable(context: Context, username: String? = null): Boolean {
+    suspend fun isModuleAvailable(context: Context, username: String? = null): Boolean {
         // Se for o Márcio e o bypass estiver ativo, libera sem nenhuma validação!
         if (username != null && isBypassEnabled(context, username)) {
             Log.d("MatchAvailability", "Bypass active for MÁRCIO - match registration allowed.")
@@ -127,13 +130,66 @@ object MatchAvailabilityManager {
         }
         val isWithinTimeWindow = !currentTime.isBefore(startTime) && currentTime.isBefore(currentEndTime)
  
-        val result = isWorkingDay && isWithinTimeWindow && !isHoliday
+        var result = isWorkingDay && isWithinTimeWindow && !isHoliday
  
+        if (!result && username != null) {
+            val hasActive = withContext(Dispatchers.IO) {
+                try {
+                    MySqlDatabase.connect().use { conn ->
+                        val ps = conn.prepareStatement(
+                            "SELECT COUNT(*) FROM partidas_em_andamento " +
+                            "WHERE (jogador1 = ? OR jogador2 = ? OR jogador3 = ? OR jogador4 = ?) " +
+                            "AND DATE(data_criacao) = CURDATE()"
+                        )
+                        ps.setString(1, username)
+                        ps.setString(2, username)
+                        ps.setString(3, username)
+                        ps.setString(4, username)
+                        val rs = ps.executeQuery()
+                        if (rs.next()) rs.getInt(1) > 0 else false
+                    }
+                } catch (t: Throwable) {
+                    false
+                }
+            }
+            if (hasActive) {
+                result = true
+                Log.d("MatchAvailability", "Bypass: User $username has an active match in progress after hours.")
+            }
+        }
+
         Log.d(
             "MatchAvailability",
             "Check: AutoTime=${!isTimeManipulated}, Time=${currentTime}, Result=${result}"
         )
  
         return result
+    }
+
+    fun getRemainingSecondsToClose(context: Context, username: String? = null): Long? {
+        if (username != null && isBypassEnabled(context, username)) {
+            return null
+        }
+        
+        val now = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), zoneId)
+        val today = now.toLocalDate()
+        val currentTime = now.toLocalTime()
+        val dayOfWeek = now.dayOfWeek
+        
+        val isHoliday = holidayRepository.isHoliday(today)
+        val isWorkingDay = dayOfWeek >= DayOfWeek.MONDAY && dayOfWeek <= DayOfWeek.FRIDAY
+        
+        if (!isWorkingDay || isHoliday) return null
+        
+        val currentEndTime = if (today.year == 2026 && today.monthValue == 6 && today.dayOfMonth == 30) {
+            LocalTime.of(17, 0)
+        } else {
+            endTime
+        }
+        
+        if (currentTime.isBefore(startTime) || currentTime.isAfter(currentEndTime)) return null
+        
+        val seconds = currentEndTime.toSecondOfDay() - currentTime.toSecondOfDay()
+        return if (seconds in 0..600) seconds.toLong() else null
     }
 }

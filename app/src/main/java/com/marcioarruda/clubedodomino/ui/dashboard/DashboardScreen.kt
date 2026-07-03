@@ -600,7 +600,11 @@ fun ChampionCelebrationDialog(
     onDismiss: () -> Unit
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { /* Ignora clique fora */ },
+        properties = androidx.compose.ui.window.DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
+        ),
         containerColor = DominoSurface,
         title = {
             Text(

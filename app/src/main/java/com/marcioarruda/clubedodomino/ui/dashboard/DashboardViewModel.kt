@@ -111,8 +111,8 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                         if (currentTime.isAfter(java.time.LocalTime.of(14, 0))) {
                             showCelebration = true
                         }
-                    } else if (today.dayOfMonth in 1..7) {
-                        // Primeira semana do mês seguinte - ativa o dia todo para o mês anterior
+                    } else if (today.dayOfMonth == 1) {
+                        // Primeiro dia do mês seguinte - ativa o dia todo para o mês anterior
                         showCelebration = true
                         val prevDate = today.minusMonths(1)
                         targetYear = prevDate.year
