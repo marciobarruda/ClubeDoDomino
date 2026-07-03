@@ -79,9 +79,9 @@ class AdminRepository(context: Context) {
         // 2. Determine Denominator based on 'Ativo' switch (as per new requirement)
         // Note: Non-members and special accounts are excluded
         val activeMembers = allUsers.filter { user ->
-            !user.name.contains("NÃO MEMBRO", ignoreCase = true) && 
-            user.id != "7" && 
-            isPlayerActive(user.id)
+            !user.name.contains("NÃO MEMBRO", ignoreCase = true) &&
+            user.id != "7" &&
+            user.isActive
         }
         val activeCount = if (activeMembers.isNotEmpty()) activeMembers.size else 1 // Avoid div by zero
 

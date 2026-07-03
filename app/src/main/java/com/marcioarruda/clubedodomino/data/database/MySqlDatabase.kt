@@ -41,6 +41,26 @@ object MySqlDatabase {
             e.printStackTrace()
         }
 
+        try {
+            conn.createStatement().use { stmt ->
+                stmt.execute(
+                    "ALTER TABLE jogadores ADD COLUMN IF NOT EXISTS ativo TINYINT(1) NOT NULL DEFAULT 1"
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        try {
+            conn.createStatement().use { stmt ->
+                stmt.execute(
+                    "ALTER TABLE jogadores ADD COLUMN IF NOT EXISTS ferias TINYINT(1) NOT NULL DEFAULT 0"
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         return conn
     }
 }

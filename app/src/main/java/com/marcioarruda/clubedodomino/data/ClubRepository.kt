@@ -50,12 +50,16 @@ class ClubRepository {
         try {
             MySqlDatabase.connect().use { conn ->
                 val rs = conn.prepareStatement(
-                    "SELECT jogador, avatar, email, senha FROM jogadores"
+                    "SELECT jogador, avatar, email, senha, ativo, ferias FROM jogadores"
                 ).executeQuery()
+                val meta = rs.metaData
+                val cols = (1..meta.columnCount).map { meta.getColumnName(it).lowercase() }.toSet()
                 val users = mutableListOf<User>()
                 while (rs.next()) {
                     val email = rs.getString("email") ?: continue
                     val name  = rs.getString("jogador") ?: continue
+                    val ativo = if ("ativo" in cols) rs.getObject("ativo")?.let { (it as? Number)?.toInt() ?: 1 } ?: 1 else 1
+                    val ferias = if ("ferias" in cols) rs.getObject("ferias")?.let { (it as? Number)?.toInt() ?: 0 } ?: 0 else 0
                     users.add(User(
                         id          = email.trim(),
                         name        = name.trim(),
@@ -63,7 +67,9 @@ class ClubRepository {
                         photoUrl    = rs.getString("avatar") ?: "",
                         clubId      = "c1",
                         isMember    = true,
-                        password    = rs.getString("senha")?.trim()
+                        password    = rs.getString("senha")?.trim(),
+                        isActive    = ativo == 1,
+                        isOnVacation = ferias == 1
                     ))
                 }
                 if (users.none { it.name.contains("NÃO MEMBRO", ignoreCase = true) }) {
@@ -77,6 +83,26 @@ class ClubRepository {
             val rootCause = generateSequence(t) { it.cause }.lastOrNull() ?: t
             throw Exception("Erro ao buscar jogadores: $t\nCausa: $rootCause\n${t.stackTrace.take(3).joinToString("\n")}", t)
         }
+    }
+
+    suspend fun setPlayerActive(email: String, isActive: Boolean): Unit = withContext(Dispatchers.IO) {
+        MySqlDatabase.connect().use { conn ->
+            val ps = conn.prepareStatement("UPDATE jogadores SET ativo = ? WHERE email = ?")
+            ps.setInt(1, if (isActive) 1 else 0)
+            ps.setString(2, email)
+            ps.executeUpdate()
+        }
+        allUsers = allUsers.map { if (it.id == email) it.copy(isActive = isActive) else it }
+    }
+
+    suspend fun setPlayerVacation(email: String, isOnVacation: Boolean): Unit = withContext(Dispatchers.IO) {
+        MySqlDatabase.connect().use { conn ->
+            val ps = conn.prepareStatement("UPDATE jogadores SET ferias = ? WHERE email = ?")
+            ps.setInt(1, if (isOnVacation) 1 else 0)
+            ps.setString(2, email)
+            ps.executeUpdate()
+        }
+        allUsers = allUsers.map { if (it.id == email) it.copy(isOnVacation = isOnVacation) else it }
     }
 
     suspend fun login(email: String, pass: String): LoginResponse = withContext(Dispatchers.IO) {
@@ -326,7 +352,7 @@ class ClubRepository {
     suspend fun createMensalidade(playerName: String, month: Int? = null, year: Int? = null): Unit =
         withContext(Dispatchers.IO) {
             val cal = Calendar.getInstance().apply {
-                set(Calendar.DAY_OF_MONTH, 10)
+                set(Calendar.DAY_OF_MONTH, 1)
                 if (year != null) set(Calendar.YEAR, year)
                 if (month != null) set(Calendar.MONTH, month)
             }
@@ -603,7 +629,7 @@ class ClubRepository {
             } catch (_: Exception) {}
         }
         if (monthIndex == null) return null
-        val dueDate = Calendar.getInstance().apply { set(year, monthIndex, 10) }
+        val dueDate = Calendar.getInstance().apply { set(year, monthIndex, 1) }
         val ref = "$monthName/$year"
         return FinancialEntry(
             id = UUID.randomUUID().toString(),

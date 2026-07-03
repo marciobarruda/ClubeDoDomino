@@ -374,8 +374,8 @@ fun PlayersList(
     canEdit: Boolean
 ) {
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
-        items(players) { item ->
-            Card( //... keeping existing card structure but disabling toggles if !canEdit
+        items(players, key = { it.user.id }) { item ->
+            Card(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
                 modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
             ) {

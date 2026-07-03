@@ -17,7 +17,9 @@ data class User(
     val clubId: String,
     val isMember: Boolean = false,
     val pixarAvatarUrl: String? = null,
-    val password: String? = null
+    val password: String? = null,
+    val isActive: Boolean = true,
+    val isOnVacation: Boolean = false
 )
 
 // 3. Match

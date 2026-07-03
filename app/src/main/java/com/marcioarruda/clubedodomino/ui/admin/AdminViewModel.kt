@@ -63,8 +63,8 @@ class AdminViewModel(
                     .map { user ->
                         AdminPlayerItem(
                             user = user,
-                            isActive = adminRepository.isPlayerActive(user.id),
-                            isOnVacation = adminRepository.isPlayerOnVacation(user.id)
+                            isActive = user.isActive,
+                            isOnVacation = user.isOnVacation
                         )
                     }
                     .sortedBy { it.user.displayName }
@@ -127,13 +127,31 @@ class AdminViewModel(
     }
 
     fun togglePlayerActive(user: User, isActive: Boolean) {
-        adminRepository.setPlayerActive(user.id, isActive)
         updateLocalPlayerState(user.id) { it.copy(isActive = isActive) }
+        viewModelScope.launch {
+            try {
+                repository.setPlayerActive(user.id, isActive)
+                val status = if (isActive) "ativo" else "inativo"
+                _uiState.update { it.copy(message = "${user.displayName} marcado como $status.") }
+            } catch (e: Exception) {
+                updateLocalPlayerState(user.id) { it.copy(isActive = !isActive) }
+                _uiState.update { it.copy(error = "Erro ao salvar: ${e.message}") }
+            }
+        }
     }
 
     fun togglePlayerVacation(user: User, isOnVacation: Boolean) {
-        adminRepository.setPlayerVacation(user.id, isOnVacation)
         updateLocalPlayerState(user.id) { it.copy(isOnVacation = isOnVacation) }
+        viewModelScope.launch {
+            try {
+                repository.setPlayerVacation(user.id, isOnVacation)
+                val status = if (isOnVacation) "em férias" else "fora do modo férias"
+                _uiState.update { it.copy(message = "${user.displayName} marcado como $status.") }
+            } catch (e: Exception) {
+                updateLocalPlayerState(user.id) { it.copy(isOnVacation = !isOnVacation) }
+                _uiState.update { it.copy(error = "Erro ao salvar: ${e.message}") }
+            }
+        }
     }
 
     private fun updateLocalPlayerState(userId: String, update: (AdminPlayerItem) -> AdminPlayerItem) {

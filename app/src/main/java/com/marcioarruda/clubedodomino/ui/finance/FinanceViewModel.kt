@@ -147,8 +147,8 @@ class FinanceViewModel(
                     }
 
                     // --- RETROACTIVE FINANCIAL TRIGGERS (Looping last 3 months) ---
-                    val isActive = adminRepository.isPlayerActive(userId)
-                    val isOnVacation = adminRepository.isPlayerOnVacation(userId)
+                    val isActive = currentUser.isActive
+                    val isOnVacation = currentUser.isOnVacation
 
                     // 1. Extra Fee Check (Trigger n8n API)
                     if (isActive && !isOnVacation) {
