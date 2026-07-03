@@ -105,6 +105,11 @@ data class UpdatePlayerRequest(
     val senha: String
 )
 
+data class ResetPasswordRequest(
+    val email: String,
+    val nova_senha: String
+)
+
 data class UpdateProfileRequest(
     val email: String,
     val avatar: String // Base64
@@ -176,6 +181,9 @@ interface ApiService {
 
     @POST("webhook/login")
     suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    @POST("webhook/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): LoginResponse
 
     @POST("webhook/atualizar-dados")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): ResponseBody

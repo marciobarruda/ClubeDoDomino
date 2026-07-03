@@ -3,6 +3,12 @@ const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const axios = require('axios');
+const bcrypt = require('bcryptjs');
+
+const BCRYPT_ROUNDS = 10;
+
+// Verifica se a senha é um hash bcrypt (começa com $2b$ ou $2a$)
+const isBcryptHash = (s) => s && (s.startsWith('$2b$') || s.startsWith('$2a$'));
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -80,17 +86,61 @@ app.post('/webhook/login', async (req, res) => {
 
   try {
     const [rows] = await pool.query(
-      'SELECT email FROM jogadores WHERE email = ? AND senha = ?',
-      [email.trim(), senha.trim()]
+      'SELECT email, senha FROM jogadores WHERE email = ?',
+      [email.trim()]
     );
 
-    if (rows.length > 0) {
+    if (rows.length === 0) {
+      return res.status(401).json({ status: 'error', message: 'E-mail ou senha incorretos.' });
+    }
+
+    const stored = rows[0].senha ? rows[0].senha.trim() : '';
+    let valid = false;
+
+    if (isBcryptHash(stored)) {
+      valid = await bcrypt.compare(senha.trim(), stored);
+    } else {
+      // Senha ainda em texto puro — compara e já migra para hash
+      valid = stored === senha.trim();
+      if (valid) {
+        const hash = await bcrypt.hash(senha.trim(), BCRYPT_ROUNDS);
+        await pool.query('UPDATE jogadores SET senha = ? WHERE email = ?', [hash, email.trim()]);
+      }
+    }
+
+    if (valid) {
       return res.json({ status: 'success' });
     } else {
       return res.status(401).json({ status: 'error', message: 'E-mail ou senha incorretos.' });
     }
   } catch (error) {
     console.error('Erro no login:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro interno no servidor.' });
+  }
+});
+
+// 1b. POST /webhook/reset-password
+app.post('/webhook/reset-password', async (req, res) => {
+  const { email, nova_senha } = req.body;
+  if (!email || !nova_senha) {
+    return res.status(400).json({ status: 'error', message: 'E-mail e nova_senha são obrigatórios.' });
+  }
+  if (nova_senha.trim().length < 4) {
+    return res.status(400).json({ status: 'error', message: 'A senha deve ter pelo menos 4 caracteres.' });
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT email FROM jogadores WHERE email = ?', [email.trim()]);
+    if (rows.length === 0) {
+      // Não revelamos se o email existe ou não por segurança
+      return res.json({ status: 'success' });
+    }
+
+    const hash = await bcrypt.hash(nova_senha.trim(), BCRYPT_ROUNDS);
+    await pool.query('UPDATE jogadores SET senha = ? WHERE email = ?', [hash, email.trim()]);
+    return res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao resetar senha:', error.message);
     res.status(500).json({ status: 'error', message: 'Erro interno no servidor.' });
   }
 });
@@ -104,7 +154,7 @@ app.get('/webhook/buscar-jogadores', async (req, res) => {
       jogador: r.jogador ? r.jogador.trim() : '',
       avatar: r.avatar || '',
       email: r.email ? r.email.trim() : '',
-      senha: r.senha ? r.senha.trim() : ''
+      senha: '' // nunca expor hash
     }));
     res.json(players);
   } catch (error) {

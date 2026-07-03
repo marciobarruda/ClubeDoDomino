@@ -114,30 +114,22 @@ class ClubRepository {
 
     suspend fun login(email: String, pass: String): LoginResponse = withContext(Dispatchers.IO) {
         try {
-            MySqlDatabase.connect().use { conn ->
-                val ps = conn.prepareStatement(
-                    "SELECT email FROM jogadores WHERE email = ? AND senha = ?"
-                )
-                ps.setString(1, email)
-                ps.setString(2, pass)
-                val rs = ps.executeQuery()
-                if (rs.next()) LoginResponse("Login bem sucedido")
-                else throw Exception("Email ou senha inválidos")
+            val response = RetrofitClient.instance.login(LoginRequest(email, pass))
+            if (response.status.equals("success", ignoreCase = true)) {
+                LoginResponse("Login bem sucedido")
+            } else {
+                throw Exception("Email ou senha inválidos")
             }
         } catch (t: Throwable) {
-            t.printStackTrace()
-            if (t is Exception && t.message == "Email ou senha inválidos") throw t
-            val rootCause = generateSequence(t) { it.cause }.lastOrNull() ?: t
-            throw Exception("Erro ao autenticar: $t\nCausa: $rootCause\n${t.stackTrace.take(3).joinToString("\n")}", t)
+            if (t is retrofit2.HttpException && t.code() == 401) throw Exception("Email ou senha inválidos")
+            throw t
         }
     }
 
     suspend fun updatePassword(email: String, pass: String): Unit = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("UPDATE jogadores SET senha = ? WHERE email = ?")
-            ps.setString(1, pass)
-            ps.setString(2, email)
-            ps.executeUpdate()
+        val response = RetrofitClient.instance.resetPassword(ResetPasswordRequest(email, pass))
+        if (!response.status.equals("success", ignoreCase = true)) {
+            throw Exception("Erro ao redefinir senha.")
         }
     }
 

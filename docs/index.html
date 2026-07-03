@@ -380,7 +380,10 @@
                 <input type="password" id="login-pass" placeholder="••••••••">
             </div>
             <button class="btn btn-primary" style="width: 100%" onclick="app.login()">Entrar</button>
-            <div style="margin-top: 20px; text-align: center;">
+            <div style="margin-top: 12px; text-align: center;">
+                <button onclick="app.showForgotPassword()" style="background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;text-decoration:underline;padding:4px 0;">Esqueci a senha</button>
+            </div>
+            <div style="margin-top: 12px; text-align: center;">
                 <span id="btn-toggle-api" style="font-size: 11px; color: var(--text-muted); cursor: pointer; text-decoration: underline; font-weight: 600;" onclick="document.getElementById('api-config-container').style.display = document.getElementById('api-config-container').style.display === 'none' ? 'block' : 'none'">⚙️ Configurar Servidor (API)</span>
                 <div id="api-config-container" style="display: none; margin-top: 16px; text-align: left; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                     <label style="display:block; margin-bottom: 6px; font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Endereço da API Backend</label>
@@ -608,6 +611,38 @@
         </div>
     </div>
  
+    <!-- Forgot Password Modal -->
+    <div id="forgot-modal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+                <h3 style="margin: 0">Redefinir Senha</h3>
+                <i data-lucide="x" onclick="app.closeForgotPassword()" style="cursor: pointer"></i>
+            </div>
+            <div id="forgot-form">
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px">Informe seu e-mail e escolha uma nova senha.</p>
+                <div style="margin-bottom: 12px">
+                    <label style="display:block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted)">E-mail</label>
+                    <input type="email" id="forgot-email" placeholder="seu@email.com" style="width:100%; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom: 12px">
+                    <label style="display:block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted)">Nova Senha</label>
+                    <input type="password" id="forgot-new-pass" placeholder="••••••" style="width:100%; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom: 20px">
+                    <label style="display:block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted)">Confirmar Nova Senha</label>
+                    <input type="password" id="forgot-confirm-pass" placeholder="••••••" style="width:100%; box-sizing:border-box;">
+                </div>
+                <div id="forgot-error" style="color: var(--error); font-size: 13px; margin-bottom: 12px; display: none;"></div>
+                <button class="btn btn-primary" style="width: 100%" onclick="app.submitForgotPassword()">Salvar Nova Senha</button>
+                <button class="btn btn-ghost" style="width: 100%; margin-top: 8px" onclick="app.closeForgotPassword()">Cancelar</button>
+            </div>
+            <div id="forgot-success" style="display: none; text-align: center; padding: 16px 0">
+                <p style="color: var(--success, #4ade80); font-size: 16px; margin-bottom: 16px">✓ Senha atualizada com sucesso!</p>
+                <button class="btn btn-primary" style="width: 100%" onclick="app.closeForgotPassword()">Voltar ao Login</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Match Details Modal -->
     <div id="match-modal" class="modal">
         <div class="modal-content">
@@ -813,6 +848,55 @@
                 
                 if (screen === 'match') this.applyMatchAvailability();
                 window.scrollTo(0,0);
+            },
+
+            showForgotPassword() {
+                document.getElementById('forgot-email').value = document.getElementById('login-email').value || '';
+                document.getElementById('forgot-new-pass').value = '';
+                document.getElementById('forgot-confirm-pass').value = '';
+                document.getElementById('forgot-error').style.display = 'none';
+                document.getElementById('forgot-form').style.display = 'block';
+                document.getElementById('forgot-success').style.display = 'none';
+                document.getElementById('forgot-modal').classList.add('active');
+            },
+
+            closeForgotPassword() {
+                document.getElementById('forgot-modal').classList.remove('active');
+            },
+
+            async submitForgotPassword() {
+                const email = document.getElementById('forgot-email').value.trim();
+                const novaSenha = document.getElementById('forgot-new-pass').value.trim();
+                const confirma = document.getElementById('forgot-confirm-pass').value.trim();
+                const errDiv = document.getElementById('forgot-error');
+
+                errDiv.style.display = 'none';
+
+                if (!email) { errDiv.textContent = 'Informe o e-mail.'; errDiv.style.display = 'block'; return; }
+                if (!novaSenha) { errDiv.textContent = 'Informe a nova senha.'; errDiv.style.display = 'block'; return; }
+                if (novaSenha.length < 4) { errDiv.textContent = 'A senha deve ter pelo menos 4 caracteres.'; errDiv.style.display = 'block'; return; }
+                if (novaSenha !== confirma) { errDiv.textContent = 'As senhas não coincidem.'; errDiv.style.display = 'block'; return; }
+
+                this.setLoading(true);
+                try {
+                    const res = await fetch(`${API_BASE}webhook/reset-password`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, nova_senha: novaSenha })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        document.getElementById('forgot-form').style.display = 'none';
+                        document.getElementById('forgot-success').style.display = 'block';
+                    } else {
+                        errDiv.textContent = data.message || 'Erro ao redefinir senha.';
+                        errDiv.style.display = 'block';
+                    }
+                } catch (e) {
+                    errDiv.textContent = 'Erro de conexão: ' + e.message;
+                    errDiv.style.display = 'block';
+                }
+                this.setLoading(false);
             },
 
             async login() {
