@@ -56,7 +56,31 @@ class MatchViewModel(
         private set
 
     fun setCurrentUser(name: String?) {
+        if (name == currentUserName) return
         currentUserName = name
+        if (name != null) loadActiveMatchForUser(name)
+    }
+
+    private fun loadActiveMatchForUser(username: String) {
+        viewModelScope.launch {
+            try {
+                val state = _uiState.value
+                if (state.isActiveMatchStarted) return@launch
+                val activeMatch = repository.getActiveMatchForUser(username) ?: return@launch
+                val players = state.availablePlayers
+                val p1 = players.find { it.name == activeMatch.player1 }
+                val p2 = players.find { it.name == activeMatch.player2 }
+                val p3 = players.find { it.name == activeMatch.player3 }
+                val p4 = players.find { it.name == activeMatch.player4 }
+                _uiState.update {
+                    it.copy(
+                        selectedPlayers = listOf(p1, p2, p3, p4),
+                        isActiveMatchStarted = true,
+                        activeMatchId = activeMatch.id
+                    )
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     init {
@@ -209,17 +233,9 @@ class MatchViewModel(
 
                 val eligiblePlayers = allUsers
                     .filter { user ->
-                        // Rule: "Ativo/Inativo" - Only show active OR Non-Member
                         val isNonMember = user.name.contains("NÃO MEMBRO", ignoreCase = true) || user.name.contains("NAO MEMBRO", ignoreCase = true) || user.id == "7"
-                        val isActive = adminRepository.isPlayerActive(user.id)
-                        
-                        // Condition: (Active AND Not Blocked) OR (Non-Member)
-                        // Note: Non-Members are immune to blocking above, but explicitly here too:
-                        // They must obey "Uniqueness" which is UI/Selection logic, not list loading.
-                        // They are "Always Visible" (Active check bypassed)
-                        
-                        if (isNonMember) true // Always visible
-                        else isActive && (user.id !in blockedUserIds)
+                        if (isNonMember) true
+                        else user.isActive && (user.id !in blockedUserIds)
                     }
                     .sortedBy { it.displayName }
 
@@ -245,6 +261,8 @@ class MatchViewModel(
                             )
                         }
                     }
+                } ?: run {
+                    // currentUserName ainda não chegou — loadActiveMatchForUser será chamado pelo setCurrentUser
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Falha ao carregar jogadores: ${e.message}") }

@@ -49,9 +49,16 @@ class ClubRepository {
     suspend fun getPlayers(): List<User> = withContext(Dispatchers.IO) {
         try {
             MySqlDatabase.connect().use { conn ->
-                val rs = conn.prepareStatement(
-                    "SELECT jogador, avatar, email, senha, ativo, ferias FROM jogadores"
-                ).executeQuery()
+                // Try with ativo/ferias columns first; fall back to basic select if they don't exist yet
+                val rs = try {
+                    conn.prepareStatement(
+                        "SELECT jogador, avatar, email, senha, ativo, ferias FROM jogadores"
+                    ).executeQuery()
+                } catch (_: Exception) {
+                    conn.prepareStatement(
+                        "SELECT jogador, avatar, email, senha FROM jogadores"
+                    ).executeQuery()
+                }
                 val meta = rs.metaData
                 val cols = (1..meta.columnCount).map { meta.getColumnName(it).lowercase() }.toSet()
                 val users = mutableListOf<User>()

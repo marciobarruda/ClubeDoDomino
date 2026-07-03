@@ -52,6 +52,7 @@ fun AvatarImage(
         "tenorio" -> com.marcioarruda.clubedodomino.R.drawable.tenorio
         "avatar_13" -> com.marcioarruda.clubedodomino.R.drawable.avatar_13
         "avatar_14" -> com.marcioarruda.clubedodomino.R.drawable.avatar_14
+        "avatar_15" -> com.marcioarruda.clubedodomino.R.drawable.avatar_15
         "tercio" -> com.marcioarruda.clubedodomino.R.drawable.tercio
         "arnaldo" -> com.marcioarruda.clubedodomino.R.drawable.arnaldo
         "tatu" -> com.marcioarruda.clubedodomino.R.drawable.tatu
