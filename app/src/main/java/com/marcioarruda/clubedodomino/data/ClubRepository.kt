@@ -113,23 +113,30 @@ class ClubRepository {
     }
 
     suspend fun login(email: String, pass: String): LoginResponse = withContext(Dispatchers.IO) {
-        try {
-            val response = RetrofitClient.instance.login(LoginRequest(email, pass))
-            if (response.status.equals("success", ignoreCase = true)) {
-                LoginResponse("Login bem sucedido")
+        MySqlDatabase.connect().use { conn ->
+            val ps = conn.prepareStatement("SELECT senha FROM jogadores WHERE email = ?")
+            ps.setString(1, email)
+            val rs = ps.executeQuery()
+            if (!rs.next()) throw Exception("Email ou senha inválidos")
+            val stored = rs.getString("senha")?.trim() ?: throw Exception("Email ou senha inválidos")
+            val valid = if (stored.startsWith("\$2a\$") || stored.startsWith("\$2b\$")) {
+                org.mindrot.jbcrypt.BCrypt.checkpw(pass, stored)
             } else {
-                throw Exception("Email ou senha inválidos")
+                // fallback texto puro (senhas nao migradas ainda)
+                stored == pass
             }
-        } catch (t: Throwable) {
-            if (t is retrofit2.HttpException && t.code() == 401) throw Exception("Email ou senha inválidos")
-            throw t
+            if (!valid) throw Exception("Email ou senha inválidos")
+            LoginResponse("Login bem sucedido")
         }
     }
 
     suspend fun updatePassword(email: String, pass: String): Unit = withContext(Dispatchers.IO) {
-        val response = RetrofitClient.instance.resetPassword(ResetPasswordRequest(email, pass))
-        if (!response.status.equals("success", ignoreCase = true)) {
-            throw Exception("Erro ao redefinir senha.")
+        val hash = org.mindrot.jbcrypt.BCrypt.hashpw(pass, org.mindrot.jbcrypt.BCrypt.gensalt(10))
+        MySqlDatabase.connect().use { conn ->
+            val ps = conn.prepareStatement("UPDATE jogadores SET senha = ? WHERE email = ?")
+            ps.setString(1, hash)
+            ps.setString(2, email)
+            ps.executeUpdate()
         }
     }
 

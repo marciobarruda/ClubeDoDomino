@@ -28,8 +28,8 @@ android {
         applicationId = "com.marcioarruda.clubedodomino"
         minSdk = 26
         targetSdk = 34
-        versionCode = 72
-        versionName = "1.37"
+        versionCode = 73
+        versionName = "1.38"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -151,6 +151,9 @@ dependencies {
 
     // MySQL JDBC driver 5.1.x — compatible with Android (does not use java.sql.DriverAction)
     implementation("mysql:mysql-connector-java:5.1.49")
+
+    // BCrypt para verificacao de senhas hasheadas
+    implementation("org.mindrot:jbcrypt:0.4")
 
 
     testImplementation("junit:junit:4.13.2")
