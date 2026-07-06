@@ -170,7 +170,7 @@ interface ApiService {
     suspend fun registerDebit(@Body debit: DebitRequest): retrofit2.Response<Unit>
 
     // Endpoints Financeiros
-    @GET("https://n8ndev.devlogconsultoria.com.br/webhook/gravar-buchos")
+    @GET("webhook/gravar-buchos")
     suspend fun getBuchos(): List<BuchoDto>
     
     @GET("webhook/buscar-info-mensalidade")
@@ -237,7 +237,7 @@ data class DeleteRequest(
 // --- Retrofit Singleton Client ---
 
 object RetrofitClient {
-    private const val BASE_URL = "https://n8ndev.devlogconsultoria.com.br/"
+    private const val BASE_URL = "https://geral-clube-domino-api.ep9oni.easypanel.host/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

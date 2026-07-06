@@ -658,7 +658,7 @@
         // Configuração da API:
         // Prioriza o endereço salvo em localStorage. Se não houver, usa localhost para desenvolvimento ou a URL padrão.
         const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const defaultApi = isLocalHost ? "http://localhost:3000/" : "https://n8ndev.devlogconsultoria.com.br/";
+        const defaultApi = isLocalHost ? "http://localhost:3000/" : "https://geral-clube-domino-api.ep9oni.easypanel.host/";
         const API_BASE = localStorage.getItem('api_base_url') || defaultApi;
         
         const app = {
