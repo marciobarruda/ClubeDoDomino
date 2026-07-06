@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.marcioarruda.clubedodomino.data.AdminRepository
 import com.marcioarruda.clubedodomino.data.ClubRepository
+import com.marcioarruda.clubedodomino.data.FinancialEntry
+import com.marcioarruda.clubedodomino.data.FinancialEntryStatus
+import com.marcioarruda.clubedodomino.data.FinancialEntryType
 import com.marcioarruda.clubedodomino.data.GlobalStats
 import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.data.User
@@ -15,11 +18,18 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+data class DebtorItem(
+    val user: User,
+    val totalDue: Double,
+    val debts: List<FinancialEntry>
+)
+
 data class AdminUiState(
     val isLoading: Boolean = false,
     val matches: List<Match> = emptyList(),
     val buchos: List<BuchoDto> = emptyList(),
     val players: List<AdminPlayerItem> = emptyList(),
+    val debtors: List<DebtorItem> = emptyList(),
     val globalStats: GlobalStats? = null,
     val error: String? = null,
     val message: String? = null
@@ -69,12 +79,45 @@ class AdminViewModel(
                     }
                     .sortedBy { it.user.displayName }
 
-                _uiState.update { 
+                // Calcular inadimplentes — mesma lógica do FinanceViewModel.updateUiState
+                val now = Calendar.getInstance()
+                val currentYear = now.get(Calendar.YEAR)
+                val currentMonth = now.get(Calendar.MONTH)
+
+                val allBuchos = repository.getBuchosResult().getOrNull() ?: emptyList()
+                val allMensalidades = repository.getMensalidadesResult().getOrNull() ?: emptyList()
+                val allEntries = buildList {
+                    addAll(allBuchos.mapNotNull { with(repository) { it.toFinancialEntry(users) } })
+                    addAll(allMensalidades.mapNotNull { with(repository) { it.toFinancialEntry(users) } })
+                }
+
+                val debtors = adminPlayers.mapNotNull { playerItem ->
+                    val userId = playerItem.user.id
+                    val overdueDebts = allEntries.filter { entry ->
+                        if (entry.userId != userId) return@filter false
+                        if (entry.status != FinancialEntryStatus.PENDING) return@filter false
+                        when (entry.type) {
+                            FinancialEntryType.MONTHLY_FEE, FinancialEntryType.EXTRA_TAX -> true
+                            FinancialEntryType.BUCHO -> {
+                                val cal = Calendar.getInstance().apply { time = entry.dueDate }
+                                val y = cal.get(Calendar.YEAR); val m = cal.get(Calendar.MONTH)
+                                y < currentYear || (y == currentYear && m < currentMonth)
+                            }
+                            else -> false
+                        }
+                    }.sortedByDescending { it.dueDate }
+
+                    val total = overdueDebts.sumOf { it.amount }
+                    if (total > 0.0) DebtorItem(playerItem.user, total, overdueDebts) else null
+                }.sortedByDescending { it.totalDue }
+
+                _uiState.update {
                     it.copy(
                         isLoading = false,
                         matches = matches,
                         buchos = buchos,
                         players = adminPlayers,
+                        debtors = debtors,
                         globalStats = stats
                     )
                 }

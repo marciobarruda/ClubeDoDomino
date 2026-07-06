@@ -1,11 +1,17 @@
 package com.marcioarruda.clubedodomino.ui.admin
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,8 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.marcioarruda.clubedodomino.data.FinancialEntryType
 import com.marcioarruda.clubedodomino.ui.ViewModelFactory
 import com.marcioarruda.clubedodomino.ui.theme.DominoGold
+import com.marcioarruda.clubedodomino.ui.util.AvatarImage
 import androidx.compose.ui.platform.LocalContext
 import com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
 import androidx.compose.ui.text.font.FontWeight
@@ -34,7 +42,7 @@ fun AdminScreen(
     val viewModel: AdminViewModel = viewModel(factory = factory)
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Partidas", "Buchos", "Jogadores")
+    val tabs = listOf("Partidas", "Buchos", "Jogadores", "Inadimplentes")
 
     // Determine permissions
     val userName = session?.userName?.trim() ?: ""
@@ -247,8 +255,9 @@ fun AdminScreen(
                             players = uiState.players,
                             onToggleActive = { u, a -> viewModel.togglePlayerActive(u, a) },
                             onToggleVacation = { u, v -> viewModel.togglePlayerVacation(u, v) },
-                            canEdit = canEdit 
+                            canEdit = canEdit
                         )
+                        3 -> DebtorsList(debtors = uiState.debtors)
                     }
                 }
             }
@@ -358,6 +367,166 @@ fun BuchosList(
                             IconButton(onClick = { onDelete(bucho.id) }) {
                                 Text("🗑️")
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DebtorsList(debtors: List<DebtorItem>) {
+    val dateFormat = remember { SimpleDateFormat("MM/yyyy", Locale.getDefault()) }
+    val totalGeral = debtors.sumOf { it.totalDue }
+
+    if (debtors.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("✅", fontSize = 48.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Nenhum inadimplente!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("Todos os jogadores estão em dia.", color = Color.Gray, fontSize = 14.sp)
+            }
+        }
+        return
+    }
+
+    LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF3A1A1A)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Total em Aberto", color = Color.Gray, fontSize = 12.sp)
+                        Text(
+                            "${debtors.size} inadimplente${if (debtors.size > 1) "s" else ""}",
+                            color = Color.White, fontSize = 13.sp
+                        )
+                    }
+                    Text(
+                        "R$ ${"%.2f".format(totalGeral)}",
+                        color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold, fontSize = 20.sp
+                    )
+                }
+            }
+        }
+
+        items(debtors, key = { it.user.id }) { debtor ->
+            var expanded by remember { mutableStateOf(false) }
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+            ) {
+                Column {
+                    // Header clicável
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { expanded = !expanded }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AvatarImage(
+                            url = debtor.user.photoUrl,
+                            size = 44.dp,
+                            borderColor = Color(0xFFFF6B6B),
+                            borderWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                debtor.user.displayName,
+                                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp
+                            )
+                            Text(
+                                "${debtor.debts.size} débito${if (debtor.debts.size > 1) "s" else ""} em aberto",
+                                color = Color.Gray, fontSize = 12.sp
+                            )
+                        }
+                        Text(
+                            "R$ ${"%.2f".format(debtor.totalDue)}",
+                            color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold, fontSize = 15.sp
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = null, tint = Color.Gray
+                        )
+                    }
+
+                    // Detalhes expansíveis
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF222222))
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            HorizontalDivider(color = Color(0xFF444444), modifier = Modifier.padding(bottom = 8.dp))
+                            debtor.debts.forEach { entry ->
+                                val icon = when (entry.type) {
+                                    FinancialEntryType.MONTHLY_FEE -> "📅"
+                                    FinancialEntryType.EXTRA_TAX -> "⚡"
+                                    else -> "🁣"
+                                }
+                                val typeLabel = when (entry.type) {
+                                    FinancialEntryType.MONTHLY_FEE -> "Mensalidade"
+                                    FinancialEntryType.EXTRA_TAX -> "Taxa Extra"
+                                    else -> "Bucho"
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(icon, fontSize = 16.sp)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(typeLabel, color = Color.White, fontSize = 13.sp)
+                                            Text(
+                                                if (entry.type == FinancialEntryType.MONTHLY_FEE || entry.type == FinancialEntryType.EXTRA_TAX)
+                                                    dateFormat.format(entry.dueDate)
+                                                else
+                                                    entry.description,
+                                                color = Color.Gray, fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        "R$ ${"%.2f".format(entry.amount)}",
+                                        color = Color(0xFFFF9B9B), fontSize = 13.sp, fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                            HorizontalDivider(color = Color(0xFF444444), modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Text("Total: ", color = Color.Gray, fontSize = 13.sp)
+                                Text(
+                                    "R$ ${"%.2f".format(debtor.totalDue)}",
+                                    color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold, fontSize = 13.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
                         }
                     }
                 }
