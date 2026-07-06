@@ -378,6 +378,7 @@ fun BuchosList(
 @Composable
 fun DebtorsList(debtors: List<DebtorItem>) {
     val dateFormat = remember { SimpleDateFormat("MM/yyyy", Locale.getDefault()) }
+    val fullDateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
     val totalGeral = debtors.sumOf { it.totalDue }
 
     if (debtors.isEmpty()) {
@@ -501,10 +502,12 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                                         Column {
                                             Text(typeLabel, color = Color.White, fontSize = 13.sp)
                                             Text(
-                                                if (entry.type == FinancialEntryType.MONTHLY_FEE || entry.type == FinancialEntryType.EXTRA_TAX)
-                                                    dateFormat.format(entry.dueDate)
-                                                else
-                                                    entry.description,
+                                                when (entry.type) {
+                                                    FinancialEntryType.MONTHLY_FEE, FinancialEntryType.EXTRA_TAX ->
+                                                        dateFormat.format(entry.dueDate)
+                                                    else ->
+                                                        fullDateFormat.format(entry.dueDate)
+                                                },
                                                 color = Color.Gray, fontSize = 11.sp
                                             )
                                         }
