@@ -28,8 +28,8 @@ android {
         applicationId = "com.marcioarruda.clubedodomino"
         minSdk = 26
         targetSdk = 34
-        versionCode = 74
-        versionName = "1.39"
+        versionCode = 75
+        versionName = "1.40"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
