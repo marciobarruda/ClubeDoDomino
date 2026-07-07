@@ -258,10 +258,10 @@ fun PlayerDropdown(
     var expanded by remember { mutableStateOf(false) }
     var filterText by remember(selectedPlayer) { mutableStateOf(selectedPlayer?.displayName ?: "") }
 
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (enabled) expanded = !expanded }, modifier = modifier) {
         TextField(
             value = filterText,
-            onValueChange = { filterText = it; expanded = true },
+            onValueChange = { if (enabled) { filterText = it; expanded = true } },
             modifier = Modifier.menuAnchor(),
             enabled = enabled,
             label = { Text("Jogador", fontSize = 12.sp) },
