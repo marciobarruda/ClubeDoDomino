@@ -153,7 +153,7 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
             title = { Text("Escolha seu Avatar 🏆", color = DominoLight, fontWeight = FontWeight.Bold) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text("Selecione um avatar inspirado no Clube nas cores do Brasil 🇧🇷:", color = DominoMuted, fontSize = 13.sp)
+                    Text("Escolha seu avatar — Sport, Náutico, Santa Cruz ou outro 🎲:", color = DominoMuted, fontSize = 13.sp)
                     Spacer(Modifier.height(16.dp))
                     
                     val avatars = listOf(
