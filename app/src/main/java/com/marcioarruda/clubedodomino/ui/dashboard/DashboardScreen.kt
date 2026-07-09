@@ -166,7 +166,7 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
                         "arnaldo", "tatu", "calabria",
                         "sakaki", "breno", "molinho",
                         "ruan", "pedro", "marcio",
-                        "amilton", "frodo"
+                        "amilton", "frodo", "geraldo"
                     )
                     Column(
                         verticalArrangement = Arrangement.spacedBy(16.dp),

@@ -589,7 +589,7 @@ fun AddPlayerDialog(
     val availableAvatars = listOf(
         "marcio", "ruan", "tenorio", "frodo",
         "arnaldo", "sakaki", "molinho",
-        "amilton", "breno", "calabria", "tatu", "pedro", "tercio",
+        "amilton", "breno", "calabria", "tatu", "pedro", "tercio", "geraldo",
         "avatar_1", "avatar_2", "avatar_3", "avatar_4", "avatar_5",
         "avatar_6", "avatar_7", "avatar_8", "avatar_9", "avatar_10",
         "avatar_11", "avatar_13", "avatar_14", "avatar_15"
