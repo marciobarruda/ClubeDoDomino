@@ -8,20 +8,28 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.marcioarruda.clubedodomino.data.FinancialEntryType
 import com.marcioarruda.clubedodomino.ui.ViewModelFactory
 import com.marcioarruda.clubedodomino.ui.theme.DominoGold
+import com.marcioarruda.clubedodomino.ui.theme.DominoGreen
+import com.marcioarruda.clubedodomino.ui.theme.DominoLight
+import com.marcioarruda.clubedodomino.ui.theme.DominoMuted
+import com.marcioarruda.clubedodomino.ui.theme.DominoSurface
 import com.marcioarruda.clubedodomino.ui.util.AvatarImage
 import androidx.compose.ui.platform.LocalContext
 import com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
@@ -29,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +63,18 @@ fun AdminScreen(
 
     var showReleaseNotes by remember { mutableStateOf(false) }
     var releaseInfo by remember { mutableStateOf<Triple<String, String, String>?>(null) } // Local, Server, Notes
+    var showAddPlayerDialog by remember { mutableStateOf(false) }
+
+    if (showAddPlayerDialog) {
+        AddPlayerDialog(
+            onDismiss = { showAddPlayerDialog = false },
+            onConfirm = { name, email, password, avatarId, billingStart ->
+                viewModel.createPlayer(name, email, password, avatarId, billingStart)
+                showAddPlayerDialog = false
+            },
+            isLoading = uiState.isCreatingPlayer
+        )
+    }
 
     if (showReleaseNotes) {
         AlertDialog(
@@ -158,10 +179,19 @@ fun AdminScreen(
                                 bypassEnabled = checked
                             },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = com.marcioarruda.clubedodomino.ui.theme.DominoGreen,
-                                checkedTrackColor = com.marcioarruda.clubedodomino.ui.theme.DominoGreen.copy(alpha = 0.5f)
+                                checkedThumbColor = DominoGreen,
+                                checkedTrackColor = DominoGreen.copy(alpha = 0.5f)
                             )
                         )
+                    }
+                    HorizontalDivider(color = Color(0xFF444444), modifier = Modifier.padding(horizontal = 16.dp))
+                    TextButton(
+                        onClick = { showAddPlayerDialog = true },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = null, tint = DominoGreen)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Cadastrar Novo Jogador", color = DominoGreen, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -536,6 +566,181 @@ fun DebtorsList(debtors: List<DebtorItem>) {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddPlayerDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, email: String, password: String, avatarId: String, billingStart: Calendar) -> Unit,
+    isLoading: Boolean
+) {
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var selectedAvatar by remember { mutableStateOf("avatar_1") }
+
+    // Date pickers — day/month/year for billing start
+    val today = Calendar.getInstance()
+    var billingDay by remember { mutableStateOf(1) }
+    var billingMonth by remember { mutableStateOf(today.get(Calendar.MONTH) + 1) } // 1-based for display
+    var billingYear by remember { mutableStateOf(today.get(Calendar.YEAR)) }
+
+    val availableAvatars = listOf(
+        "marcio", "ruan", "tenorio", "frodo",
+        "arnaldo", "sakaki", "molinho",
+        "amilton", "breno", "calabria", "tatu", "pedro", "tercio",
+        "avatar_1", "avatar_2", "avatar_3", "avatar_4", "avatar_5",
+        "avatar_6", "avatar_7", "avatar_8", "avatar_9", "avatar_10",
+        "avatar_11", "avatar_13", "avatar_14", "avatar_15"
+    )
+
+    val nameError = name.isBlank()
+    val emailError = email.isBlank() || !email.contains("@")
+    val passwordError = password.length < 4
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DominoSurface,
+        title = { Text("Cadastrar Jogador", color = DominoLight, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.uppercase() },
+                    label = { Text("Nome do Jogador", color = DominoMuted) },
+                    singleLine = true,
+                    isError = name.isNotBlank() && nameError,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                    )
+                )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it.trim().lowercase() },
+                    label = { Text("E-mail (login)", color = DominoMuted) },
+                    singleLine = true,
+                    isError = email.isNotBlank() && emailError,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                    )
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Senha (mín. 4 caracteres)", color = DominoMuted) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = password.isNotBlank() && passwordError,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                    )
+                )
+
+                Text("Início das cobranças", color = DominoMuted, fontSize = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = billingDay.toString(),
+                        onValueChange = { billingDay = it.toIntOrNull()?.coerceIn(1, 28) ?: billingDay },
+                        label = { Text("Dia", color = DominoMuted, fontSize = 11.sp) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                            focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
+                            focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                        )
+                    )
+                    OutlinedTextField(
+                        value = billingMonth.toString(),
+                        onValueChange = { billingMonth = it.toIntOrNull()?.coerceIn(1, 12) ?: billingMonth },
+                        label = { Text("Mês", color = DominoMuted, fontSize = 11.sp) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                            focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
+                            focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                        )
+                    )
+                    OutlinedTextField(
+                        value = billingYear.toString(),
+                        onValueChange = { billingYear = it.toIntOrNull() ?: billingYear },
+                        label = { Text("Ano", color = DominoMuted, fontSize = 11.sp) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1.5f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                            focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
+                            focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                        )
+                    )
+                }
+
+                Text("Avatar", color = DominoMuted, fontSize = 12.sp)
+                availableAvatars.chunked(5).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        row.forEach { avatarId ->
+                            Box(
+                                modifier = Modifier
+                                    .clickable { selectedAvatar = avatarId }
+                                    .padding(2.dp)
+                            ) {
+                                AvatarImage(
+                                    url = avatarId,
+                                    size = 48.dp,
+                                    borderWidth = if (selectedAvatar == avatarId) 3.dp else 1.dp,
+                                    borderColor = if (selectedAvatar == avatarId) DominoGreen else Color.Gray
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (!nameError && !emailError && !passwordError) {
+                        val billingStart = Calendar.getInstance().apply {
+                            set(Calendar.YEAR, billingYear)
+                            set(Calendar.MONTH, billingMonth - 1) // back to 0-based
+                            set(Calendar.DAY_OF_MONTH, billingDay)
+                        }
+                        onConfirm(name.trim(), email.trim(), password, selectedAvatar, billingStart)
+                    }
+                },
+                enabled = !nameError && !emailError && !passwordError && !isLoading,
+                colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                } else {
+                    Text("Cadastrar", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = DominoMuted) }
+        }
+    )
 }
 
 @Composable

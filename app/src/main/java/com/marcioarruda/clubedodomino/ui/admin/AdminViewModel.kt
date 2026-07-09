@@ -32,7 +32,8 @@ data class AdminUiState(
     val debtors: List<DebtorItem> = emptyList(),
     val globalStats: GlobalStats? = null,
     val error: String? = null,
-    val message: String? = null
+    val message: String? = null,
+    val isCreatingPlayer: Boolean = false
 )
 
 data class AdminPlayerItem(
@@ -206,6 +207,25 @@ class AdminViewModel(
         }
     }
     
+    fun createPlayer(
+        name: String,
+        email: String,
+        password: String,
+        avatarId: String,
+        billingStartDate: Calendar
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCreatingPlayer = true, error = null) }
+            try {
+                repository.createPlayer(name, email, password, avatarId, billingStartDate)
+                loadData()
+                _uiState.update { it.copy(isCreatingPlayer = false, message = "Jogador \"$name\" cadastrado com mensalidades retroativas aplicadas.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isCreatingPlayer = false, error = "Erro ao cadastrar jogador: ${e.message}") }
+            }
+        }
+    }
+
     fun dismissMessage() {
          _uiState.update { it.copy(message = null, error = null) }
     }

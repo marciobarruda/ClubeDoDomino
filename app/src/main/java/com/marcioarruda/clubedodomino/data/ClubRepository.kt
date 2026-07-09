@@ -373,6 +373,68 @@ class ClubRepository {
             }
         }
 
+    suspend fun createPlayer(
+        name: String,
+        email: String,
+        password: String,
+        avatarId: String,
+        startDate: Calendar
+    ): Unit = withContext(Dispatchers.IO) {
+        val hashedPassword = org.mindrot.jbcrypt.BCrypt.hashpw(password, org.mindrot.jbcrypt.BCrypt.gensalt())
+        MySqlDatabase.connect().use { conn ->
+            val ps = conn.prepareStatement(
+                "INSERT INTO jogadores (jogador, avatar, email, senha, ativo, ferias) VALUES (?, ?, ?, ?, 1, 0)"
+            )
+            ps.setString(1, name.trim())
+            ps.setString(2, avatarId)
+            ps.setString(3, email.trim().lowercase())
+            ps.setString(4, hashedPassword)
+            ps.executeUpdate()
+        }
+        // invalidate cache so the new player appears
+        allUsers = emptyList()
+        generateRetroactiveMensalidades(name.trim(), startDate)
+    }
+
+    suspend fun generateRetroactiveMensalidades(playerName: String, startDate: Calendar): Unit =
+        withContext(Dispatchers.IO) {
+            val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            // Fetch existing mensalidades for this player to avoid duplicates
+            val existing = MySqlDatabase.connect().use { conn ->
+                val rs = conn.prepareStatement(
+                    "SELECT mensalidade FROM mensalidades WHERE jogador = ?"
+                ).apply { setString(1, playerName) }.executeQuery()
+                val set = mutableSetOf<String>()
+                while (rs.next()) set.add(rs.getString("mensalidade") ?: "")
+                set
+            }
+            val today = Calendar.getInstance()
+            // Generate from startDate month up to (and including) the previous month
+            val cursor = startDate.clone() as Calendar
+            cursor.set(Calendar.DAY_OF_MONTH, 1)
+            cursor.set(Calendar.HOUR_OF_DAY, 0)
+            cursor.set(Calendar.MINUTE, 0)
+            cursor.set(Calendar.SECOND, 0)
+            cursor.set(Calendar.MILLISECOND, 0)
+            val limit = today.clone() as Calendar
+            limit.set(Calendar.DAY_OF_MONTH, 1)
+            limit.add(Calendar.MONTH, -1) // up to last month
+            MySqlDatabase.connect().use { conn ->
+                while (!cursor.after(limit)) {
+                    val dateStr = fmt.format(cursor.time)
+                    if (dateStr !in existing) {
+                        val ps = conn.prepareStatement(
+                            "INSERT INTO mensalidades (mensalidade, jogador, pago) VALUES (?, ?, 'false')"
+                        )
+                        ps.setString(1, dateStr)
+                        ps.setString(2, playerName)
+                        ps.executeUpdate()
+                    }
+                    cursor.add(Calendar.MONTH, 1)
+                }
+            }
+        }
+
     // ─── Ranking (computado localmente) ───────────────────────────────────
 
     suspend fun getRankingResult(): Result<List<RankingDto>> = safeDbCall {
