@@ -1,7 +1,7 @@
 {
-  "version_code": 66,
-  "version_name": "1.31",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v66/clube_v_66.apk",
-  "release_notes": "* Atualização de Avatar (v66): Nova versão do avatar do jogador Márcio com formato de rosto e cabelo mais realistas!",
-  "min_version": 0
+  "version_code": 79,
+  "version_name": "1.44",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v79/clube_v_79.apk",
+  "release_notes": "* v79: Correção no registro de buchos (linha individual por jogador da dupla perdedora). Atualização automática agora funciona via servidor.",
+  "min_version": 78
 }

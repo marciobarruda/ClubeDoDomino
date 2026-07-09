@@ -418,10 +418,14 @@ class MatchViewModel(
                             cadastrado_por = registeredBy.name, wasBuchoRe = state.isBuchoRe
                         ))
                     } else {
-                        // Ambos pagam normal - Chamada Única para evitar duplicidade
-                        val combinedNames = "${losers[0].name} / ${losers[1].name}"
+                        // Ambos pagam — uma linha por jogador
                         repository.registerDebit(DebitRequest(
-                            data = dateStr, jogador = combinedNames, valor = debitValue,
+                            data = dateStr, jogador = losers[0].name, valor = debitValue,
+                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora,
+                            cadastrado_por = registeredBy.name, wasBuchoRe = state.isBuchoRe
+                        ))
+                        repository.registerDebit(DebitRequest(
+                            data = dateStr, jogador = losers[1].name, valor = debitValue,
                             pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora,
                             cadastrado_por = registeredBy.name, wasBuchoRe = state.isBuchoRe
                         ))
