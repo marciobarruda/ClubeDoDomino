@@ -65,6 +65,7 @@ fun AvatarImage(
         "marcio" -> com.marcioarruda.clubedodomino.R.drawable.marcio
         "amilton" -> com.marcioarruda.clubedodomino.R.drawable.amilton
         "frodo" -> com.marcioarruda.clubedodomino.R.drawable.frodo
+        "geraldo" -> com.marcioarruda.clubedodomino.R.drawable.geraldo
         else -> null
     }
 
