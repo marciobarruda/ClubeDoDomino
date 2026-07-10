@@ -64,6 +64,7 @@ fun AdminScreen(
     var showReleaseNotes by remember { mutableStateOf(false) }
     var releaseInfo by remember { mutableStateOf<Triple<String, String, String>?>(null) } // Local, Server, Notes
     var showAddPlayerDialog by remember { mutableStateOf(false) }
+    var buchoPlayerFilter by remember { mutableStateOf("Todos os Jogadores") }
 
     if (showAddPlayerDialog) {
         AddPlayerDialog(
@@ -219,7 +220,6 @@ fun AdminScreen(
                         )
                         1 -> {
                             var expanded by remember { mutableStateOf(false) }
-                            var selectedPlayerName by remember { mutableStateOf("Todos os Jogadores") }
                             val playerNames = remember(uiState.players) {
                                 listOf("Todos os Jogadores") + uiState.players.map { it.user.name }.distinct().sorted()
                             }
@@ -231,7 +231,7 @@ fun AdminScreen(
                                         onExpandedChange = { expanded = !expanded }
                                     ) {
                                         OutlinedTextField(
-                                            value = selectedPlayerName,
+                                            value = buchoPlayerFilter,
                                             onValueChange = {},
                                             readOnly = true,
                                             label = { Text("Filtrar por Jogador", color = DominoGold) },
@@ -255,7 +255,7 @@ fun AdminScreen(
                                                 DropdownMenuItem(
                                                     text = { Text(name, color = Color.White) },
                                                     onClick = {
-                                                        selectedPlayerName = name
+                                                        buchoPlayerFilter = name
                                                         expanded = false
                                                     }
                                                 )
@@ -264,11 +264,11 @@ fun AdminScreen(
                                     }
                                 }
 
-                                val filteredBuchos = remember(uiState.buchos, selectedPlayerName) {
-                                    if (selectedPlayerName == "Todos os Jogadores") {
+                                val filteredBuchos = remember(uiState.buchos, buchoPlayerFilter) {
+                                    if (buchoPlayerFilter == "Todos os Jogadores") {
                                         uiState.buchos
                                     } else {
-                                        uiState.buchos.filter { it.jogador?.trim()?.equals(selectedPlayerName.trim(), ignoreCase = true) == true }
+                                        uiState.buchos.filter { it.jogador?.trim()?.equals(buchoPlayerFilter.trim(), ignoreCase = true) == true }
                                     }
                                 }
 
@@ -589,7 +589,7 @@ fun AddPlayerDialog(
     val availableAvatars = listOf(
         "marcio", "ruan", "tenorio", "frodo",
         "arnaldo", "sakaki", "molinho",
-        "amilton", "breno", "calabria", "tatu", "pedro", "tercio", "geraldo",
+        "amilton", "breno", "calabria", "tatu", "pedro", "tercio", "geraldo", "emerson",
         "avatar_1", "avatar_2", "avatar_3", "avatar_4", "avatar_5",
         "avatar_6", "avatar_7", "avatar_8", "avatar_9", "avatar_10",
         "avatar_11", "avatar_13", "avatar_14", "avatar_15"
