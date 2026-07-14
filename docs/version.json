@@ -1,7 +1,7 @@
 {
-  "version_code": 83,
-  "version_name": "1.48",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v83/clube_v_83.apk",
-  "release_notes": "* v83: Checagem de atualização agora busca direto o version.json (GitHub Pages), sem depender do webhook n8n. Verificação silenciosa: só notifica o usuário quando há versão nova.",
+  "version_code": 84,
+  "version_name": "1.49",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v84/clube_v_84.apk",
+  "release_notes": "* v84: Novo tema visual de clube de dominó — troca das imagens de fundo (login, dashboard, finanças, ranking) e nova imagem para o cadastro de partidas, removendo referências à Copa do Mundo/futebol. Emojis de troféu substituídos por peças de dominó.",
   "min_version": 82
 }

@@ -150,7 +150,7 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
         AlertDialog(
             onDismissRequest = { showAvatarSelector = false },
             containerColor = DominoSurface,
-            title = { Text("Escolha seu Avatar 🏆", color = DominoLight, fontWeight = FontWeight.Bold) },
+            title = { Text("Escolha seu Avatar 🎲", color = DominoLight, fontWeight = FontWeight.Bold) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Text("Escolha seu avatar — Sport, Náutico, Santa Cruz ou outro 🎲:", color = DominoMuted, fontSize = 13.sp)
@@ -410,7 +410,7 @@ private fun DailyAwardsCard(bestPlayers: List<BestPlayer>, worstPlayers: List<Be
             Column {
                 if (bestPlayers.isNotEmpty()) {
                     AwardSection(
-                        title = "🏆 CRAQUE DO DIA",
+                        title = "🂓 CRAQUE DO DIA",
                         players = bestPlayers,
                         nameColor = DominoYellow,
                         pointsColor = DominoGreen
@@ -502,11 +502,11 @@ private fun MatchDetailsDialog(match: Match, onDismiss: () -> Unit) {
                 DetailRow("Data", SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(match.date))
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Time 1 ${if (match.score1 > match.score2) "🏆" else ""}", fontSize = 11.sp, color = DominoMuted)
+                    Text("Time 1 ${if (match.score1 > match.score2) "🂓" else ""}", fontSize = 11.sp, color = DominoMuted)
                     Text("${match.team1Player1.name} / ${match.team1Player2.name}", color = if (match.score1 > match.score2) DominoGreen else DominoLight, fontWeight = FontWeight.Bold)
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Time 2 ${if (match.score2 > match.score1) "🏆" else ""}", fontSize = 11.sp, color = DominoMuted)
+                    Text("Time 2 ${if (match.score2 > match.score1) "🂓" else ""}", fontSize = 11.sp, color = DominoMuted)
                     Text("${match.team2Player1.name} / ${match.team2Player2.name}", color = if (match.score2 > match.score1) DominoGreen else DominoLight, fontWeight = FontWeight.Bold)
                 }
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
@@ -609,7 +609,7 @@ fun ChampionCelebrationDialog(
         containerColor = DominoSurface,
         title = {
             Text(
-                text = "🏆 CAMPEÃO DE ${celebration.monthName.uppercase()} 🏆",
+                text = "🂓 CAMPEÃO DE ${celebration.monthName.uppercase()} 🂓",
                 color = RoyalGold,
                 fontWeight = FontWeight.Black,
                 fontSize = 20.sp,

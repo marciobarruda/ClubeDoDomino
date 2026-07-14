@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.Color
 // Playful "Game felt green" table palette
 val DominoGreen   = Color(0xFF00E676)  // Primary - vibrant game green
 val DominoOrange  = Color(0xFFFF7043)  // Secondary - gaming orange/coral
-val DominoYellow  = Color(0xFFFFD700)  // Gold - trophies & awards
+val DominoYellow  = Color(0xFFFFD700)  // Gold - highlights & awards
 val DominoPurple  = Color(0xFF9575CD)  // Tertiary - rankings/special
 val DominoCyan    = Color(0xFF00E5FF)  // Accent - highlights
 val DominoBg      = Color(0xFF0E3821)  // Background - Deep gaming table felt green

@@ -148,9 +148,9 @@ fun RankingItem(player: RankingPlayer, position: Int) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = when(position) {
-                        1 -> "🏆"
-                        2 -> "🥈"
-                        3 -> "🥉"
+                        1 -> "🂓"
+                        2 -> "🂒"
+                        3 -> "🂑"
                         else -> "$position"
                     },
                     color = if (position <= 3) RoyalGold else Color.Gray,
