@@ -472,15 +472,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });
 });
 
-// Versão atual do app — consultado pelo cliente para atualizações automáticas
-app.get('/webhook/checar-atualizacao', (req, res) => {
-  res.json({
-    version_code: 82,
-    version_name: "1.47",
-    apk_url: "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v82/clube_v_82.apk",
-    release_notes: "* v82: Corrigido bypass de horário para partidas já ativas. Nomes compostos exibem apenas o primeiro nome no cadastro da partida.",
-    min_version: 82
-  });
+// Versão atual do app — consultado pelo cliente para atualizações automáticas.
+// Repassa o docs/version.json publicado no GitHub Pages, que é atualizado a cada release,
+// para este endpoint nunca ficar com dados desatualizados/hardcoded novamente.
+app.get('/webhook/checar-atualizacao', async (req, res) => {
+  try {
+    const { data } = await axios.get('https://marciobarruda.github.io/ClubeDoDomino/version.json', { timeout: 5000 });
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao buscar version.json:', err.message);
+    res.status(502).json({ error: 'Falha ao consultar informações de versão.' });
+  }
 });
 
 // Inicialização do servidor
