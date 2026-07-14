@@ -475,11 +475,11 @@ app.get('/health', (req, res) => {
 // Versão atual do app — consultado pelo cliente para atualizações automáticas
 app.get('/webhook/checar-atualizacao', (req, res) => {
   res.json({
-    version_code: 80,
-    version_name: "1.45",
-    apk_url: "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v80/clube_v_80.apk",
-    release_notes: "* v80: Filtro de jogador na aba Buchos mantido após confirmar pagamento. PWA atualizado com novos avatares.",
-    min_version: 78
+    version_code: 82,
+    version_name: "1.47",
+    apk_url: "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v82/clube_v_82.apk",
+    release_notes: "* v82: Corrigido bypass de horário para partidas já ativas. Nomes compostos exibem apenas o primeiro nome no cadastro da partida.",
+    min_version: 82
   });
 });
 

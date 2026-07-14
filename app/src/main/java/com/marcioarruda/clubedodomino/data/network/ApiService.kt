@@ -203,9 +203,6 @@ interface ApiService {
     @POST("webhook/stack-trace")
     suspend fun sendStackTrace(@Body request: StackTraceRequest): retrofit2.Response<Unit>
 
-    @GET("webhook/checar-atualizacao")
-    suspend fun checkUpdate(): UpdateInfo
-
     @POST("webhook/estatisticas-globais")
     suspend fun triggerTaxasExtras(@Body body: Map<String, String> = emptyMap()): retrofit2.Response<Unit>
 

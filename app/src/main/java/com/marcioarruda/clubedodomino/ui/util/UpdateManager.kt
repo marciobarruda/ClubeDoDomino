@@ -21,34 +21,15 @@ import java.io.File
 
 class UpdateManager(private val context: Context) {
 
-    private val fallbackVersionUrl = "https://marciobarruda.github.io/ClubeDoDomino/version.json"
-
     fun checkForUpdate(onUpdateAvailable: (url: String, notes: String, isMandatory: Boolean) -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Verificando atualizações...", Toast.LENGTH_SHORT).show()
-                }
-
-                val updateInfo = try {
-                    RetrofitClient.instance.checkUpdate()
-                } catch (primary: Exception) {
-                    primary.printStackTrace()
-                    fetchFallbackVersionInfo() ?: throw primary
-                }
-
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Local v${BuildConfig.VERSION_CODE} | Server v${updateInfo.versionCode}", Toast.LENGTH_SHORT).show()
-                }
+                val updateInfo = fetchLatestVersionInfo() ?: return@launch
 
                 if (updateInfo.versionCode > BuildConfig.VERSION_CODE) {
                     val isMandatory = (updateInfo.minVersionCode ?: 0) > BuildConfig.VERSION_CODE
                     withContext(Dispatchers.Main) {
                         onUpdateAvailable(updateInfo.apkUrl, updateInfo.releaseNotes ?: "Nova versão disponível!", isMandatory)
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "App atualizado (v${BuildConfig.VERSION_CODE})", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
@@ -59,16 +40,20 @@ class UpdateManager(private val context: Context) {
         }
     }
 
-    private fun fetchFallbackVersionInfo(): UpdateInfo? {
-        return try {
-            val client = okhttp3.OkHttpClient()
-            val request = okhttp3.Request.Builder().url(fallbackVersionUrl).build()
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return null
-            val body = response.body?.string() ?: return null
-            Gson().fromJson(body, UpdateInfo::class.java)
-        } catch (e: Exception) {
-            null
+    companion object {
+        private const val VERSION_URL = "https://marciobarruda.github.io/ClubeDoDomino/version.json"
+
+        suspend fun fetchLatestVersionInfo(): UpdateInfo? = withContext(Dispatchers.IO) {
+            try {
+                val client = okhttp3.OkHttpClient()
+                val request = okhttp3.Request.Builder().url(VERSION_URL).build()
+                val response = client.newCall(request).execute()
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
+                Gson().fromJson(body, UpdateInfo::class.java)
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 

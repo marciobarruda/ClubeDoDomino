@@ -238,11 +238,11 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
 
     LaunchedEffect(showReleaseNotes) {
         if (showReleaseNotes && releaseInfo == null) {
-            try {
-                val info = com.marcioarruda.clubedodomino.data.network.RetrofitClient.instance.checkUpdate()
-                releaseInfo = Triple(com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME, info.versionName ?: info.versionCode.toString(), info.releaseNotes ?: "")
-            } catch (e: Exception) {
-                releaseInfo = Triple(com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME, "Indisponível", "Erro ao buscar notas.")
+            val info = com.marcioarruda.clubedodomino.ui.util.UpdateManager.fetchLatestVersionInfo()
+            releaseInfo = if (info != null) {
+                Triple(com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME, info.versionName ?: info.versionCode.toString(), info.releaseNotes ?: "")
+            } else {
+                Triple(com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME, "Indisponível", "Erro ao buscar notas.")
             }
         }
     }
