@@ -288,9 +288,16 @@ fun PlayerDropdown(
     var expanded by remember { mutableStateOf(false) }
     var filterText by remember(selectedPlayer) { mutableStateOf(selectedPlayer?.displayName ?: "") }
 
+    // Exibição: quando não está sendo filtrado/editado, mostra apenas o primeiro nome para evitar quebra de linha.
+    val displayText = if (!expanded && filterText == (selectedPlayer?.displayName ?: "")) {
+        selectedPlayer?.displayName?.substringBefore(" ") ?: filterText
+    } else {
+        filterText
+    }
+
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (enabled) expanded = !expanded }, modifier = modifier) {
         TextField(
-            value = filterText,
+            value = displayText,
             onValueChange = { if (enabled) { filterText = it; expanded = true } },
             modifier = Modifier.menuAnchor(),
             enabled = enabled,

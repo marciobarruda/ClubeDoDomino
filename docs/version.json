@@ -1,7 +1,7 @@
 {
-  "version_code": 81,
-  "version_name": "1.46",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v81/clube_v_81.apk",
-  "release_notes": "* v81: Adicionado registro de fechas no módulo de Partidas. Ao bater com fechas acumuladas, escolha o tipo de batida (Simples, Carroça, Lá e Lô ou Cruzada) para somar a pontuação ao placar da dupla vencedora. Avatar do Geraldo corrigido (camisa Santa Cruz).",
+  "version_code": 82,
+  "version_name": "1.47",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v82/clube_v_82.apk",
+  "release_notes": "* v82: Corrigido bypass de horário para partidas já ativas (botão de salvar não some mais após as 14h quando a partida foi confirmada antes do fechamento). Nomes compostos de jogadores agora exibem apenas o primeiro nome no cadastro da partida, evitando quebra de linha.",
   "min_version": 78
 }

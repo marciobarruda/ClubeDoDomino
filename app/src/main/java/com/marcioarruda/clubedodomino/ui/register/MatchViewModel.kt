@@ -101,8 +101,11 @@ class MatchViewModel(
         viewModelScope.launch {
             while (true) {
                 val context = com.marcioarruda.clubedodomino.DominoClubApplication.instance
-                if (_uiState.value.editingMatchId == null) {
-                    val available = matchAvailabilityManager.isModuleAvailable(context, currentUserName)
+                val currentState = _uiState.value
+                if (currentState.editingMatchId == null) {
+                    // Partida já confirmada como ativa localmente: libera sem depender de nova consulta ao banco.
+                    val available = currentState.isActiveMatchStarted ||
+                        matchAvailabilityManager.isModuleAvailable(context, currentUserName)
                     val remainingSeconds = matchAvailabilityManager.getRemainingSecondsToClose(context, currentUserName)
 
                     if (!available) {
@@ -117,7 +120,7 @@ class MatchViewModel(
                         }
                     } else {
                         _uiState.update { it.copy(
-                            error = null, 
+                            error = null,
                             isModuleAvailable = true,
                             remainingSecondsToClose = remainingSeconds
                         ) }
@@ -367,7 +370,10 @@ class MatchViewModel(
 
         viewModelScope.launch {
             try {
-                if (!matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)) {
+                // Partida já confirmada como ativa localmente: dispensa nova checagem de horário.
+                if (!state.isActiveMatchStarted &&
+                    !matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)
+                ) {
                     val diag = matchAvailabilityManager.getExtendedDiagnosticInfo(com.marcioarruda.clubedodomino.DominoClubApplication.instance)
                     _uiState.update { it.copy(isLoading = false, error = "MÓDULO BLOQUEADO\n$diag") }
                     return@launch
