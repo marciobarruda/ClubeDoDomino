@@ -1,7 +1,7 @@
 {
-  "version_code": 80,
-  "version_name": "1.45",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v80/clube_v_80.apk",
-  "release_notes": "* v80: Filtro de jogador na aba Buchos mantido após confirmar pagamento. Envio de bucho_ids no comprovante corrigido. PWA atualizado com novos avatares.",
+  "version_code": 81,
+  "version_name": "1.46",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v81/clube_v_81.apk",
+  "release_notes": "* v81: Adicionado registro de fechas no módulo de Partidas. Ao bater com fechas acumuladas, escolha o tipo de batida (Simples, Carroça, Lá e Lô ou Cruzada) para somar a pontuação ao placar da dupla vencedora. Avatar do Geraldo corrigido (camisa Santa Cruz).",
   "min_version": 78
 }

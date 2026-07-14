@@ -48,6 +48,36 @@ fun RegisterMatchScreen(
         }
     }
 
+    if (state.showBatidaDialogForTeam != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissBatidaDialog() },
+            containerColor = DominoSurface,
+            title = { Text("🎯 Tipo de Batida", color = DominoGreen, fontWeight = FontWeight.Black) },
+            text = {
+                Column {
+                    Text("Fechas acumuladas: ${state.fechas}", color = DominoLight)
+                    Spacer(Modifier.height(12.dp))
+                    TipoBatida.entries.forEach { tipo ->
+                        OutlinedButton(
+                            onClick = { viewModel.onBatidaSelected(tipo) },
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = DominoGreen),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("${tipo.label} (${tipo.pontos} ${if (tipo.pontos == 1) "ponto" else "pontos"})")
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                OutlinedButton(onClick = { viewModel.onDismissBatidaDialog() }, colors = ButtonDefaults.outlinedButtonColors(contentColor = DominoMuted), shape = RoundedCornerShape(12.dp)) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     if (state.showRepeatDialog) {
         AlertDialog(
             onDismissRequest = {},
@@ -298,30 +328,64 @@ private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewMo
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ScoreControl(
-                p1 = state.selectedPlayers[0],
-                p2 = state.selectedPlayers[1],
-                score = state.score1,
-                onScoreChange = { viewModel.onScoreChange(1, it) },
-                accentColor = DominoGreen,
-                modifier = Modifier.weight(1f),
-                enabled = enabled
-            )
-            Text("×", fontSize = 28.sp, color = DominoMuted, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp))
-            ScoreControl(
-                p1 = state.selectedPlayers[2],
-                p2 = state.selectedPlayers[3],
-                score = state.score2,
-                onScoreChange = { viewModel.onScoreChange(2, it) },
-                accentColor = DominoOrange,
-                modifier = Modifier.weight(1f),
-                enabled = enabled
-            )
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ScoreControl(
+                    p1 = state.selectedPlayers[0],
+                    p2 = state.selectedPlayers[1],
+                    score = state.score1,
+                    onDecrement = { viewModel.onScoreChange(1, (state.score1 - 1).coerceAtLeast(0)) },
+                    onIncrement = { viewModel.onScoreIncrement(1) },
+                    accentColor = DominoGreen,
+                    modifier = Modifier.weight(1f),
+                    enabled = enabled
+                )
+                Text("×", fontSize = 28.sp, color = DominoMuted, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp))
+                ScoreControl(
+                    p1 = state.selectedPlayers[2],
+                    p2 = state.selectedPlayers[3],
+                    score = state.score2,
+                    onDecrement = { viewModel.onScoreChange(2, (state.score2 - 1).coerceAtLeast(0)) },
+                    onIncrement = { viewModel.onScoreIncrement(2) },
+                    accentColor = DominoOrange,
+                    modifier = Modifier.weight(1f),
+                    enabled = enabled
+                )
+            }
+            HorizontalDivider(color = DominoGreen.copy(alpha = 0.2f))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Fechas:", color = DominoLight, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.width(12.dp))
+                IconButton(
+                    onClick = { viewModel.onFechasChange(state.fechas - 1) },
+                    enabled = enabled,
+                    modifier = Modifier.size(32.dp).background(if (enabled) DominoMuted.copy(alpha = 0.15f) else Color.Transparent, CircleShape)
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = "-", tint = if (enabled) DominoLight else DominoMuted, modifier = Modifier.size(16.dp))
+                }
+                Text(
+                    state.fechas.toString(),
+                    fontSize = 20.sp,
+                    color = DominoLight,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                IconButton(
+                    onClick = { viewModel.onFechasChange(state.fechas + 1) },
+                    enabled = enabled,
+                    modifier = Modifier.size(32.dp).background(if (enabled) DominoMuted.copy(alpha = 0.15f) else Color.Transparent, CircleShape)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "+", tint = if (enabled) DominoLight else DominoMuted, modifier = Modifier.size(16.dp))
+                }
+            }
         }
     }
 }
@@ -331,7 +395,8 @@ private fun ScoreControl(
     p1: User?,
     p2: User?,
     score: Int,
-    onScoreChange: (Int) -> Unit,
+    onDecrement: () -> Unit,
+    onIncrement: () -> Unit,
     accentColor: Color,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
@@ -390,7 +455,7 @@ private fun ScoreControl(
         )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(
-                onClick = { if (score > 0) onScoreChange(score - 1) },
+                onClick = { if (score > 0) onDecrement() },
                 enabled = enabled,
                 modifier = Modifier.size(36.dp).background(if (enabled) accentColor.copy(alpha = 0.12f) else Color.Transparent, CircleShape)
             ) {
@@ -403,7 +468,7 @@ private fun ScoreControl(
                 Text(score.toString(), fontSize = 36.sp, textAlign = TextAlign.Center, color = if (enabled) accentColor else DominoMuted, fontWeight = FontWeight.Black)
             }
             IconButton(
-                onClick = { onScoreChange(score + 1) },
+                onClick = onIncrement,
                 enabled = enabled,
                 modifier = Modifier.size(36.dp).background(if (enabled) accentColor.copy(alpha = 0.12f) else Color.Transparent, CircleShape)
             ) {

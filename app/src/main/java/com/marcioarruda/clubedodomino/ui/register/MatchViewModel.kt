@@ -21,11 +21,20 @@ import java.util.Locale
 import java.util.UUID
 import kotlin.math.abs
 
+enum class TipoBatida(val pontos: Int, val label: String) {
+    SIMPLES(1, "Simples"),
+    CARROCA(2, "Carroça"),
+    LA_E_LO(3, "Lá e Lô"),
+    CRUZADA(4, "Cruzada")
+}
+
 data class MatchRegistrationState(
     val availablePlayers: List<User> = emptyList(),
     val selectedPlayers: List<User?> = listOf(null, null, null, null),
     val score1: Int = 0,
     val score2: Int = 0,
+    val fechas: Int = 0,
+    val showBatidaDialogForTeam: Int? = null,
     val isBuchoRe: Boolean = false,
     val isBuchoReEnabled: Boolean = false,
     val showRepeatDialog: Boolean = false,
@@ -282,19 +291,48 @@ class MatchViewModel(
         _uiState.update {
             val s1 = if (team == 1) score else it.score1
             val s2 = if (team == 2) score else it.score2
-            
+
             // Regra 5: Bucho de Ré disponível apenas se um dos placares for 5 e o outro for maior
             val buchoReEnabled = (s1 == 5 && s2 > 5) || (s2 == 5 && s1 > 5)
             // Se desabilitar, desmarca
             val isBuchoRe = if (buchoReEnabled) it.isBuchoRe else false
 
             it.copy(
-                score1 = s1, 
-                score2 = s2, 
+                score1 = s1,
+                score2 = s2,
                 isBuchoReEnabled = buchoReEnabled,
                 isBuchoRe = isBuchoRe
             )
         }
+    }
+
+    fun onScoreIncrement(team: Int) {
+        val state = _uiState.value
+        if (state.fechas > 0) {
+            _uiState.update { it.copy(showBatidaDialogForTeam = team) }
+        } else {
+            val current = if (team == 1) state.score1 else state.score2
+            onScoreChange(team, current + 1)
+        }
+    }
+
+    fun onFechasChange(value: Int) {
+        _uiState.update { it.copy(fechas = if (value < 0) 0 else value) }
+    }
+
+    fun onBatidaSelected(tipo: TipoBatida) {
+        val state = _uiState.value
+        val team = state.showBatidaDialogForTeam ?: return
+        val ganho = state.fechas + tipo.pontos
+        val novoScore1 = if (team == 1) state.score1 + ganho else state.score1
+        val novoScore2 = if (team == 2) state.score2 + ganho else state.score2
+
+        _uiState.update { it.copy(showBatidaDialogForTeam = null, fechas = 0) }
+        onScoreChange(if (team == 1) 1 else 2, if (team == 1) novoScore1 else novoScore2)
+    }
+
+    fun onDismissBatidaDialog() {
+        _uiState.update { it.copy(showBatidaDialogForTeam = null) }
     }
 
     fun onBuchoReChanged(isBuchoRe: Boolean) {
@@ -465,6 +503,7 @@ class MatchViewModel(
                         showRepeatDialog = false,
                         score1 = 0,
                         score2 = 0,
+                        fechas = 0,
                         isBuchoRe = false,
                         isBuchoReEnabled = false,
                         success = false
@@ -475,6 +514,7 @@ class MatchViewModel(
                         selectedPlayers = listOf(null, null, null, null),
                         score1 = 0,
                         score2 = 0,
+                        fechas = 0,
                         isBuchoRe = false,
                         isBuchoReEnabled = false,
                         success = true
@@ -572,6 +612,7 @@ class MatchViewModel(
                             activeMatchId = null,
                             score1 = 0,
                             score2 = 0,
+                            fechas = 0,
                             isBuchoRe = false,
                             isBuchoReEnabled = false,
                             selectedPlayers = listOf(null, null, null, null)
