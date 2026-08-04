@@ -76,20 +76,46 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 val allPlayers = repository.getPlayers()
 
                 rankingResult.onSuccess { ranking ->
-                    val playedToday = ranking.filter { it.partidas_dia > 0 && !it.jogador.contains("NÃO MEMBRO", ignoreCase = true) }
-                    
-                    if (playedToday.isNotEmpty()) {
-                        val maxPoints = playedToday.maxOf { it.pontos_dia }
-                        val minPoints = playedToday.minOf { it.pontos_dia }
+                    // Só concorre ao destaque do dia quem jogou pelo menos 2 partidas —
+                    // evita que 1 partida isolada (vitória ou derrota) decida o prêmio.
+                    val eligibleToday = ranking.filter { it.partidas_dia >= 2 && !it.jogador.contains("NÃO MEMBRO", ignoreCase = true) }
 
-                        topPlayers = playedToday.filter { it.pontos_dia == maxPoints }.mapNotNull { r ->
-                            val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
-                            playerUser?.let { BestPlayer(it, r.pontos_dia) }
+                    if (eligibleToday.isNotEmpty()) {
+                        fun winRate(r: com.marcioarruda.clubedodomino.data.network.RankingDto) =
+                            r.vitorias_dia.toDouble() / r.partidas_dia
+
+                        // Craque do dia: maior taxa de aproveitamento; empate desempatado por mais pontos.
+                        val bestRanked = eligibleToday.sortedWith(
+                            compareByDescending<com.marcioarruda.clubedodomino.data.network.RankingDto> { winRate(it) }
+                                .thenByDescending { it.pontos_dia }
+                        )
+                        val bestTop = bestRanked.first()
+                        val bestTied = bestRanked.filter {
+                            winRate(it) == winRate(bestTop) && it.pontos_dia == bestTop.pontos_dia
                         }
-                        
-                        bottomPlayers = playedToday.filter { it.pontos_dia == minPoints }.mapNotNull { r ->
+
+                        // Piorzinho do dia: menor taxa de aproveitamento; empate desempatado por mais
+                        // derrotas (pior sequência) e depois por menos pontos.
+                        val worstRanked = eligibleToday.sortedWith(
+                            compareBy<com.marcioarruda.clubedodomino.data.network.RankingDto> { winRate(it) }
+                                .thenByDescending { it.derrotas_dia }
+                                .thenBy { it.pontos_dia }
+                        )
+                        val worstTop = worstRanked.first()
+                        val worstTied = worstRanked.filter {
+                            winRate(it) == winRate(worstTop) &&
+                                it.derrotas_dia == worstTop.derrotas_dia &&
+                                it.pontos_dia == worstTop.pontos_dia
+                        }
+
+                        topPlayers = bestTied.mapNotNull { r ->
                             val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
-                            playerUser?.let { BestPlayer(it, r.pontos_dia) }
+                            playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia) }
+                        }
+
+                        bottomPlayers = worstTied.mapNotNull { r ->
+                            val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
+                            playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia) }
                         }
                     }
                 }

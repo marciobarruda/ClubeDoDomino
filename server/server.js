@@ -4,6 +4,7 @@ const cors = require('cors');
 const mysql = require('mysql2/promise');
 const axios = require('axios');
 const bcrypt = require('bcryptjs');
+const cron = require('node-cron');
 
 const BCRYPT_ROUNDS = 10;
 
@@ -75,6 +76,48 @@ const getMatchDateParts = (dataStr) => {
   }
   if (isNaN(date.getTime())) return null;
   return getSaoPauloDateParts(date);
+};
+
+// Gera a mensalidade do mês corrente para todos os jogadores ativos (exceto os de férias e o "não membro"),
+// caso ainda não exista. Idempotente — pode ser chamada no cron mensal e também no boot do servidor
+// para cobrir o caso do processo estar fora do ar exatamente na virada do mês.
+const gerarMensalidadesDoMesAtual = async () => {
+  const { year, month } = getSaoPauloDateParts();
+  const mesReferencia = `${year}-${String(month).padStart(2, '0')}-01`;
+
+  try {
+    const [jogadores] = await pool.query(
+      "SELECT jogador FROM jogadores WHERE (ativo IS NULL OR ativo = 1) AND (ferias IS NULL OR ferias = 0) AND jogador NOT LIKE '%NÃO MEMBRO%'"
+    );
+
+    if (jogadores.length === 0) return;
+
+    const [existentes] = await pool.query(
+      'SELECT jogador FROM mensalidades WHERE mensalidade = ?',
+      [mesReferencia]
+    );
+    const jaGerados = new Set(existentes.map(r => (r.jogador || '').trim().toUpperCase()));
+
+    const pendentes = jogadores
+      .map(r => (r.jogador || '').trim())
+      .filter(nome => nome && !jaGerados.has(nome.toUpperCase()));
+
+    if (pendentes.length === 0) {
+      console.log(`ℹ️ Mensalidades de ${mesReferencia} já geradas para todos os jogadores ativos.`);
+      return;
+    }
+
+    for (const jogador of pendentes) {
+      await pool.query(
+        "INSERT INTO mensalidades (mensalidade, jogador, pago) VALUES (?, ?, 'false')",
+        [mesReferencia, jogador]
+      );
+    }
+
+    console.log(`✅ Mensalidades de ${mesReferencia} geradas para ${pendentes.length} jogador(es): ${pendentes.join(', ')}`);
+  } catch (error) {
+    console.error('❌ Erro ao gerar mensalidades automáticas do mês:', error.message);
+  }
 };
 
 // 1. POST /webhook/login
@@ -387,6 +430,8 @@ app.get('/webhook/listar-ranking', async (req, res) => {
             jogador,
             partidas_dia: 0,
             pontos_dia: 0,
+            vitorias_dia: 0,
+            derrotas_dia: 0,
             partidas_mes: 0,
             pontos_mes: 0,
             partidas_ano: 0,
@@ -394,21 +439,25 @@ app.get('/webhook/listar-ranking', async (req, res) => {
           };
         }
         const s = playersStats[jogador];
+        const isWinner = winners.includes(jogador);
 
         if (mParts.year === todayParts.year) {
           s.partidas_ano++;
-          if (winners.includes(jogador)) {
+          if (isWinner) {
             s.pontos_ano += pontos;
           }
           if (mParts.month === todayParts.month) {
             s.partidas_mes++;
-            if (winners.includes(jogador)) {
+            if (isWinner) {
               s.pontos_mes += pontos;
             }
             if (mParts.day === todayParts.day) {
               s.partidas_dia++;
-              if (winners.includes(jogador)) {
+              if (isWinner) {
                 s.pontos_dia += pontos;
+                s.vitorias_dia++;
+              } else {
+                s.derrotas_dia++;
               }
             }
           }
@@ -485,7 +534,17 @@ app.get('/webhook/checar-atualizacao', async (req, res) => {
   }
 });
 
+// Cron: todo dia 1º às 00:05 (horário de Recife/São Paulo), gera a mensalidade
+// do mês corrente para todos os jogadores ativos, exceto o "não membro".
+cron.schedule('5 0 1 * *', gerarMensalidadesDoMesAtual, {
+  timezone: 'America/Sao_Paulo'
+});
+
 // Inicialização do servidor
 app.listen(port, () => {
   console.log(`🚀 Servidor rodando na porta ${port}`);
+  // Checagem de segurança no boot: cobre o caso do servidor estar fora do ar
+  // exatamente na virada do mês, garantindo que a mensalidade do mês corrente
+  // seja gerada assim que o processo voltar a subir.
+  gerarMensalidadesDoMesAtual();
 });

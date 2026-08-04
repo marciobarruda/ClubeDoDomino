@@ -461,7 +461,8 @@ class ClubRepository {
             var buchos_aplicados_dia: Int = 0, var buchos_sofridos_dia: Int = 0,
             var buchos_aplicados_mes: Int = 0, var buchos_sofridos_mes: Int = 0,
             var buchos_aplicados_ano: Int = 0, var buchos_sofridos_ano: Int = 0,
-            var vitorias_ano: Int = 0, var derrotas_ano: Int = 0
+            var vitorias_ano: Int = 0, var derrotas_ano: Int = 0,
+            var vitorias_dia: Int = 0, var derrotas_dia: Int = 0
         )
         // Brazilian Timezone
         val tz = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
@@ -530,6 +531,9 @@ class ClubRepository {
                             s.partidas_dia++
                             if (isWinner) {
                                 s.pontos_dia += pontos
+                                s.vitorias_dia++
+                            } else {
+                                s.derrotas_dia++
                             }
                             if (isBucho) {
                                 if (isWinner) s.buchos_aplicados_dia++ else s.buchos_sofridos_dia++
@@ -556,7 +560,9 @@ class ClubRepository {
                 buchos_aplicados_ano = s.buchos_aplicados_ano,
                 buchos_sofridos_ano = s.buchos_sofridos_ano,
                 vitorias_ano = s.vitorias_ano,
-                derrotas_ano = s.derrotas_ano
+                derrotas_ano = s.derrotas_ano,
+                vitorias_dia = s.vitorias_dia,
+                derrotas_dia = s.derrotas_dia
             )
         }.sortedByDescending { it.pontos_ano }
     }

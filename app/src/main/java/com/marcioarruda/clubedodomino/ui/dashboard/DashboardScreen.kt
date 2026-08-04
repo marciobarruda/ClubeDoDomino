@@ -442,7 +442,9 @@ private fun AwardSection(title: String, players: List<BestPlayer>, nameColor: Co
         val names = players.joinToString(", ") { it.player.name.split(" ").first() }
         Text(names, color = nameColor, fontWeight = FontWeight.Black, fontSize = 18.sp)
         if (players.isNotEmpty()) {
-            Text("${players[0].points} pontos hoje", color = pointsColor, fontSize = 12.sp)
+            val p = players[0]
+            val winRatePct = (p.winRate * 100).toInt()
+            Text("$winRatePct% aproveitamento (${p.wins}/${p.matches}) · ${p.points} pontos hoje", color = pointsColor, fontSize = 12.sp)
         }
     }
 }

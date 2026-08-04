@@ -1,7 +1,7 @@
 {
-  "version_code": 84,
-  "version_name": "1.49",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v84/clube_v_84.apk",
-  "release_notes": "* v84: Novo tema visual de clube de dominó — troca das imagens de fundo (login, dashboard, finanças, ranking) e nova imagem para o cadastro de partidas, removendo referências à Copa do Mundo/futebol. Emojis de troféu substituídos por peças de dominó.",
+  "version_code": 85,
+  "version_name": "1.50",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v85/clube_v_85.apk",
+  "release_notes": "* v85: Corrigido cálculo de Craque do Dia/Piorzinho no dashboard — agora considera taxa de aproveitamento (vitórias/partidas), não apenas pontos acumulados, exigindo ao menos 2 partidas no dia para concorrer. Geração de mensalidades passou a rodar automaticamente no servidor todo início de mês para todos os jogadores ativos, sem depender de abrir o app.",
   "min_version": 82
 }
