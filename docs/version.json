@@ -1,7 +1,7 @@
 {
-  "version_code": 86,
-  "version_name": "1.51",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v86/clube_v_86.apk",
-  "release_notes": "* v86: Novo módulo de Administração permite ao Márcio trocar a senha do banco de dados diretamente pelo app (com confirmação da senha de login). Todo o acesso ao banco que antes era feito direto pelo celular via JDBC (incluindo login, cadastro de jogador e partidas) agora passa pelo servidor, removendo a senha do banco de dentro do APK. Corrigido login que havia parado de funcionar durante a migração.",
+  "version_code": 87,
+  "version_name": "1.52",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v87/clube_v_87.apk",
+  "release_notes": "* v87: Adicionado modo de recuperação na tela de login (\"Não consigo entrar / erro do servidor\") para corrigir a senha do banco de dados usada pelo servidor sem depender de conseguir logar antes — útil quando a senha do banco muda por fora do app.",
   "min_version": 82
 }

@@ -96,6 +96,16 @@ class ClubRepository {
         }
     }
 
+    // Rota de emergência: não exige login, apenas a chave de administração do servidor.
+    // Usada quando a senha do banco em uso pelo servidor está desalinhada da senha real,
+    // a ponto do login (que também depende do banco) estar quebrado.
+    suspend fun emergencyUpdateDbPassword(adminKey: String, novaSenha: String): Unit = withContext(Dispatchers.IO) {
+        val response = api.emergencyUpdateDbPassword(adminKey, EmergencyUpdateDbPasswordRequest(novaSenha))
+        if (!response.status.equals("success", ignoreCase = true)) {
+            throw Exception(response.message ?: "Falha ao atualizar a senha do banco de dados.")
+        }
+    }
+
     // ─── Matches ──────────────────────────────────────────────────────────
 
     suspend fun getMatchesCountToday(): Int {

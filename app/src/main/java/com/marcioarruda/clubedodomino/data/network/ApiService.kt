@@ -9,6 +9,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.PUT
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -51,6 +52,10 @@ data class ActiveMatchDto(
 data class UpdateDbPasswordRequest(
     val email: String,
     val senhaLogin: String,
+    val novaSenha: String
+)
+
+data class EmergencyUpdateDbPasswordRequest(
     val novaSenha: String
 )
 
@@ -265,6 +270,14 @@ interface ApiService {
 
     @POST("webhook/admin/atualizar-senha-db")
     suspend fun updateDbPassword(@Body request: UpdateDbPasswordRequest): SimpleStatusResponse
+
+    // Rota de emergência: corrige a senha do banco usada pelo servidor sem exigir login —
+    // usada quando a senha está desalinhada a ponto do login em si estar quebrado.
+    @POST("webhook/admin/emergencia/atualizar-senha-db")
+    suspend fun emergencyUpdateDbPassword(
+        @Header("X-Admin-Key") adminKey: String,
+        @Body request: EmergencyUpdateDbPasswordRequest
+    ): SimpleStatusResponse
 
     @POST("webhook/stack-trace")
     suspend fun sendStackTrace(@Body request: StackTraceRequest): retrofit2.Response<Unit>

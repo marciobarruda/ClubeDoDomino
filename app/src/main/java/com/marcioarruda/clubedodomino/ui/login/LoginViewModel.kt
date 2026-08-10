@@ -21,6 +21,9 @@ class LoginViewModel(
     private val _resetPasswordState = MutableStateFlow<ResetPasswordState>(ResetPasswordState.Idle)
     val resetPasswordState: StateFlow<ResetPasswordState> = _resetPasswordState.asStateFlow()
 
+    private val _dbRecoveryState = MutableStateFlow<DbRecoveryState>(DbRecoveryState.Idle)
+    val dbRecoveryState: StateFlow<DbRecoveryState> = _dbRecoveryState.asStateFlow()
+
     fun login(email: String, pass: String) {
         _loginState.value = LoginUiState.Loading
         viewModelScope.launch {
@@ -63,6 +66,22 @@ class LoginViewModel(
     fun clearResetState() {
         _resetPasswordState.value = ResetPasswordState.Idle
     }
+
+    fun emergencyUpdateDbPassword(adminKey: String, novaSenha: String) {
+        _dbRecoveryState.value = DbRecoveryState.Loading
+        viewModelScope.launch {
+            try {
+                repository.emergencyUpdateDbPassword(adminKey.trim(), novaSenha.trim())
+                _dbRecoveryState.value = DbRecoveryState.Success
+            } catch (e: Exception) {
+                _dbRecoveryState.value = DbRecoveryState.Error("Erro ao corrigir senha do banco: ${e.message}")
+            }
+        }
+    }
+
+    fun clearDbRecoveryState() {
+        _dbRecoveryState.value = DbRecoveryState.Idle
+    }
 }
 
 sealed class LoginUiState {
@@ -77,4 +96,11 @@ sealed class ResetPasswordState {
     object Loading : ResetPasswordState()
     object Success : ResetPasswordState()
     data class Error(val message: String) : ResetPasswordState()
+}
+
+sealed class DbRecoveryState {
+    object Idle : DbRecoveryState()
+    object Loading : DbRecoveryState()
+    object Success : DbRecoveryState()
+    data class Error(val message: String) : DbRecoveryState()
 }

@@ -35,11 +35,14 @@ import com.marcioarruda.clubedodomino.ui.theme.*
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
+private enum class LoginScreenMode { LOGIN, RESET_PASSWORD, DB_RECOVERY }
+
 @Composable
 fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = viewModel()) {
     val loginState by loginViewModel.loginState.collectAsState()
     val resetState by loginViewModel.resetPasswordState.collectAsState()
-    var isResetPasswordMode by remember { mutableStateOf(false) }
+    val dbRecoveryState by loginViewModel.dbRecoveryState.collectAsState()
+    var screenMode by remember { mutableStateOf(LoginScreenMode.LOGIN) }
 
     LaunchedEffect(loginState) {
         if (loginState is LoginUiState.Success) {
@@ -135,20 +138,28 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(Modifier.padding(24.dp)) {
-                    if (isResetPasswordMode) {
-                        ResetPasswordForm(
+                    when (screenMode) {
+                        LoginScreenMode.RESET_PASSWORD -> ResetPasswordForm(
                             resetState = resetState,
                             onReset = { email, pass -> loginViewModel.resetPassword(email, pass) },
                             onCancel = {
-                                isResetPasswordMode = false
+                                screenMode = LoginScreenMode.LOGIN
                                 loginViewModel.clearResetState()
                             }
                         )
-                    } else {
-                        LoginForm(
+                        LoginScreenMode.DB_RECOVERY -> DbRecoveryForm(
+                            recoveryState = dbRecoveryState,
+                            onRecover = { adminKey, novaSenha -> loginViewModel.emergencyUpdateDbPassword(adminKey, novaSenha) },
+                            onCancel = {
+                                screenMode = LoginScreenMode.LOGIN
+                                loginViewModel.clearDbRecoveryState()
+                            }
+                        )
+                        LoginScreenMode.LOGIN -> LoginForm(
                             loginState = loginState,
                             onLogin = { email, pass -> loginViewModel.login(email, pass) },
-                            onForgotPassword = { isResetPasswordMode = true }
+                            onForgotPassword = { screenMode = LoginScreenMode.RESET_PASSWORD },
+                            onServerIssue = { screenMode = LoginScreenMode.DB_RECOVERY }
                         )
                     }
                 }
@@ -159,7 +170,12 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
 }
 
 @Composable
-fun LoginForm(loginState: LoginUiState, onLogin: (String, String) -> Unit, onForgotPassword: () -> Unit) {
+fun LoginForm(
+    loginState: LoginUiState,
+    onLogin: (String, String) -> Unit,
+    onForgotPassword: () -> Unit,
+    onServerIssue: () -> Unit
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val emailRegex = Regex("[a-zA-Z0-9@._\\-+]")
@@ -227,6 +243,9 @@ fun LoginForm(loginState: LoginUiState, onLogin: (String, String) -> Unit, onFor
     TextButton(onClick = onForgotPassword, modifier = Modifier.fillMaxWidth()) {
         Text("Esqueci a senha", color = DominoMuted)
     }
+    TextButton(onClick = onServerIssue, modifier = Modifier.fillMaxWidth()) {
+        Text("Não consigo entrar / erro do servidor", color = DominoMuted, fontSize = 12.sp)
+    }
 }
 
 @Composable
@@ -279,6 +298,98 @@ fun ResetPasswordForm(resetState: ResetPasswordState, onReset: (String, String) 
         ) {
             if (resetState is ResetPasswordState.Loading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.Black)
             else Text("Atualizar Senha", color = Color.Black, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Cancelar", color = DominoMuted) }
+    }
+}
+
+@Composable
+fun DbRecoveryForm(
+    recoveryState: DbRecoveryState,
+    onRecover: (adminKey: String, novaSenha: String) -> Unit,
+    onCancel: () -> Unit
+) {
+    var adminKey by remember { mutableStateOf("") }
+    var novaSenha by remember { mutableStateOf("") }
+    var confirmarSenha by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = DominoGreen,
+        unfocusedBorderColor = DominoMuted.copy(alpha = 0.4f),
+        focusedLabelColor = DominoGreen,
+        focusedTextColor = DominoLight,
+        unfocusedTextColor = DominoLight,
+        cursorColor = DominoGreen
+    )
+
+    Text("Corrigir Senha do Banco de Dados", style = MaterialTheme.typography.titleLarge, color = DominoLight, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(12.dp))
+    Text(
+        "Use esta opção apenas se o login estiver falhando por erro do servidor (senha do banco de " +
+        "dados desalinhada). Exige a chave de administração do servidor — não é a senha do seu login.",
+        color = DominoMuted,
+        fontSize = 12.sp
+    )
+    Spacer(Modifier.height(20.dp))
+
+    OutlinedTextField(
+        value = adminKey,
+        onValueChange = { adminKey = it },
+        label = { Text("Chave de administração do servidor") },
+        visualTransformation = PasswordVisualTransformation(),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        colors = fieldColors
+    )
+    Spacer(Modifier.height(12.dp))
+    OutlinedTextField(
+        value = novaSenha,
+        onValueChange = { novaSenha = it },
+        label = { Text("Senha correta do banco de dados") },
+        visualTransformation = PasswordVisualTransformation(),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        colors = fieldColors
+    )
+    Spacer(Modifier.height(12.dp))
+    OutlinedTextField(
+        value = confirmarSenha,
+        onValueChange = { confirmarSenha = it },
+        label = { Text("Confirmar senha do banco de dados") },
+        visualTransformation = PasswordVisualTransformation(),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        colors = fieldColors
+    )
+    Spacer(Modifier.height(20.dp))
+
+    errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp)) }
+    if (recoveryState is DbRecoveryState.Error) Text(recoveryState.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
+
+    if (recoveryState is DbRecoveryState.Success) {
+        Text("Senha do banco corrigida com sucesso! Já pode tentar fazer login normalmente.", color = DominoGreen, modifier = Modifier.padding(bottom = 8.dp))
+        Button(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)) {
+            Text("Voltar ao Login", color = Color.Black, fontWeight = FontWeight.Bold)
+        }
+    } else {
+        Button(
+            onClick = {
+                when {
+                    adminKey.isBlank() -> errorMessage = "Informe a chave de administração."
+                    novaSenha != confirmarSenha -> errorMessage = "As senhas não coincidem."
+                    novaSenha.isBlank() -> errorMessage = "A senha não pode ser vazia."
+                    else -> { errorMessage = null; onRecover(adminKey, novaSenha) }
+                }
+            },
+            enabled = recoveryState !is DbRecoveryState.Loading,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)
+        ) {
+            if (recoveryState is DbRecoveryState.Loading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.Black)
+            else Text("Corrigir Senha", color = Color.Black, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Cancelar", color = DominoMuted) }

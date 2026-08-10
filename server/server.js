@@ -812,11 +812,51 @@ app.delete('/webhook/partidas-em-andamento/:id', async (req, res) => {
   }
 });
 
+// Testa a nova senha em um pool isolado e, se funcionar, substitui o pool ativo e persiste
+// em disco. Lança se a nova senha não conseguir conectar — nesse caso nada é alterado.
+const aplicarNovaSenhaDb = async (novaSenha) => {
+  let testPool;
+  try {
+    testPool = mysql.createPool({
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT) || 3306,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: novaSenha,
+      waitForConnections: true,
+      connectionLimit: 1,
+      queueLimit: 0
+    });
+    const testConn = await testPool.getConnection();
+    testConn.release();
+  } catch (error) {
+    throw new Error('Não foi possível conectar ao MySQL com a nova senha. Nenhuma alteração foi aplicada.');
+  } finally {
+    if (testPool) await testPool.end().catch(() => {});
+  }
+
+  persistDbPassword(novaSenha);
+
+  const oldPool = pool;
+  pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT) || 3306,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: novaSenha,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  });
+  currentDbPassword = novaSenha;
+  await oldPool.end().catch(() => {});
+};
+
 // 15. POST /webhook/admin/atualizar-senha-db
-// Permite que apenas o e-mail autorizado (Márcio) troque a senha de acesso ao MySQL usada pelo
+// Permite que apenas o e-mail autorizado troque a senha de acesso ao MySQL usada pelo
 // servidor, mediante confirmação da própria senha de login (mesma validação do /webhook/login).
-// Testa a nova senha antes de aplicar, recria o pool de conexão em memória e persiste em disco
-// para sobreviver a restarts do processo.
+// Depende do login funcionar — se a senha do banco já estiver desalinhada a ponto do login
+// falhar, use a rota de emergência abaixo.
 app.post('/webhook/admin/atualizar-senha-db', async (req, res) => {
   const { email, senhaLogin, novaSenha } = req.body;
 
@@ -847,50 +887,45 @@ app.post('/webhook/admin/atualizar-senha-db', async (req, res) => {
     return res.status(500).json({ status: 'error', message: 'Erro ao validar credenciais.' });
   }
 
-  let testPool;
   try {
-    // Testa a nova senha em um pool isolado antes de afetar a conexão em uso.
-    testPool = mysql.createPool({
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT) || 3306,
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: novaSenha,
-      waitForConnections: true,
-      connectionLimit: 1,
-      queueLimit: 0
-    });
-    const testConn = await testPool.getConnection();
-    testConn.release();
-  } catch (error) {
-    console.error('Falha ao validar nova senha do banco:', error.message);
-    return res.status(400).json({ status: 'error', message: 'Não foi possível conectar ao MySQL com a nova senha. Nenhuma alteração foi aplicada.' });
-  } finally {
-    if (testPool) await testPool.end().catch(() => {});
-  }
-
-  try {
-    persistDbPassword(novaSenha);
-
-    const oldPool = pool;
-    pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT) || 3306,
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: novaSenha,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0
-    });
-    currentDbPassword = novaSenha;
-    await oldPool.end().catch(() => {});
-
+    await aplicarNovaSenhaDb(novaSenha);
     console.log(`✅ Senha de acesso ao MySQL atualizada por ${email.trim()}.`);
     res.json({ status: 'success', message: 'Senha do banco de dados atualizada com sucesso.' });
   } catch (error) {
-    console.error('Erro ao aplicar nova senha do banco:', error.message);
-    res.status(500).json({ status: 'error', message: 'Erro ao aplicar a nova senha.' });
+    console.error('Falha ao validar/aplicar nova senha do banco:', error.message);
+    res.status(400).json({ status: 'error', message: error.message });
+  }
+});
+
+// 15b. POST /webhook/admin/emergencia/atualizar-senha-db
+// Rota de emergência: usada quando a senha do banco em uso pelo servidor está desalinhada da
+// senha real (ex: alguém trocou a senha direto no MySQL) e o login parou de funcionar — nesse
+// cenário a rota acima é inacessível porque depende de autenticar contra a tabela `jogadores`,
+// que está inacessível. Esta rota não toca no banco para autenticar: exige apenas uma chave
+// secreta fixa, guardada à parte na variável de ambiente ADMIN_SECRET_KEY (nunca no app/APK).
+app.post('/webhook/admin/emergencia/atualizar-senha-db', async (req, res) => {
+  const adminKey = req.get('X-Admin-Key');
+  const { novaSenha } = req.body;
+
+  if (!process.env.ADMIN_SECRET_KEY) {
+    return res.status(503).json({ status: 'error', message: 'Rota de emergência não configurada no servidor (ADMIN_SECRET_KEY ausente).' });
+  }
+
+  if (!adminKey || adminKey !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(403).json({ status: 'error', message: 'Chave de administração inválida.' });
+  }
+
+  if (!novaSenha || novaSenha.trim().length < 4) {
+    return res.status(400).json({ status: 'error', message: 'A nova senha deve ter pelo menos 4 caracteres.' });
+  }
+
+  try {
+    await aplicarNovaSenhaDb(novaSenha);
+    console.log('✅ Senha de acesso ao MySQL atualizada via rota de emergência.');
+    res.json({ status: 'success', message: 'Senha do banco de dados atualizada com sucesso.' });
+  } catch (error) {
+    console.error('Falha ao validar/aplicar nova senha do banco (emergência):', error.message);
+    res.status(400).json({ status: 'error', message: error.message });
   }
 });
 
