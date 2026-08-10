@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -64,7 +65,19 @@ fun AdminScreen(
     var showReleaseNotes by remember { mutableStateOf(false) }
     var releaseInfo by remember { mutableStateOf<Triple<String, String, String>?>(null) } // Local, Server, Notes
     var showAddPlayerDialog by remember { mutableStateOf(false) }
+    var showDbPasswordDialog by remember { mutableStateOf(false) }
     var buchoPlayerFilter by remember { mutableStateOf("Todos os Jogadores") }
+
+    if (showDbPasswordDialog) {
+        UpdateDbPasswordDialog(
+            onDismiss = { showDbPasswordDialog = false },
+            onConfirm = { senhaLogin, novaSenha ->
+                viewModel.updateDbPassword(session?.userEmail ?: "", senhaLogin, novaSenha)
+                showDbPasswordDialog = false
+            },
+            isLoading = uiState.isUpdatingDbPassword
+        )
+    }
 
     if (showAddPlayerDialog) {
         AddPlayerDialog(
@@ -193,6 +206,15 @@ fun AdminScreen(
                         Icon(Icons.Default.PersonAdd, contentDescription = null, tint = DominoGreen)
                         Spacer(Modifier.width(8.dp))
                         Text("Cadastrar Novo Jogador", color = DominoGreen, fontWeight = FontWeight.SemiBold)
+                    }
+                    HorizontalDivider(color = Color(0xFF444444), modifier = Modifier.padding(horizontal = 16.dp))
+                    TextButton(
+                        onClick = { showDbPasswordDialog = true },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Storage, contentDescription = null, tint = DominoGold)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Alterar Senha do Banco de Dados", color = DominoGold, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -789,4 +811,101 @@ fun PlayersList(
             }
         }
     }
+}
+
+@Composable
+private fun UpdateDbPasswordDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (senhaLogin: String, novaSenha: String) -> Unit,
+    isLoading: Boolean
+) {
+    var senhaLogin by remember { mutableStateOf("") }
+    var novaSenha by remember { mutableStateOf("") }
+    var confirmarSenha by remember { mutableStateOf("") }
+
+    val senhasNaoConferem = confirmarSenha.isNotEmpty() && novaSenha != confirmarSenha
+    val senhaMuitoCurta = novaSenha.isNotEmpty() && novaSenha.length < 4
+    val podeConfirmar = senhaLogin.isNotBlank() && novaSenha.isNotBlank() && !senhasNaoConferem && !senhaMuitoCurta
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Alterar Senha do Banco de Dados", color = DominoGold) },
+        text = {
+            Column {
+                Text(
+                    "Esta é a senha de acesso ao MySQL usada pelo servidor. Confirme com sua senha de " +
+                    "login atual. Só é aplicada se a conexão com a nova senha for validada com sucesso.",
+                    color = DominoMuted,
+                    fontSize = 12.sp
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = senhaLogin,
+                    onValueChange = { senhaLogin = it },
+                    label = { Text("Sua senha de login", color = DominoMuted) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                    )
+                )
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(color = Color(0xFF444444))
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = novaSenha,
+                    onValueChange = { novaSenha = it },
+                    label = { Text("Nova senha do banco", color = DominoMuted) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = senhaMuitoCurta,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                    )
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = confirmarSenha,
+                    onValueChange = { confirmarSenha = it },
+                    label = { Text("Confirmar nova senha do banco", color = DominoMuted) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = senhasNaoConferem,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
+                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                    )
+                )
+                if (senhasNaoConferem) {
+                    Text("As senhas não conferem.", color = Color(0xFFE57373), fontSize = 11.sp)
+                } else if (senhaMuitoCurta) {
+                    Text("A senha deve ter pelo menos 4 caracteres.", color = Color(0xFFE57373), fontSize = 11.sp)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(senhaLogin, novaSenha) },
+                enabled = podeConfirmar && !isLoading,
+                colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                } else {
+                    Text("Atualizar", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = DominoMuted) }
+        }
+    )
 }

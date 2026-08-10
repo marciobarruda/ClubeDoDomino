@@ -33,7 +33,8 @@ data class AdminUiState(
     val globalStats: GlobalStats? = null,
     val error: String? = null,
     val message: String? = null,
-    val isCreatingPlayer: Boolean = false
+    val isCreatingPlayer: Boolean = false,
+    val isUpdatingDbPassword: Boolean = false
 )
 
 data class AdminPlayerItem(
@@ -228,5 +229,21 @@ class AdminViewModel(
 
     fun dismissMessage() {
          _uiState.update { it.copy(message = null, error = null) }
+    }
+
+    fun updateDbPassword(requesterEmail: String, senhaLogin: String, novaSenha: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUpdatingDbPassword = true, error = null) }
+            try {
+                repository.updateDbPassword(requesterEmail, senhaLogin, novaSenha)
+                _uiState.update {
+                    it.copy(isUpdatingDbPassword = false, message = "Senha do banco de dados atualizada com sucesso.")
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isUpdatingDbPassword = false, error = "Erro ao atualizar senha do banco: ${e.message}")
+                }
+            }
+        }
     }
 }

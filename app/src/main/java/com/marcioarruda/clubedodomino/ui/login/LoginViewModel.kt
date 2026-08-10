@@ -28,7 +28,7 @@ class LoginViewModel(
                 val cleanEmail = email.trim()
                 val response = repository.login(cleanEmail, pass.trim())
 
-                if (response.status.equals("Login bem sucedido", ignoreCase = true)) {
+                if (response.status.equals("success", ignoreCase = true)) {
                     val players = repository.getPlayers()
                     val user = players.find { it.id.equals(cleanEmail, ignoreCase = true) }
 

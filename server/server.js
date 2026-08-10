@@ -5,8 +5,35 @@ const mysql = require('mysql2/promise');
 const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const cron = require('node-cron');
+const fs = require('fs');
+const path = require('path');
 
 const BCRYPT_ROUNDS = 10;
+
+// E-mail autorizado a trocar a senha de acesso ao MySQL pelo app (módulo Administração).
+const DB_PASSWORD_ADMIN_EMAIL = 'marciobarruda@recife.pe.gov.br';
+
+// Persistência local da senha do banco, para sobreviver a restarts do processo/container
+// (ex: crash recovery, `docker restart`). Um rebuild de imagem sem volume externo apaga este
+// arquivo — nesse caso o servidor volta a usar o DB_PASS do .env até a senha ser definida de novo.
+const DB_PASS_OVERRIDE_FILE = path.join(__dirname, '.db-pass-override.json');
+
+const readPersistedDbPassword = () => {
+  try {
+    const raw = fs.readFileSync(DB_PASS_OVERRIDE_FILE, 'utf8');
+    return JSON.parse(raw).password || null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const persistDbPassword = (password) => {
+  fs.writeFileSync(
+    DB_PASS_OVERRIDE_FILE,
+    JSON.stringify({ password, updatedAt: new Date().toISOString() }),
+    { mode: 0o600 }
+  );
+};
 
 // Verifica se a senha é um hash bcrypt (começa com $2b$ ou $2a$)
 const isBcryptHash = (s) => s && (s.startsWith('$2b$') || s.startsWith('$2a$'));
@@ -19,24 +46,38 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Pool de conexão com o MySQL
-const pool = mysql.createPool({
+let currentDbPassword = readPersistedDbPassword() || process.env.DB_PASS;
+
+// Pool de conexão com o MySQL — mutável para permitir troca de senha em runtime (ver /webhook/admin/atualizar-senha-db)
+let pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT) || 3306,
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
-  password: process.env.DB_PASS,
+  password: currentDbPassword,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
-// Testar conexão inicial com o banco de dados
+// Testar conexão inicial com o banco de dados e garantir tabelas auxiliares
 (async () => {
   try {
     const connection = await pool.getConnection();
     console.log('✅ Conexão com o banco de dados MySQL estabelecida com sucesso.');
     connection.release();
+
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS partidas_em_andamento (
+        id VARCHAR(50) PRIMARY KEY,
+        jogador1 VARCHAR(100) NOT NULL,
+        jogador2 VARCHAR(100) NOT NULL,
+        jogador3 VARCHAR(100) NOT NULL,
+        jogador4 VARCHAR(100) NOT NULL,
+        cadastrador VARCHAR(100) NOT NULL,
+        data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
   } catch (error) {
     console.error('❌ Falha ao conectar ao banco de dados MySQL:', error.message);
   }
@@ -191,18 +232,125 @@ app.post('/webhook/reset-password', async (req, res) => {
 // 2. GET /webhook/buscar-jogadores
 app.get('/webhook/buscar-jogadores', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT jogador, avatar, email, senha FROM jogadores');
-    // Normalizar retorno para o formato esperado pelo PWA
+    let rows;
+    try {
+      [rows] = await pool.query('SELECT jogador, avatar, email, senha, ativo, ferias FROM jogadores');
+    } catch (e) {
+      [rows] = await pool.query('SELECT jogador, avatar, email, senha FROM jogadores');
+    }
+    // Normalizar retorno para o formato esperado pelo app/PWA
     const players = rows.map(r => ({
       jogador: r.jogador ? r.jogador.trim() : '',
       avatar: r.avatar || '',
       email: r.email ? r.email.trim() : '',
-      senha: '' // nunca expor hash
+      senha: '', // nunca expor hash
+      ativo: r.ativo === undefined || r.ativo === null ? 1 : Number(r.ativo),
+      ferias: r.ferias === undefined || r.ferias === null ? 0 : Number(r.ferias)
     }));
     res.json(players);
   } catch (error) {
     console.error('Erro ao buscar jogadores:', error.message);
     res.status(500).json({ error: 'Erro ao buscar jogadores' });
+  }
+});
+
+// 2b. POST /webhook/jogador/ativo — ativa/inativa um jogador
+app.post('/webhook/jogador/ativo', async (req, res) => {
+  const { email, ativo } = req.body;
+  if (!email || typeof ativo === 'undefined') {
+    return res.status(400).json({ status: 'error', message: 'email e ativo são obrigatórios.' });
+  }
+  try {
+    await pool.query('UPDATE jogadores SET ativo = ? WHERE email = ?', [ativo ? 1 : 0, email.trim()]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao atualizar status ativo do jogador:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao atualizar jogador.' });
+  }
+});
+
+// 2c. POST /webhook/jogador/ferias — marca/desmarca jogador como de férias
+app.post('/webhook/jogador/ferias', async (req, res) => {
+  const { email, ferias } = req.body;
+  if (!email || typeof ferias === 'undefined') {
+    return res.status(400).json({ status: 'error', message: 'email e ferias são obrigatórios.' });
+  }
+  try {
+    await pool.query('UPDATE jogadores SET ferias = ? WHERE email = ?', [ferias ? 1 : 0, email.trim()]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao atualizar férias do jogador:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao atualizar jogador.' });
+  }
+});
+
+// 2d. POST /webhook/jogador/avatar — atualiza a foto de perfil (base64)
+app.post('/webhook/jogador/avatar', async (req, res) => {
+  const { email, avatar } = req.body;
+  if (!email || !avatar) {
+    return res.status(400).json({ status: 'error', message: 'email e avatar são obrigatórios.' });
+  }
+  try {
+    await pool.query('UPDATE jogadores SET avatar = ? WHERE email = ?', [avatar, email.trim()]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao atualizar avatar:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao atualizar avatar.' });
+  }
+});
+
+// Gera mensalidades retroativas para um jogador, do mês de início (startDate) até o mês anterior ao atual.
+const gerarMensalidadesRetroativas = async (playerName, startYear, startMonth) => {
+  const [existentesRows] = await pool.query(
+    'SELECT mensalidade FROM mensalidades WHERE jogador = ?',
+    [playerName]
+  );
+  const existentes = new Set(existentesRows.map(r => r.mensalidade));
+
+  const { year: anoAtual, month: mesAtual } = getSaoPauloDateParts();
+  // Limite: até o mês anterior ao atual (inclusive)
+  let limiteAno = anoAtual;
+  let limiteMes = mesAtual - 1;
+  if (limiteMes === 0) { limiteMes = 12; limiteAno -= 1; }
+
+  let cursorAno = startYear;
+  let cursorMes = startMonth;
+
+  while (cursorAno < limiteAno || (cursorAno === limiteAno && cursorMes <= limiteMes)) {
+    const dateStr = `${cursorAno}-${String(cursorMes).padStart(2, '0')}-01`;
+    if (!existentes.has(dateStr)) {
+      await pool.query(
+        "INSERT INTO mensalidades (mensalidade, jogador, pago) VALUES (?, ?, 'false')",
+        [dateStr, playerName]
+      );
+    }
+    cursorMes++;
+    if (cursorMes > 12) { cursorMes = 1; cursorAno += 1; }
+  }
+};
+
+// 2e. POST /webhook/criar-jogador — cadastra um novo jogador e gera mensalidades retroativas
+app.post('/webhook/criar-jogador', async (req, res) => {
+  const { name, email, password, avatarId, startYear, startMonth } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ status: 'error', message: 'name, email e password são obrigatórios.' });
+  }
+
+  try {
+    const hash = await bcrypt.hash(password.trim(), BCRYPT_ROUNDS);
+    await pool.query(
+      'INSERT INTO jogadores (jogador, avatar, email, senha, ativo, ferias) VALUES (?, ?, ?, ?, 1, 0)',
+      [name.trim(), avatarId || '', email.trim().toLowerCase(), hash]
+    );
+
+    if (startYear && startMonth) {
+      await gerarMensalidadesRetroativas(name.trim(), parseInt(startYear), parseInt(startMonth));
+    }
+
+    res.status(201).json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao criar jogador:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao criar jogador.' });
   }
 });
 
@@ -276,6 +424,62 @@ app.post('/webhook/partidas', async (req, res) => {
   }
 });
 
+// 4b. PUT /webhook/partidas/:id
+app.put('/webhook/partidas/:id', async (req, res) => {
+  const { id } = req.params;
+  const {
+    data,
+    jogador1,
+    jogador2,
+    jogador3,
+    jogador4,
+    scored1,
+    scored2,
+    buchore,
+    pts,
+    dupla_vencedora,
+    cadastrado_por
+  } = req.body;
+
+  try {
+    await pool.query(
+      `UPDATE partidas SET data=?, jogador1=?, jogador2=?, jogador3=?, jogador4=?,
+       scored1=?, scored2=?, buchore=?, pts=?, dupla_vencedora=?, cadastrador=?
+       WHERE id_tabela=?`,
+      [
+        data,
+        jogador1,
+        jogador2,
+        jogador3,
+        jogador4,
+        String(scored1 || 0),
+        String(scored2 || 0),
+        String(buchore || false),
+        String(pts || 0),
+        dupla_vencedora,
+        cadastrado_por,
+        id
+      ]
+    );
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao atualizar partida:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao atualizar partida.' });
+  }
+});
+
+// 4c. DELETE /webhook/partidas/:id
+app.delete('/webhook/partidas/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM partidas WHERE id_tabela = ?', [id]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao excluir partida:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao excluir partida.' });
+  }
+});
+
 // 5. GET /webhook/gravar-buchos
 app.get('/webhook/gravar-buchos', async (req, res) => {
   try {
@@ -334,6 +538,30 @@ app.post('/webhook/gravar-buchos', async (req, res) => {
   } catch (error) {
     console.error('Erro ao registrar bucho:', error.message);
     res.status(500).json({ status: 'error', message: 'Erro ao registrar bucho.' });
+  }
+});
+
+// 6b. DELETE /webhook/gravar-buchos/:id
+app.delete('/webhook/gravar-buchos/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM buchos WHERE id_tabela = ?', [id]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao excluir bucho:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao excluir bucho.' });
+  }
+});
+
+// 6c. POST /webhook/gravar-buchos/:id/pagar
+app.post('/webhook/gravar-buchos/:id/pagar', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("UPDATE buchos SET pago = 'true' WHERE id_tabela = ?", [id]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao marcar bucho como pago:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao marcar bucho como pago.' });
   }
 });
 
@@ -513,6 +741,156 @@ app.post('/webhook/estatisticas-globais', async (req, res) => {
     } else {
       res.status(500).json({ error: 'Erro ao acionar rotina de estatísticas no n8n.' });
     }
+  }
+});
+
+// 12. GET /webhook/partidas-em-andamento — lista partidas em andamento hoje (opcionalmente filtrando por jogador)
+app.get('/webhook/partidas-em-andamento', async (req, res) => {
+  const { jogador } = req.query;
+  try {
+    let rows;
+    if (jogador) {
+      [rows] = await pool.query(
+        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao
+         FROM partidas_em_andamento
+         WHERE (jogador1 = ? OR jogador2 = ? OR jogador3 = ? OR jogador4 = ?)
+         AND DATE(data_criacao) = CURDATE() LIMIT 1`,
+        [jogador, jogador, jogador, jogador]
+      );
+    } else {
+      [rows] = await pool.query(
+        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao
+         FROM partidas_em_andamento WHERE DATE(data_criacao) = CURDATE()`
+      );
+    }
+
+    const activeMatches = rows.map(r => ({
+      id: r.id,
+      jogador1: r.jogador1,
+      jogador2: r.jogador2,
+      jogador3: r.jogador3,
+      jogador4: r.jogador4,
+      cadastrador: r.cadastrador,
+      data_criacao: r.data_criacao
+    }));
+
+    res.json(activeMatches);
+  } catch (error) {
+    console.error('Erro ao buscar partidas em andamento:', error.message);
+    res.status(500).json({ error: 'Erro ao buscar partidas em andamento' });
+  }
+});
+
+// 13. POST /webhook/partidas-em-andamento
+app.post('/webhook/partidas-em-andamento', async (req, res) => {
+  const { id, jogador1, jogador2, jogador3, jogador4, cadastrador } = req.body;
+  if (!id) {
+    return res.status(400).json({ status: 'error', message: 'id é obrigatório.' });
+  }
+  try {
+    await pool.query(
+      `INSERT INTO partidas_em_andamento (id, jogador1, jogador2, jogador3, jogador4, cadastrador)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, jogador1, jogador2, jogador3, jogador4, cadastrador]
+    );
+    res.status(201).json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao iniciar partida em andamento:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao iniciar partida em andamento.' });
+  }
+});
+
+// 14. DELETE /webhook/partidas-em-andamento/:id
+app.delete('/webhook/partidas-em-andamento/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM partidas_em_andamento WHERE id = ?', [id]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao excluir partida em andamento:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao excluir partida em andamento.' });
+  }
+});
+
+// 15. POST /webhook/admin/atualizar-senha-db
+// Permite que apenas o e-mail autorizado (Márcio) troque a senha de acesso ao MySQL usada pelo
+// servidor, mediante confirmação da própria senha de login (mesma validação do /webhook/login).
+// Testa a nova senha antes de aplicar, recria o pool de conexão em memória e persiste em disco
+// para sobreviver a restarts do processo.
+app.post('/webhook/admin/atualizar-senha-db', async (req, res) => {
+  const { email, senhaLogin, novaSenha } = req.body;
+
+  if (!email || !senhaLogin || !novaSenha) {
+    return res.status(400).json({ status: 'error', message: 'email, senhaLogin e novaSenha são obrigatórios.' });
+  }
+
+  if (email.trim().toLowerCase() !== DB_PASSWORD_ADMIN_EMAIL) {
+    return res.status(403).json({ status: 'error', message: 'Usuário não autorizado a realizar esta operação.' });
+  }
+
+  if (novaSenha.trim().length < 4) {
+    return res.status(400).json({ status: 'error', message: 'A nova senha deve ter pelo menos 4 caracteres.' });
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT senha FROM jogadores WHERE email = ?', [email.trim()]);
+    const stored = rows[0]?.senha ? rows[0].senha.trim() : '';
+    const senhaValida = isBcryptHash(stored)
+      ? await bcrypt.compare(senhaLogin.trim(), stored)
+      : stored === senhaLogin.trim();
+
+    if (rows.length === 0 || !senhaValida) {
+      return res.status(401).json({ status: 'error', message: 'Senha de login incorreta.' });
+    }
+  } catch (error) {
+    console.error('Erro ao validar senha de login para troca de senha do banco:', error.message);
+    return res.status(500).json({ status: 'error', message: 'Erro ao validar credenciais.' });
+  }
+
+  let testPool;
+  try {
+    // Testa a nova senha em um pool isolado antes de afetar a conexão em uso.
+    testPool = mysql.createPool({
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT) || 3306,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: novaSenha,
+      waitForConnections: true,
+      connectionLimit: 1,
+      queueLimit: 0
+    });
+    const testConn = await testPool.getConnection();
+    testConn.release();
+  } catch (error) {
+    console.error('Falha ao validar nova senha do banco:', error.message);
+    return res.status(400).json({ status: 'error', message: 'Não foi possível conectar ao MySQL com a nova senha. Nenhuma alteração foi aplicada.' });
+  } finally {
+    if (testPool) await testPool.end().catch(() => {});
+  }
+
+  try {
+    persistDbPassword(novaSenha);
+
+    const oldPool = pool;
+    pool = mysql.createPool({
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT) || 3306,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: novaSenha,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0
+    });
+    currentDbPassword = novaSenha;
+    await oldPool.end().catch(() => {});
+
+    console.log(`✅ Senha de acesso ao MySQL atualizada por ${email.trim()}.`);
+    res.json({ status: 'success', message: 'Senha do banco de dados atualizada com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao aplicar nova senha do banco:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao aplicar a nova senha.' });
   }
 });
 

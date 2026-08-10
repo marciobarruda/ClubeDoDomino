@@ -1,6 +1,5 @@
 package com.marcioarruda.clubedodomino.data
 
-import com.marcioarruda.clubedodomino.data.database.MySqlDatabase
 import com.marcioarruda.clubedodomino.data.network.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,6 +11,8 @@ import java.util.UUID
 import kotlin.math.abs
 
 class ClubRepository {
+
+    private val api = RetrofitClient.instance
 
     private var allUsers: List<User> = emptyList()
     private var allMatches: List<Match> = emptyList()
@@ -48,43 +49,13 @@ class ClubRepository {
 
     suspend fun getPlayers(): List<User> = withContext(Dispatchers.IO) {
         try {
-            MySqlDatabase.connect().use { conn ->
-                // Try with ativo/ferias columns first; fall back to basic select if they don't exist yet
-                val rs = try {
-                    conn.prepareStatement(
-                        "SELECT jogador, avatar, email, senha, ativo, ferias FROM jogadores"
-                    ).executeQuery()
-                } catch (_: Exception) {
-                    conn.prepareStatement(
-                        "SELECT jogador, avatar, email, senha FROM jogadores"
-                    ).executeQuery()
-                }
-                val meta = rs.metaData
-                val cols = (1..meta.columnCount).map { meta.getColumnName(it).lowercase() }.toSet()
-                val users = mutableListOf<User>()
-                while (rs.next()) {
-                    val email = rs.getString("email") ?: continue
-                    val name  = rs.getString("jogador") ?: continue
-                    val ativo = if ("ativo" in cols) rs.getObject("ativo")?.let { (it as? Number)?.toInt() ?: 1 } ?: 1 else 1
-                    val ferias = if ("ferias" in cols) rs.getObject("ferias")?.let { (it as? Number)?.toInt() ?: 0 } ?: 0 else 0
-                    users.add(User(
-                        id          = email.trim(),
-                        name        = name.trim(),
-                        displayName = name.trim(),
-                        photoUrl    = rs.getString("avatar") ?: "",
-                        clubId      = "c1",
-                        isMember    = true,
-                        password    = rs.getString("senha")?.trim(),
-                        isActive    = ativo == 1,
-                        isOnVacation = ferias == 1
-                    ))
-                }
-                if (users.none { it.name.contains("NÃO MEMBRO", ignoreCase = true) }) {
-                    users.add(User("7", "JOGADOR NÃO MEMBRO", "NÃO MEMBRO", "", "c1", false))
-                }
-                allUsers = users
-                users
+            val dtos = api.getPlayers()
+            val users = dtos.mapNotNull { it.toUser() }.toMutableList()
+            if (users.none { it.name.contains("NÃO MEMBRO", ignoreCase = true) }) {
+                users.add(User("7", "JOGADOR NÃO MEMBRO", "NÃO MEMBRO", "", "c1", false))
             }
+            allUsers = users
+            users
         } catch (t: Throwable) {
             t.printStackTrace()
             val rootCause = generateSequence(t) { it.cause }.lastOrNull() ?: t
@@ -93,59 +64,35 @@ class ClubRepository {
     }
 
     suspend fun setPlayerActive(email: String, isActive: Boolean): Unit = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("UPDATE jogadores SET ativo = ? WHERE email = ?")
-            ps.setInt(1, if (isActive) 1 else 0)
-            ps.setString(2, email)
-            ps.executeUpdate()
-        }
+        api.setPlayerActive(SetPlayerActiveRequest(email, isActive))
         allUsers = allUsers.map { if (it.id == email) it.copy(isActive = isActive) else it }
     }
 
     suspend fun setPlayerVacation(email: String, isOnVacation: Boolean): Unit = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("UPDATE jogadores SET ferias = ? WHERE email = ?")
-            ps.setInt(1, if (isOnVacation) 1 else 0)
-            ps.setString(2, email)
-            ps.executeUpdate()
-        }
+        api.setPlayerVacation(SetPlayerVacationRequest(email, isOnVacation))
         allUsers = allUsers.map { if (it.id == email) it.copy(isOnVacation = isOnVacation) else it }
     }
 
     suspend fun login(email: String, pass: String): LoginResponse = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("SELECT senha FROM jogadores WHERE email = ?")
-            ps.setString(1, email)
-            val rs = ps.executeQuery()
-            if (!rs.next()) throw Exception("Email ou senha inválidos")
-            val stored = rs.getString("senha")?.trim() ?: throw Exception("Email ou senha inválidos")
-            val valid = if (stored.startsWith("\$2a\$") || stored.startsWith("\$2b\$")) {
-                org.mindrot.jbcrypt.BCrypt.checkpw(pass, stored)
-            } else {
-                // fallback texto puro (senhas nao migradas ainda)
-                stored == pass
-            }
-            if (!valid) throw Exception("Email ou senha inválidos")
-            LoginResponse("Login bem sucedido")
-        }
+        api.login(LoginRequest(email, pass))
     }
 
     suspend fun updatePassword(email: String, pass: String): Unit = withContext(Dispatchers.IO) {
-        val hash = org.mindrot.jbcrypt.BCrypt.hashpw(pass, org.mindrot.jbcrypt.BCrypt.gensalt(10))
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("UPDATE jogadores SET senha = ? WHERE email = ?")
-            ps.setString(1, hash)
-            ps.setString(2, email)
-            ps.executeUpdate()
-        }
+        api.resetPassword(ResetPasswordRequest(email, pass))
+        Unit
     }
 
     suspend fun updateProfile(email: String, base64Image: String): Unit = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("UPDATE jogadores SET avatar = ? WHERE email = ?")
-            ps.setString(1, base64Image)
-            ps.setString(2, email)
-            ps.executeUpdate()
+        api.updateProfile(UpdateAvatarRequest(email, base64Image))
+        Unit
+    }
+
+    // ─── Admin: senha do banco de dados ─────────────────────────────────────
+
+    suspend fun updateDbPassword(requesterEmail: String, senhaLogin: String, novaSenha: String): Unit = withContext(Dispatchers.IO) {
+        val response = api.updateDbPassword(UpdateDbPasswordRequest(requesterEmail, senhaLogin, novaSenha))
+        if (!response.status.equals("success", ignoreCase = true)) {
+            throw Exception(response.message ?: "Falha ao atualizar a senha do banco de dados.")
         }
     }
 
@@ -178,31 +125,7 @@ class ClubRepository {
 
     private suspend fun getMatchDTOsFromDb(): List<MatchDTO> = withContext(Dispatchers.IO) {
         try {
-            MySqlDatabase.connect().use { conn ->
-                val rs = conn.prepareStatement(
-                    "SELECT id_tabela as id, data, jogador1, jogador2, jogador3, jogador4, " +
-                    "scored1, scored2, buchore, pts, dupla_vencedora, cadastrador " +
-                    "FROM partidas ORDER BY id_tabela DESC"
-                ).executeQuery()
-                val list = mutableListOf<MatchDTO>()
-                while (rs.next()) {
-                    list.add(MatchDTO(
-                        id             = rs.getLong("id"),
-                        data           = rs.getString("data"),
-                        jogador1       = rs.getString("jogador1"),
-                        jogador2       = rs.getString("jogador2"),
-                        jogador3       = rs.getString("jogador3"),
-                        jogador4       = rs.getString("jogador4"),
-                        scored1        = rs.getString("scored1")?.toIntOrNull() ?: 0,
-                        scored2        = rs.getString("scored2")?.toIntOrNull() ?: 0,
-                        buchore        = rs.getString("buchore")?.toBoolean() ?: (rs.getString("buchore") == "true" || rs.getString("buchore") == "1"),
-                        pts            = rs.getString("pts")?.toIntOrNull() ?: 0,
-                        dupla_vencedora = rs.getString("dupla_vencedora"),
-                        cadastrado_por = rs.getString("cadastrador")
-                    ))
-                }
-                list.distinctBy { it.id }
-            }
+            api.getMatches().distinctBy { it.id }
         } catch (t: Throwable) {
             throw Exception("Erro ao buscar partidas: ${t.message}", t)
         }
@@ -210,149 +133,52 @@ class ClubRepository {
 
     suspend fun registerMatch(match: Match): Unit = withContext(Dispatchers.IO) {
         val dto = match.toDTO()
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement(
-                "INSERT INTO partidas (data, jogador1, jogador2, jogador3, jogador4, " +
-                "scored1, scored2, buchore, pts, dupla_vencedora, cadastrador) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            )
-            ps.setString(1, dto.data)
-            ps.setString(2, dto.jogador1)
-            ps.setString(3, dto.jogador2)
-            ps.setString(4, dto.jogador3)
-            ps.setString(5, dto.jogador4)
-            ps.setString(6, (dto.scored1 ?: 0).toString())
-            ps.setString(7, (dto.scored2 ?: 0).toString())
-            ps.setString(8, (dto.buchore ?: false).toString())
-            ps.setString(9, (dto.pts ?: 0).toString())
-            ps.setString(10, dto.dupla_vencedora)
-            ps.setString(11, dto.cadastrado_por)
-            ps.executeUpdate()
-        }
+        api.registerMatch(dto)
+        Unit
     }
 
     suspend fun updateMatch(match: Match): Unit = withContext(Dispatchers.IO) {
         val dto = match.toDTO()
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement(
-                "UPDATE partidas SET data=?, jogador1=?, jogador2=?, jogador3=?, jogador4=?, " +
-                "scored1=?, scored2=?, buchore=?, pts=?, dupla_vencedora=?, cadastrador=? " +
-                "WHERE id_tabela=?"
-            )
-            ps.setString(1, dto.data)
-            ps.setString(2, dto.jogador1)
-            ps.setString(3, dto.jogador2)
-            ps.setString(4, dto.jogador3)
-            ps.setString(5, dto.jogador4)
-            ps.setString(6, (dto.scored1 ?: 0).toString())
-            ps.setString(7, (dto.scored2 ?: 0).toString())
-            ps.setString(8, (dto.buchore ?: false).toString())
-            ps.setString(9, (dto.pts ?: 0).toString())
-            ps.setString(10, dto.dupla_vencedora)
-            ps.setString(11, dto.cadastrado_por)
-            ps.setLong(12, match.id.toLongOrNull() ?: throw Exception("ID de partida inválido: ${match.id}"))
-            ps.executeUpdate()
-        }
+        val id = match.id.toLongOrNull()?.toString() ?: throw Exception("ID de partida inválido: ${match.id}")
+        api.updateMatch(id, dto)
+        Unit
     }
 
     suspend fun deleteMatch(id: String, buttonName: String = "Excluir"): Unit = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("DELETE FROM partidas WHERE id_tabela = ?")
-            ps.setLong(1, id.toLong())
-            ps.executeUpdate()
-        }
+        api.deleteMatch(id)
+        Unit
     }
 
     // ─── Buchos ───────────────────────────────────────────────────────────
 
     suspend fun getBuchosResult(): Result<List<BuchoDto>> = safeDbCall {
-        withContext(Dispatchers.IO) {
-            MySqlDatabase.connect().use { conn ->
-                val rs = conn.prepareStatement(
-                    "SELECT id_tabela as id, data, jogador, valor, pago, placar, dupla_vencedora, " +
-                    "dupla_perdedora, obs FROM buchos"
-                ).executeQuery()
-                val list = mutableListOf<BuchoDto>()
-                while (rs.next()) {
-                    list.add(BuchoDto(
-                        id              = rs.getLong("id"),
-                        data            = rs.getString("data"),
-                        jogador         = rs.getString("jogador"),
-                        valor           = rs.getString("valor")?.toDoubleOrNull() ?: 0.0,
-                        pago            = rs.getString("pago")?.toBoolean() ?: (rs.getString("pago") == "true" || rs.getString("pago") == "1"),
-                        placar          = rs.getString("placar"),
-                        dupla_vencedora = rs.getString("dupla_vencedora"),
-                        dupla_perdedora = rs.getString("dupla_perdedora"),
-                        obs             = rs.getString("obs"),
-                        cadastrado_por  = null,
-                        buchore         = null
-                    ))
-                }
-                list
-            }
-        }
+        withContext(Dispatchers.IO) { api.getBuchos() }
     }
 
     suspend fun registerDebit(debitRequest: DebitRequest): Unit = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement(
-                "INSERT INTO buchos (data, jogador, valor, pago, placar, dupla_vencedora, " +
-                "dupla_perdedora, obs) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-            )
-            ps.setString(1, debitRequest.data)
-            ps.setString(2, debitRequest.jogador)
-            ps.setString(3, debitRequest.valor.toString())
-            ps.setString(4, debitRequest.pago.toString())
-            ps.setString(5, debitRequest.placar)
-            ps.setString(6, debitRequest.dupla_vencedora)
-            ps.setString(7, debitRequest.dupla_perdedora)
-            val finalObs = if (debitRequest.wasBuchoRe == true) {
-                "[BUCHO DE RÉ] ${debitRequest.obs ?: ""}".trim()
-            } else {
-                debitRequest.obs
-            }
-            ps.setString(8, finalObs)
-            ps.executeUpdate()
+        val finalObs = if (debitRequest.wasBuchoRe == true) {
+            "[BUCHO DE RÉ] ${debitRequest.obs ?: ""}".trim()
+        } else {
+            debitRequest.obs
         }
+        api.registerDebit(debitRequest.copy(obs = finalObs))
+        Unit
     }
 
     suspend fun deleteBucho(id: String, buttonName: String = "Excluir"): Unit = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("DELETE FROM buchos WHERE id_tabela = ?")
-            ps.setLong(1, id.toLong())
-            ps.executeUpdate()
-        }
+        api.deleteBucho(id)
+        Unit
     }
 
     suspend fun markBuchoAsPaid(id: Long): Unit = withContext(Dispatchers.IO) {
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement("UPDATE buchos SET pago = 'true' WHERE id_tabela = ?")
-            ps.setLong(1, id)
-            ps.executeUpdate()
-        }
+        api.markBuchoAsPaid(id.toString())
+        Unit
     }
 
     // ─── Mensalidades ─────────────────────────────────────────────────────
 
     suspend fun getMensalidadesResult(): Result<List<MensalidadeDto>> = safeDbCall {
-        withContext(Dispatchers.IO) {
-            MySqlDatabase.connect().use { conn ->
-                val rs = conn.prepareStatement(
-                    "SELECT id_tabela as id, mensalidade, jogador, pago FROM mensalidades"
-                ).executeQuery()
-                val list = mutableListOf<MensalidadeDto>()
-                while (rs.next()) {
-                    list.add(MensalidadeDto(
-                        id          = rs.getLong("id"),
-                        mensalidade = rs.getString("mensalidade"),
-                        jogador     = rs.getString("jogador"),
-                        pago        = rs.getString("pago")?.toBoolean() ?: (rs.getString("pago") == "true" || rs.getString("pago") == "1"),
-                        ano         = null
-                    ))
-                }
-                list
-            }
-        }
+        withContext(Dispatchers.IO) { api.getMensalidades() }
     }
 
     suspend fun createMensalidade(playerName: String, month: Int? = null, year: Int? = null): Unit =
@@ -363,14 +189,8 @@ class ClubRepository {
                 if (month != null) set(Calendar.MONTH, month)
             }
             val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
-            MySqlDatabase.connect().use { conn ->
-                val ps = conn.prepareStatement(
-                    "INSERT INTO mensalidades (mensalidade, jogador, pago) VALUES (?, ?, 'false')"
-                )
-                ps.setString(1, dateStr)
-                ps.setString(2, playerName)
-                ps.executeUpdate()
-            }
+            api.createMensalidade(CreateMensalidadeRequest(playerName, dateStr))
+            Unit
         }
 
     suspend fun createPlayer(
@@ -380,60 +200,19 @@ class ClubRepository {
         avatarId: String,
         startDate: Calendar
     ): Unit = withContext(Dispatchers.IO) {
-        val hashedPassword = org.mindrot.jbcrypt.BCrypt.hashpw(password, org.mindrot.jbcrypt.BCrypt.gensalt())
-        MySqlDatabase.connect().use { conn ->
-            val ps = conn.prepareStatement(
-                "INSERT INTO jogadores (jogador, avatar, email, senha, ativo, ferias) VALUES (?, ?, ?, ?, 1, 0)"
+        api.createPlayer(
+            CreatePlayerRequest(
+                name = name.trim(),
+                email = email.trim().lowercase(),
+                password = password,
+                avatarId = avatarId,
+                startYear = startDate.get(Calendar.YEAR),
+                startMonth = startDate.get(Calendar.MONTH) + 1
             )
-            ps.setString(1, name.trim())
-            ps.setString(2, avatarId)
-            ps.setString(3, email.trim().lowercase())
-            ps.setString(4, hashedPassword)
-            ps.executeUpdate()
-        }
+        )
         // invalidate cache so the new player appears
         allUsers = emptyList()
-        generateRetroactiveMensalidades(name.trim(), startDate)
     }
-
-    suspend fun generateRetroactiveMensalidades(playerName: String, startDate: Calendar): Unit =
-        withContext(Dispatchers.IO) {
-            val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            // Fetch existing mensalidades for this player to avoid duplicates
-            val existing = MySqlDatabase.connect().use { conn ->
-                val rs = conn.prepareStatement(
-                    "SELECT mensalidade FROM mensalidades WHERE jogador = ?"
-                ).apply { setString(1, playerName) }.executeQuery()
-                val set = mutableSetOf<String>()
-                while (rs.next()) set.add(rs.getString("mensalidade") ?: "")
-                set
-            }
-            val today = Calendar.getInstance()
-            // Generate from startDate month up to (and including) the previous month
-            val cursor = startDate.clone() as Calendar
-            cursor.set(Calendar.DAY_OF_MONTH, 1)
-            cursor.set(Calendar.HOUR_OF_DAY, 0)
-            cursor.set(Calendar.MINUTE, 0)
-            cursor.set(Calendar.SECOND, 0)
-            cursor.set(Calendar.MILLISECOND, 0)
-            val limit = today.clone() as Calendar
-            limit.set(Calendar.DAY_OF_MONTH, 1)
-            limit.add(Calendar.MONTH, -1) // up to last month
-            MySqlDatabase.connect().use { conn ->
-                while (!cursor.after(limit)) {
-                    val dateStr = fmt.format(cursor.time)
-                    if (dateStr !in existing) {
-                        val ps = conn.prepareStatement(
-                            "INSERT INTO mensalidades (mensalidade, jogador, pago) VALUES (?, ?, 'false')"
-                        )
-                        ps.setString(1, dateStr)
-                        ps.setString(2, playerName)
-                        ps.executeUpdate()
-                    }
-                    cursor.add(Calendar.MONTH, 1)
-                }
-            }
-        }
 
     // ─── Ranking (computado localmente) ───────────────────────────────────
 
@@ -487,14 +266,14 @@ class ClubRepository {
 
             val team1 = listOfNotNull(m.jogador1, m.jogador2).map { it.trim().uppercase() }
             val team2 = listOfNotNull(m.jogador3, m.jogador4).map { it.trim().uppercase() }
-            
+
             val scored1 = m.scored1 ?: 0
             val scored2 = m.scored2 ?: 0
             val isTeam1Winner = scored1 > scored2
-            
+
             val winnerTeam = if (isTeam1Winner) team1 else team2
             val loserTeam = if (isTeam1Winner) team2 else team1
-            
+
             val isBucho = (scored1 == 0 || scored2 == 0) || m.buchore == true
             val pontos = m.pts ?: 0
 
@@ -572,7 +351,7 @@ class ClubRepository {
             val matches = if (allMatchDTOs.isEmpty()) getMatchDTOsFromDb() else allMatchDTOs
             val players = getPlayers()
             val ignorados = setOf("ÍNDIO", "XAMÃ", "EX-MEMBRO", "JOSELITRO", "JOGADOR NÃO MEMBRO", "POLÍCIA FEMININA", "YAN")
-            
+
             val pointsMap = mutableMapOf<String, Int>()
             for (m in matches) {
                 val dataStr = m.data?.split("T")?.firstOrNull() ?: continue
@@ -580,14 +359,14 @@ class ClubRepository {
                 if (parts.size < 3) continue
                 val anoPartida = parts[0].toIntOrNull() ?: continue
                 val mesPartida = parts[1].toIntOrNull() ?: continue
-                
+
                 if (anoPartida == year && mesPartida == month) {
                     val vencedores = m.dupla_vencedora
                         ?.split("&", "/")
                         ?.map { it.trim().uppercase() }
                         ?: emptyList()
                     val pontos = m.pts ?: 0
-                    
+
                     vencedores.forEach { jogador ->
                         val name = jogador.trim().uppercase()
                         if (name !in ignorados && name.isNotBlank()) {
@@ -596,7 +375,7 @@ class ClubRepository {
                     }
                 }
             }
-            
+
             val entry = pointsMap.maxByOrNull { it.value }
             if (entry != null) {
                 val champUser = players.find { it.name.trim().uppercase() == entry.key || it.displayName.trim().uppercase() == entry.key }
@@ -721,8 +500,15 @@ class ClubRepository {
     private fun PlayerDTO.toUser(): User? {
         if (this.email.isNullOrBlank() || this.jogador.isNullOrBlank()) return null
         return User(
-            id = this.email.trim(), name = this.jogador.trim(), displayName = this.jogador.trim(),
-            photoUrl = this.avatar ?: "", clubId = "c1", isMember = true, password = this.senha?.trim()
+            id = this.email.trim(),
+            name = this.jogador.trim(),
+            displayName = this.jogador.trim(),
+            photoUrl = this.avatar ?: "",
+            clubId = "c1",
+            isMember = true,
+            password = this.senha?.trim(),
+            isActive = (this.ativo ?: 1) == 1,
+            isOnVacation = (this.ferias ?: 0) == 1
         )
     }
 
@@ -776,25 +562,7 @@ class ClubRepository {
 
     suspend fun getActiveMatches(): List<ActiveMatch> = withContext(Dispatchers.IO) {
         try {
-            MySqlDatabase.connect().use { conn ->
-                val rs = conn.prepareStatement(
-                    "SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao " +
-                    "FROM partidas_em_andamento WHERE DATE(data_criacao) = CURDATE()"
-                ).executeQuery()
-                val list = mutableListOf<ActiveMatch>()
-                while (rs.next()) {
-                    list.add(ActiveMatch(
-                        id = rs.getString("id"),
-                        player1 = rs.getString("jogador1"),
-                        player2 = rs.getString("jogador2"),
-                        player3 = rs.getString("jogador3"),
-                        player4 = rs.getString("jogador4"),
-                        cadastrador = rs.getString("cadastrador"),
-                        createdAt = rs.getTimestamp("data_criacao") ?: java.util.Date()
-                    ))
-                }
-                list
-            }
+            api.getActiveMatches().map { it.toActiveMatch() }
         } catch (t: Throwable) {
             t.printStackTrace()
             emptyList()
@@ -803,19 +571,8 @@ class ClubRepository {
 
     suspend fun startActiveMatch(activeMatch: ActiveMatch): Boolean = withContext(Dispatchers.IO) {
         try {
-            MySqlDatabase.connect().use { conn ->
-                val ps = conn.prepareStatement(
-                    "INSERT INTO partidas_em_andamento (id, jogador1, jogador2, jogador3, jogador4, cadastrador) " +
-                    "VALUES (?, ?, ?, ?, ?, ?)"
-                )
-                ps.setString(1, activeMatch.id)
-                ps.setString(2, activeMatch.player1)
-                ps.setString(3, activeMatch.player2)
-                ps.setString(4, activeMatch.player3)
-                ps.setString(5, activeMatch.player4)
-                ps.setString(6, activeMatch.cadastrador)
-                ps.executeUpdate() > 0
-            }
+            api.startActiveMatch(activeMatch.toDto())
+            true
         } catch (t: Throwable) {
             t.printStackTrace()
             false
@@ -824,11 +581,8 @@ class ClubRepository {
 
     suspend fun deleteActiveMatch(id: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            MySqlDatabase.connect().use { conn ->
-                val ps = conn.prepareStatement("DELETE FROM partidas_em_andamento WHERE id = ?")
-                ps.setString(1, id)
-                ps.executeUpdate() > 0
-            }
+            api.deleteActiveMatch(id)
+            true
         } catch (t: Throwable) {
             t.printStackTrace()
             false
@@ -837,33 +591,30 @@ class ClubRepository {
 
     suspend fun getActiveMatchForUser(username: String): ActiveMatch? = withContext(Dispatchers.IO) {
         try {
-            MySqlDatabase.connect().use { conn ->
-                val ps = conn.prepareStatement(
-                    "SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao " +
-                    "FROM partidas_em_andamento " +
-                    "WHERE (jogador1 = ? OR jogador2 = ? OR jogador3 = ? OR jogador4 = ?) " +
-                    "AND DATE(data_criacao) = CURDATE() LIMIT 1"
-                )
-                ps.setString(1, username)
-                ps.setString(2, username)
-                ps.setString(3, username)
-                ps.setString(4, username)
-                val rs = ps.executeQuery()
-                if (rs.next()) {
-                    ActiveMatch(
-                        id = rs.getString("id"),
-                        player1 = rs.getString("jogador1"),
-                        player2 = rs.getString("jogador2"),
-                        player3 = rs.getString("jogador3"),
-                        player4 = rs.getString("jogador4"),
-                        cadastrador = rs.getString("cadastrador"),
-                        createdAt = rs.getTimestamp("data_criacao") ?: java.util.Date()
-                    )
-                } else null
-            }
+            api.getActiveMatches(jogador = username).firstOrNull()?.toActiveMatch()
         } catch (t: Throwable) {
             t.printStackTrace()
             null
         }
     }
+
+    private fun ActiveMatchDto.toActiveMatch(): ActiveMatch = ActiveMatch(
+        id = this.id,
+        player1 = this.jogador1 ?: "",
+        player2 = this.jogador2 ?: "",
+        player3 = this.jogador3 ?: "",
+        player4 = this.jogador4 ?: "",
+        cadastrador = this.cadastrador ?: "",
+        createdAt = parseAnyDate(this.dataCriacao) ?: Date()
+    )
+
+    private fun ActiveMatch.toDto(): ActiveMatchDto = ActiveMatchDto(
+        id = this.id,
+        jogador1 = this.player1,
+        jogador2 = this.player2,
+        jogador3 = this.player3,
+        jogador4 = this.player4,
+        cadastrador = this.cadastrador,
+        dataCriacao = null
+    )
 }

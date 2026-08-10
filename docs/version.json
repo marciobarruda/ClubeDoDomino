@@ -1,7 +1,7 @@
 {
-  "version_code": 85,
-  "version_name": "1.50",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v85/clube_v_85.apk",
-  "release_notes": "* v85: Corrigido cálculo de Craque do Dia/Piorzinho no dashboard — agora considera taxa de aproveitamento (vitórias/partidas), não apenas pontos acumulados, exigindo ao menos 2 partidas no dia para concorrer. Geração de mensalidades passou a rodar automaticamente no servidor todo início de mês para todos os jogadores ativos, sem depender de abrir o app.",
+  "version_code": 86,
+  "version_name": "1.51",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v86/clube_v_86.apk",
+  "release_notes": "* v86: Novo módulo de Administração permite ao Márcio trocar a senha do banco de dados diretamente pelo app (com confirmação da senha de login). Todo o acesso ao banco que antes era feito direto pelo celular via JDBC (incluindo login, cadastro de jogador e partidas) agora passa pelo servidor, removendo a senha do banco de dentro do APK. Corrigido login que havia parado de funcionar durante a migração.",
   "min_version": 82
 }

@@ -7,8 +7,12 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PUT
 import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 // --- DATA TRANSFER OBJECTS (DTOs) ---
 
@@ -16,7 +20,43 @@ data class PlayerDTO(
     val jogador: String?,
     val avatar: String?,
     val email: String?,
-    val senha: String? = null
+    val senha: String? = null,
+    val ativo: Int? = 1,
+    val ferias: Int? = 0
+)
+
+data class SetPlayerActiveRequest(val email: String, val ativo: Boolean)
+data class SetPlayerVacationRequest(val email: String, val ferias: Boolean)
+data class UpdateAvatarRequest(val email: String, val avatar: String)
+
+data class CreatePlayerRequest(
+    val name: String,
+    val email: String,
+    val password: String,
+    val avatarId: String,
+    val startYear: Int? = null,
+    val startMonth: Int? = null
+)
+
+data class ActiveMatchDto(
+    val id: String,
+    val jogador1: String?,
+    val jogador2: String?,
+    val jogador3: String?,
+    val jogador4: String?,
+    val cadastrador: String?,
+    @SerializedName("data_criacao") val dataCriacao: String?
+)
+
+data class UpdateDbPasswordRequest(
+    val email: String,
+    val senhaLogin: String,
+    val novaSenha: String
+)
+
+data class SimpleStatusResponse(
+    val status: String,
+    val message: String? = null
 )
 
 data class MatchDTO(
@@ -187,20 +227,44 @@ interface ApiService {
     @POST("webhook/reset-password")
     suspend fun resetPassword(@Body request: ResetPasswordRequest): LoginResponse
 
-    @POST("webhook/atualizar-dados")
-    suspend fun updateProfile(@Body request: UpdateProfileRequest): ResponseBody
+    @POST("webhook/jogador/avatar")
+    suspend fun updateProfile(@Body request: UpdateAvatarRequest): SimpleStatusResponse
 
     @POST("webhook/receber-comprovante")
     suspend fun uploadComprovante(@Body request: ComprovanteRequest)
 
-    @POST("webhook/apagar-partida")
-    suspend fun deleteMatch(@Body request: DeleteRequest): retrofit2.Response<Unit>
+    @PUT("webhook/partidas/{id}")
+    suspend fun updateMatch(@Path("id") id: String, @Body match: MatchDTO): SimpleStatusResponse
 
-    @POST("webhook/apagar-partida")
-    suspend fun updateMatch(@Body match: MatchDTO): retrofit2.Response<Unit>
+    @DELETE("webhook/partidas/{id}")
+    suspend fun deleteMatch(@Path("id") id: String): SimpleStatusResponse
 
-    @POST("webhook/apagar-bucho")
-    suspend fun deleteBucho(@Body request: DeleteRequest): retrofit2.Response<Unit>
+    @DELETE("webhook/gravar-buchos/{id}")
+    suspend fun deleteBucho(@Path("id") id: String): SimpleStatusResponse
+
+    @POST("webhook/gravar-buchos/{id}/pagar")
+    suspend fun markBuchoAsPaid(@Path("id") id: String): SimpleStatusResponse
+
+    @POST("webhook/jogador/ativo")
+    suspend fun setPlayerActive(@Body request: SetPlayerActiveRequest): SimpleStatusResponse
+
+    @POST("webhook/jogador/ferias")
+    suspend fun setPlayerVacation(@Body request: SetPlayerVacationRequest): SimpleStatusResponse
+
+    @POST("webhook/criar-jogador")
+    suspend fun createPlayer(@Body request: CreatePlayerRequest): SimpleStatusResponse
+
+    @GET("webhook/partidas-em-andamento")
+    suspend fun getActiveMatches(@Query("jogador") jogador: String? = null): List<ActiveMatchDto>
+
+    @POST("webhook/partidas-em-andamento")
+    suspend fun startActiveMatch(@Body activeMatch: ActiveMatchDto): SimpleStatusResponse
+
+    @DELETE("webhook/partidas-em-andamento/{id}")
+    suspend fun deleteActiveMatch(@Path("id") id: String): SimpleStatusResponse
+
+    @POST("webhook/admin/atualizar-senha-db")
+    suspend fun updateDbPassword(@Body request: UpdateDbPasswordRequest): SimpleStatusResponse
 
     @POST("webhook/stack-trace")
     suspend fun sendStackTrace(@Body request: StackTraceRequest): retrofit2.Response<Unit>
@@ -228,18 +292,19 @@ data class UpdateInfo(
     @SerializedName("min_version", alternate = ["minVersion"]) val minVersionCode: Int? = 0
 )
 
-data class DeleteRequest(
-    val id: String,
-    val buttonName: String? = "Excluir"
-)
-
 // --- Retrofit Singleton Client ---
 
 object RetrofitClient {
     private const val BASE_URL = "https://geral-clube-domino-api.ep9oni.easypanel.host/"
 
+    // Corpo completo (incluindo senhas) só é logado em builds de debug — em release, apenas
+    // linha básica (método/URL/status), para não vazar credenciais no Logcat de produção.
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (com.marcioarruda.clubedodomino.BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BODY
+        } else {
+            HttpLoggingInterceptor.Level.BASIC
+        }
     }
 
     private val okHttpClient = OkHttpClient.Builder()

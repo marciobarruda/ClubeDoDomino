@@ -11,7 +11,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.marcioarruda.clubedodomino.data.database.MySqlDatabase
+import com.marcioarruda.clubedodomino.data.network.RetrofitClient
 
 object MatchAvailabilityManager {
     
@@ -135,19 +135,7 @@ object MatchAvailabilityManager {
         if (!result && username != null) {
             val hasActive = withContext(Dispatchers.IO) {
                 try {
-                    MySqlDatabase.connect().use { conn ->
-                        val ps = conn.prepareStatement(
-                            "SELECT COUNT(*) FROM partidas_em_andamento " +
-                            "WHERE (jogador1 = ? OR jogador2 = ? OR jogador3 = ? OR jogador4 = ?) " +
-                            "AND DATE(data_criacao) = CURDATE()"
-                        )
-                        ps.setString(1, username)
-                        ps.setString(2, username)
-                        ps.setString(3, username)
-                        ps.setString(4, username)
-                        val rs = ps.executeQuery()
-                        if (rs.next()) rs.getInt(1) > 0 else false
-                    }
+                    RetrofitClient.instance.getActiveMatches(jogador = username).isNotEmpty()
                 } catch (t: Throwable) {
                     false
                 }
