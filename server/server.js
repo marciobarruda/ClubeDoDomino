@@ -11,7 +11,7 @@ const path = require('path');
 const BCRYPT_ROUNDS = 10;
 
 // E-mail autorizado a trocar a senha de acesso ao MySQL pelo app (módulo Administração).
-const DB_PASSWORD_ADMIN_EMAIL = 'marciobarruda@recife.pe.gov.br';
+const DB_PASSWORD_ADMIN_EMAIL = 'marciobarruda@gmail.com';
 
 // Persistência local da senha do banco, para sobreviver a restarts do processo/container
 // (ex: crash recovery, `docker restart`). Um rebuild de imagem sem volume externo apaga este
