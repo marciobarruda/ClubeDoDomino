@@ -929,10 +929,39 @@ app.post('/webhook/admin/emergencia/atualizar-senha-db', async (req, res) => {
   }
 });
 
+// Detecta double-encoding UTF-8 (ex: "MÁRCIO" gravado como bytes de "MÁRCIO" reinterpretados como
+// Latin-1 e recodificados) e retorna a string corrigida, ou null se não houver o padrão típico
+// (sequências UTF-8 de 2 bytes reinterpretadas — Ã seguido de caractere de controle/acentuado
+// fora do intervalo comum do português, ou qualquer caractere de controle C1 U+0080-U+009F).
+const CONTROL_CHAR_MIN = 0x80;
+const CONTROL_CHAR_MAX = 0x9f;
+const hasControlChars = (s) => {
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if (code >= CONTROL_CHAR_MIN && code <= CONTROL_CHAR_MAX) return true;
+  }
+  return false;
+};
+const corrigirDoubleEncoding = (texto) => {
+  if (!texto) return null;
+  if (!hasControlChars(texto)) return null;
+  try {
+    const corrigido = Buffer.from(texto, 'latin1').toString('utf8');
+    if (corrigido === texto) return null;
+    if (hasControlChars(corrigido)) return null;
+    if (corrigido.indexOf(String.fromCharCode(0xfffd)) !== -1) return null;
+    return corrigido;
+  } catch (e) {
+    return null;
+  }
+};
+
 // 16. POST /webhook/admin/emergencia/corrigir-encoding
-// Rota temporária: corrige nomes gravados com double-encoding UTF-8 (ex: "MÃRCIO" em vez de
-// "MÁRCIO") nas tabelas `jogadores` e `partidas`. Protegida pela mesma ADMIN_SECRET_KEY da rota
-// de emergência de senha do banco. Aceita dryRun para relatar o impacto antes de aplicar.
+// Rota temporária: corrige nomes gravados com double-encoding UTF-8 (ex: "MÁRCIO" virou "MÃRCIO"
+// + caractere de controle invisível no banco) nas tabelas `jogadores` e `partidas`. Detecta os
+// valores afetados dinamicamente (não depende de listar os nomes na mão, o que falha quando o
+// valor real contém bytes de controle que não aparecem ao digitar/copiar o texto). Protegida pela
+// mesma ADMIN_SECRET_KEY da rota de emergência de senha do banco. Aceita dryRun (padrão true).
 app.post('/webhook/admin/emergencia/corrigir-encoding', async (req, res) => {
   const adminKey = req.get('X-Admin-Key');
   const dryRun = req.body?.dryRun !== false;
@@ -944,59 +973,50 @@ app.post('/webhook/admin/emergencia/corrigir-encoding', async (req, res) => {
     return res.status(403).json({ status: 'error', message: 'Chave de administração inválida.' });
   }
 
-  // Pares [texto corrompido, texto correto], mais específicos primeiro para evitar substituições parciais indevidas.
-  const CORRECOES = [
-    ['TIA LUÃÃA', 'TIA LUÍÇA'],
-    ['TIA LÃIÃA', 'TIA LÚIÇA'],
-    ['POLÃCIA FEMININA', 'POLÍCIA FEMININA'],
-    ['MÃRCIO', 'MÁRCIO'],
-    ['TENÃRIO', 'TENÓRIO'],
-    ['REVÃ', 'REVÔ'],
-    ['ÃNDIO', 'ÍNDIO']
-  ];
-
   const COLUNAS_PARTIDAS = ['jogador1', 'jogador2', 'jogador3', 'jogador4', 'dupla_vencedora', 'cadastrador'];
 
   try {
-    const relatorio = { jogadores: {}, partidas: {} };
+    const relatorio = { jogadores: [], partidas: [] };
 
-    for (const [de, para] of CORRECOES) {
-      const [countRows] = await pool.query(
-        'SELECT COUNT(*) as c FROM jogadores WHERE jogador LIKE ?',
-        [`%${de}%`]
-      );
-      const count = countRows[0].c;
-      if (count > 0) {
-        relatorio.jogadores[de] = count;
+    const [jogadoresRows] = await pool.query('SELECT id_tabela as id, jogador FROM jogadores');
+    for (const row of jogadoresRows) {
+      const corrigido = corrigirDoubleEncoding(row.jogador);
+      if (corrigido) {
+        relatorio.jogadores.push({ id: row.id, de: row.jogador, para: corrigido });
         if (!dryRun) {
+          await pool.query('UPDATE jogadores SET jogador = ? WHERE id_tabela = ?', [corrigido, row.id]);
+        }
+      }
+    }
+
+    const [partidasRows] = await pool.query(
+      `SELECT id_tabela as id, ${COLUNAS_PARTIDAS.join(', ')} FROM partidas`
+    );
+    for (const row of partidasRows) {
+      const updates = {};
+      for (const coluna of COLUNAS_PARTIDAS) {
+        const corrigido = corrigirDoubleEncoding(row[coluna]);
+        if (corrigido) updates[coluna] = corrigido;
+      }
+      if (Object.keys(updates).length > 0) {
+        relatorio.partidas.push({ id: row.id, updates });
+        if (!dryRun) {
+          const setClause = Object.keys(updates).map(c => `${c} = ?`).join(', ');
           await pool.query(
-            'UPDATE jogadores SET jogador = REPLACE(jogador, ?, ?) WHERE jogador LIKE ?',
-            [de, para, `%${de}%`]
+            `UPDATE partidas SET ${setClause} WHERE id_tabela = ?`,
+            [...Object.values(updates), row.id]
           );
         }
       }
     }
 
-    for (const coluna of COLUNAS_PARTIDAS) {
-      for (const [de, para] of CORRECOES) {
-        const [countRows] = await pool.query(
-          `SELECT COUNT(*) as c FROM partidas WHERE ${coluna} LIKE ?`,
-          [`%${de}%`]
-        );
-        const count = countRows[0].c;
-        if (count > 0) {
-          relatorio.partidas[`${coluna}: ${de}`] = count;
-          if (!dryRun) {
-            await pool.query(
-              `UPDATE partidas SET ${coluna} = REPLACE(${coluna}, ?, ?) WHERE ${coluna} LIKE ?`,
-              [de, para, `%${de}%`]
-            );
-          }
-        }
-      }
-    }
-
-    res.json({ status: 'success', dryRun, relatorio });
+    res.json({
+      status: 'success',
+      dryRun,
+      totalJogadoresAfetados: relatorio.jogadores.length,
+      totalPartidasAfetadas: relatorio.partidas.length,
+      relatorio
+    });
   } catch (error) {
     console.error('Erro ao corrigir encoding:', error.message);
     res.status(500).json({ status: 'error', message: 'Erro ao corrigir encoding.' });
