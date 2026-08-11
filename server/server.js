@@ -421,7 +421,7 @@ app.post('/webhook/partidas', async (req, res) => {
     res.status(201).json({ id: result.insertId, status: 'success' });
   } catch (error) {
     console.error('Erro ao registrar partida:', error.message);
-    res.status(500).json({ status: 'error', message: 'Erro ao salvar partida.' });
+    res.status(500).json({ status: 'error', message: 'Erro ao salvar partida.', debug: error.message, code: error.code });
   }
 });
 
