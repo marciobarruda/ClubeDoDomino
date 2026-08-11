@@ -790,8 +790,8 @@ app.post('/webhook/partidas-em-andamento', async (req, res) => {
   }
   try {
     await pool.query(
-      `INSERT INTO partidas_em_andamento (id, jogador1, jogador2, jogador3, jogador4, cadastrador, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO partidas_em_andamento (id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [id, jogador1, jogador2, jogador3, jogador4, cadastrador]
     );
     res.status(201).json({ status: 'success' });
