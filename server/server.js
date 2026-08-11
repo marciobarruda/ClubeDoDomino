@@ -151,7 +151,7 @@ const gerarMensalidadesDoMesAtual = async () => {
 
     for (const jogador of pendentes) {
       await pool.query(
-        "INSERT INTO mensalidades (mensalidade, jogador, pago) VALUES (?, ?, 'false')",
+        "INSERT INTO mensalidades (mensalidade, jogador, pago, createdAt, updatedAt) VALUES (?, ?, 'false', NOW(), NOW())",
         [mesReferencia, jogador]
       );
     }
@@ -321,7 +321,7 @@ const gerarMensalidadesRetroativas = async (playerName, startYear, startMonth) =
     const dateStr = `${cursorAno}-${String(cursorMes).padStart(2, '0')}-01`;
     if (!existentes.has(dateStr)) {
       await pool.query(
-        "INSERT INTO mensalidades (mensalidade, jogador, pago) VALUES (?, ?, 'false')",
+        "INSERT INTO mensalidades (mensalidade, jogador, pago, createdAt, updatedAt) VALUES (?, ?, 'false', NOW(), NOW())",
         [dateStr, playerName]
       );
     }
@@ -340,7 +340,7 @@ app.post('/webhook/criar-jogador', async (req, res) => {
   try {
     const hash = await bcrypt.hash(password.trim(), BCRYPT_ROUNDS);
     await pool.query(
-      'INSERT INTO jogadores (jogador, avatar, email, senha, ativo, ferias) VALUES (?, ?, ?, ?, 1, 0)',
+      'INSERT INTO jogadores (jogador, avatar, email, senha, ativo, ferias, createdAt, updatedAt) VALUES (?, ?, ?, ?, 1, 0, NOW(), NOW())',
       [name.trim(), avatarId || '', email.trim().toLowerCase(), hash]
     );
 
@@ -402,7 +402,7 @@ app.post('/webhook/partidas', async (req, res) => {
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO partidas (data, jogador1, jogador2, jogador3, jogador4, scored1, scored2, buchore, pts, dupla_vencedora, cadastrador) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO partidas (data, jogador1, jogador2, jogador3, jogador4, scored1, scored2, buchore, pts, dupla_vencedora, cadastrador, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
       [
         data,
         jogador1,
@@ -421,7 +421,7 @@ app.post('/webhook/partidas', async (req, res) => {
     res.status(201).json({ id: result.insertId, status: 'success' });
   } catch (error) {
     console.error('Erro ao registrar partida:', error.message);
-    res.status(500).json({ status: 'error', message: 'Erro ao salvar partida.', debug: error.message, code: error.code });
+    res.status(500).json({ status: 'error', message: 'Erro ao salvar partida.' });
   }
 });
 
@@ -445,7 +445,7 @@ app.put('/webhook/partidas/:id', async (req, res) => {
   try {
     await pool.query(
       `UPDATE partidas SET data=?, jogador1=?, jogador2=?, jogador3=?, jogador4=?,
-       scored1=?, scored2=?, buchore=?, pts=?, dupla_vencedora=?, cadastrador=?
+       scored1=?, scored2=?, buchore=?, pts=?, dupla_vencedora=?, cadastrador=?, updatedAt=NOW()
        WHERE id_tabela=?`,
       [
         data,
@@ -522,7 +522,7 @@ app.post('/webhook/gravar-buchos', async (req, res) => {
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO buchos (data, jogador, valor, pago, placar, dupla_vencedora, dupla_perdedora, obs) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO buchos (data, jogador, valor, pago, placar, dupla_vencedora, dupla_perdedora, obs, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
       [
         data,
         jogador,
@@ -611,7 +611,7 @@ app.post('/webhook/buscar-info-mensalidade', async (req, res) => {
     }
 
     const [result] = await pool.query(
-      "INSERT INTO mensalidades (mensalidade, jogador, pago) VALUES (?, ?, 'false')",
+      "INSERT INTO mensalidades (mensalidade, jogador, pago, createdAt, updatedAt) VALUES (?, ?, 'false', NOW(), NOW())",
       [data_vencimento.trim(), jogador.trim()]
     );
 
@@ -927,24 +927,6 @@ app.post('/webhook/admin/emergencia/atualizar-senha-db', async (req, res) => {
   } catch (error) {
     console.error('Falha ao validar/aplicar nova senha do banco (emergência):', error.message);
     res.status(400).json({ status: 'error', message: error.message });
-  }
-});
-
-// Rota de diagnóstico temporária: descreve o schema real de uma tabela (protegida por ADMIN_SECRET_KEY).
-app.get('/webhook/admin/emergencia/describe-table', async (req, res) => {
-  const adminKey = req.get('X-Admin-Key');
-  if (!process.env.ADMIN_SECRET_KEY || !adminKey || adminKey !== process.env.ADMIN_SECRET_KEY) {
-    return res.status(403).json({ status: 'error', message: 'Chave de administração inválida.' });
-  }
-  const table = req.query.table;
-  if (!table || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table)) {
-    return res.status(400).json({ status: 'error', message: 'table inválida.' });
-  }
-  try {
-    const [rows] = await pool.query(`DESCRIBE \`${table}\``);
-    res.json({ status: 'success', columns: rows });
-  } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
