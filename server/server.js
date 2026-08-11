@@ -929,6 +929,80 @@ app.post('/webhook/admin/emergencia/atualizar-senha-db', async (req, res) => {
   }
 });
 
+// 16. POST /webhook/admin/emergencia/corrigir-encoding
+// Rota temporária: corrige nomes gravados com double-encoding UTF-8 (ex: "MÃRCIO" em vez de
+// "MÁRCIO") nas tabelas `jogadores` e `partidas`. Protegida pela mesma ADMIN_SECRET_KEY da rota
+// de emergência de senha do banco. Aceita dryRun para relatar o impacto antes de aplicar.
+app.post('/webhook/admin/emergencia/corrigir-encoding', async (req, res) => {
+  const adminKey = req.get('X-Admin-Key');
+  const dryRun = req.body?.dryRun !== false;
+
+  if (!process.env.ADMIN_SECRET_KEY) {
+    return res.status(503).json({ status: 'error', message: 'Rota de emergência não configurada no servidor (ADMIN_SECRET_KEY ausente).' });
+  }
+  if (!adminKey || adminKey !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(403).json({ status: 'error', message: 'Chave de administração inválida.' });
+  }
+
+  // Pares [texto corrompido, texto correto], mais específicos primeiro para evitar substituições parciais indevidas.
+  const CORRECOES = [
+    ['TIA LUÃÃA', 'TIA LUÍÇA'],
+    ['TIA LÃIÃA', 'TIA LÚIÇA'],
+    ['POLÃCIA FEMININA', 'POLÍCIA FEMININA'],
+    ['MÃRCIO', 'MÁRCIO'],
+    ['TENÃRIO', 'TENÓRIO'],
+    ['REVÃ', 'REVÔ'],
+    ['ÃNDIO', 'ÍNDIO']
+  ];
+
+  const COLUNAS_PARTIDAS = ['jogador1', 'jogador2', 'jogador3', 'jogador4', 'dupla_vencedora', 'cadastrador'];
+
+  try {
+    const relatorio = { jogadores: {}, partidas: {} };
+
+    for (const [de, para] of CORRECOES) {
+      const [countRows] = await pool.query(
+        'SELECT COUNT(*) as c FROM jogadores WHERE jogador LIKE ?',
+        [`%${de}%`]
+      );
+      const count = countRows[0].c;
+      if (count > 0) {
+        relatorio.jogadores[de] = count;
+        if (!dryRun) {
+          await pool.query(
+            'UPDATE jogadores SET jogador = REPLACE(jogador, ?, ?) WHERE jogador LIKE ?',
+            [de, para, `%${de}%`]
+          );
+        }
+      }
+    }
+
+    for (const coluna of COLUNAS_PARTIDAS) {
+      for (const [de, para] of CORRECOES) {
+        const [countRows] = await pool.query(
+          `SELECT COUNT(*) as c FROM partidas WHERE ${coluna} LIKE ?`,
+          [`%${de}%`]
+        );
+        const count = countRows[0].c;
+        if (count > 0) {
+          relatorio.partidas[`${coluna}: ${de}`] = count;
+          if (!dryRun) {
+            await pool.query(
+              `UPDATE partidas SET ${coluna} = REPLACE(${coluna}, ?, ?) WHERE ${coluna} LIKE ?`,
+              [de, para, `%${de}%`]
+            );
+          }
+        }
+      }
+    }
+
+    res.json({ status: 'success', dryRun, relatorio });
+  } catch (error) {
+    console.error('Erro ao corrigir encoding:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao corrigir encoding.' });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });
