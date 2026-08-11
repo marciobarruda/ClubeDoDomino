@@ -930,6 +930,24 @@ app.post('/webhook/admin/emergencia/atualizar-senha-db', async (req, res) => {
   }
 });
 
+// Rota de diagnóstico temporária: descreve o schema real de uma tabela (protegida por ADMIN_SECRET_KEY).
+app.get('/webhook/admin/emergencia/describe-table', async (req, res) => {
+  const adminKey = req.get('X-Admin-Key');
+  if (!process.env.ADMIN_SECRET_KEY || !adminKey || adminKey !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(403).json({ status: 'error', message: 'Chave de administração inválida.' });
+  }
+  const table = req.query.table;
+  if (!table || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table)) {
+    return res.status(400).json({ status: 'error', message: 'table inválida.' });
+  }
+  try {
+    const [rows] = await pool.query(`DESCRIBE \`${table}\``);
+    res.json({ status: 'success', columns: rows });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });
