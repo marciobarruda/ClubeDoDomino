@@ -796,7 +796,7 @@ app.post('/webhook/partidas-em-andamento', async (req, res) => {
     res.status(201).json({ status: 'success' });
   } catch (error) {
     console.error('Erro ao iniciar partida em andamento:', error.message);
-    res.status(500).json({ status: 'error', message: 'Erro ao iniciar partida em andamento.' });
+    res.status(500).json({ status: 'error', message: 'Erro ao iniciar partida em andamento.', debug: error.message, code: error.code });
   }
 });
 
