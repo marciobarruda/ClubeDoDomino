@@ -930,6 +930,36 @@ app.post('/webhook/admin/emergencia/atualizar-senha-db', async (req, res) => {
   }
 });
 
+// Rota de emergência temporária: marca mensalidades sem pagamento registrado como pagas
+// para um jogador específico. Usada uma única vez a pedido; será removida em seguida.
+app.post('/webhook/admin/emergencia/marcar-mensalidades-pagas', async (req, res) => {
+  const adminKey = req.get('X-Admin-Key');
+  if (!process.env.ADMIN_SECRET_KEY || !adminKey || adminKey !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(403).json({ status: 'error', message: 'Chave de administração inválida.' });
+  }
+  const { jogador, dryRun } = req.body;
+  if (!jogador) {
+    return res.status(400).json({ status: 'error', message: 'jogador é obrigatório.' });
+  }
+  try {
+    const [rows] = await pool.query(
+      "SELECT id_tabela as id, mensalidade, pago FROM mensalidades WHERE jogador = ? AND (pago IS NULL OR pago = '' OR pago = 'false')",
+      [jogador]
+    );
+    if (dryRun) {
+      return res.json({ status: 'success', dryRun: true, afetados: rows });
+    }
+    await pool.query(
+      "UPDATE mensalidades SET pago = 'true' WHERE jogador = ? AND (pago IS NULL OR pago = '' OR pago = 'false')",
+      [jogador]
+    );
+    res.json({ status: 'success', dryRun: false, afetados: rows });
+  } catch (error) {
+    console.error('Erro ao marcar mensalidades como pagas:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao marcar mensalidades como pagas.' });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });
