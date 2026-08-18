@@ -250,6 +250,12 @@ interface ApiService {
     @POST("webhook/gravar-buchos/{id}/pagar")
     suspend fun markBuchoAsPaid(@Path("id") id: String): SimpleStatusResponse
 
+    @DELETE("webhook/buscar-info-mensalidade/{id}")
+    suspend fun deleteMensalidade(@Path("id") id: String): SimpleStatusResponse
+
+    @POST("webhook/buscar-info-mensalidade/{id}/pagar")
+    suspend fun markMensalidadeAsPaid(@Path("id") id: String): SimpleStatusResponse
+
     @POST("webhook/jogador/ativo")
     suspend fun setPlayerActive(@Body request: SetPlayerActiveRequest): SimpleStatusResponse
 

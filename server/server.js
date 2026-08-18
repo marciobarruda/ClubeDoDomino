@@ -627,6 +627,30 @@ app.post('/webhook/buscar-info-mensalidade', async (req, res) => {
   }
 });
 
+// 8b. DELETE /webhook/buscar-info-mensalidade/:id
+app.delete('/webhook/buscar-info-mensalidade/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM mensalidades WHERE id_tabela = ?', [id]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao excluir mensalidade:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao excluir mensalidade.' });
+  }
+});
+
+// 8c. POST /webhook/buscar-info-mensalidade/:id/pagar
+app.post('/webhook/buscar-info-mensalidade/:id/pagar', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("UPDATE mensalidades SET pago = 'true' WHERE id_tabela = ?", [id]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao marcar mensalidade como paga:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao marcar mensalidade como paga.' });
+  }
+});
+
 // 9. GET /webhook/listar-ranking
 app.get('/webhook/listar-ranking', async (req, res) => {
   try {

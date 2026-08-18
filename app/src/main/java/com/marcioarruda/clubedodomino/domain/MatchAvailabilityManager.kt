@@ -154,6 +154,16 @@ object MatchAvailabilityManager {
         return result
     }
 
+    // Regra de edição: só permite editar uma partida cadastrada no mesmo dia (fuso America/Recife)
+    // e enquanto o horário atual estiver dentro da janela normal de cadastro (mesma janela usada
+    // para registrar novas partidas, incluindo os bypasses do Márcio e de partida ativa).
+    suspend fun canEditMatch(context: Context, username: String?, matchDate: java.util.Date): Boolean {
+        val matchLocalDate = Instant.ofEpochMilli(matchDate.time).atZone(zoneId).toLocalDate()
+        val today = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), zoneId).toLocalDate()
+        if (matchLocalDate != today) return false
+        return isModuleAvailable(context, username)
+    }
+
     fun getRemainingSecondsToClose(context: Context, username: String? = null): Long? {
         if (username != null && isBypassEnabled(context, username)) {
             return null

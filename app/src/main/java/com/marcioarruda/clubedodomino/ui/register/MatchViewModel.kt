@@ -44,6 +44,10 @@ data class MatchRegistrationState(
     val editingMatchId: String? = null,
     val editingMatchDate: java.util.Date? = null,
     val editingMatchRegisteredBy: User? = null,
+    val originalScore1: Int = 0,
+    val originalScore2: Int = 0,
+    val originalIsBuchoRe: Boolean = false,
+    val originalPlayers: List<User> = emptyList(),
     val isModuleAvailable: Boolean = true,
     val remainingSecondsToClose: Long? = null,
     val isActiveMatchStarted: Boolean = false,
@@ -63,6 +67,12 @@ class MatchViewModel(
 
     var currentUserName: String? = null
         private set
+
+    private fun isNonMemberPlayer(u: User): Boolean {
+        return u.name.contains("NÃO MEMBRO", ignoreCase = true) ||
+            u.name.contains("NAO MEMBRO", ignoreCase = true) ||
+            u.id == "7"
+    }
 
     fun setCurrentUser(name: String?) {
         if (name == currentUserName) return
@@ -379,10 +389,19 @@ class MatchViewModel(
                     return@launch
                 }
 
-                val p1 = state.selectedPlayers[0]!!
-                val p2 = state.selectedPlayers[1]!!
-                val p3 = state.selectedPlayers[2]!!
-                val p4 = state.selectedPlayers[3]!!
+                // Não sorteia se estiver editando uma partida existente, nem se a partida já foi
+                // iniciada como ativa (a dupla já ficou visível/persistida em partidas_em_andamento
+                // e não deve ser trocada silenciosamente no momento de salvar).
+                val chosenPlayers = state.selectedPlayers.filterNotNull()
+                val shouldShuffle = state.editingMatchId == null &&
+                    !state.isActiveMatchStarted &&
+                    chosenPlayers.none { isNonMemberPlayer(it) }
+                val orderedPlayers = if (shouldShuffle) chosenPlayers.shuffled() else chosenPlayers
+
+                val p1 = orderedPlayers[0]
+                val p2 = orderedPlayers[1]
+                val p3 = orderedPlayers[2]
+                val p4 = orderedPlayers[3]
 
                 // Lógica de Vencedores e Pontuação
                 val isTeam1Winner = state.score1 > state.score2
@@ -661,7 +680,11 @@ class MatchViewModel(
                             isLoading = false,
                             editingMatchId = match.id,
                             editingMatchDate = match.date,
-                            editingMatchRegisteredBy = match.registeredBy
+                            editingMatchRegisteredBy = match.registeredBy,
+                            originalScore1 = match.score1,
+                            originalScore2 = match.score2,
+                            originalIsBuchoRe = match.wasBuchoRe,
+                            originalPlayers = listOf(match.team1Player1, match.team1Player2, match.team2Player1, match.team2Player2)
                         )
                     }
                 } else {
@@ -674,37 +697,155 @@ class MatchViewModel(
     }
 
     fun updateMatch(matchId: String) {
+        val preCheckState = _uiState.value
+        if (preCheckState.selectedPlayers.any { it == null }) {
+            _uiState.update { it.copy(error = "Selecione todos os 4 jogadores.") }
+            return
+        }
+        val distinctPlayers = preCheckState.selectedPlayers.filterNotNull().map { it.id }.distinct()
+        if (distinctPlayers.size != 4) {
+            _uiState.update { it.copy(error = "Jogadores não podem ser repetidos.") }
+            return
+        }
+        val s1 = preCheckState.score1
+        val s2 = preCheckState.score2
+        if (s1 < 6 && s2 < 6) {
+            _uiState.update { it.copy(error = "Placar de criança? Pelo menos uma dupla tem que ter 6 pontos. Joguem de verdade!") }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val state = _uiState.value
+                val editingDate = state.editingMatchDate ?: Date()
+
+                // Só o próprio cadastrador pode editar, e apenas no mesmo dia da partida
+                // e dentro da janela de horário permitida para cadastro.
+                val registeredByName = state.editingMatchRegisteredBy?.name?.trim()
+                val isOwner = currentUserName != null && registeredByName != null &&
+                    currentUserName!!.trim().equals(registeredByName, ignoreCase = true)
+                if (!isOwner) {
+                    _uiState.update { it.copy(isLoading = false, error = "Apenas quem cadastrou a partida pode editá-la.") }
+                    return@launch
+                }
+                if (!matchAvailabilityManager.canEditMatch(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName, editingDate)) {
+                    _uiState.update { it.copy(isLoading = false, error = "Só é possível editar a partida no mesmo dia e dentro do horário de cadastro.") }
+                    return@launch
+                }
+
                 val p1 = state.selectedPlayers[0]!!
                 val p2 = state.selectedPlayers[1]!!
                 val p3 = state.selectedPlayers[2]!!
                 val p4 = state.selectedPlayers[3]!!
 
+                val oldWinnerScore = maxOf(state.originalScore1, state.originalScore2)
+                val oldLoserScore = minOf(state.originalScore1, state.originalScore2)
+                val oldIsBuchoSimple = oldLoserScore == 0
+                val oldIsBuchoRe = state.originalIsBuchoRe
+                val oldDebitValue = if (oldIsBuchoRe) 3.00 else if (oldIsBuchoSimple) 2.00 else 0.0
+
+                val newWinnerScore = maxOf(state.score1, state.score2)
+                val newLoserScore = minOf(state.score1, state.score2)
+                val newIsBuchoSimple = newLoserScore == 0
+                val newIsBuchoRe = state.isBuchoRe
+                val newDebitValue = if (newIsBuchoRe) 3.00 else if (newIsBuchoSimple) 2.00 else 0.0
+
+                val isTeam1Winner = state.score1 > state.score2
+                val winners = if (isTeam1Winner) listOf(p1, p2) else listOf(p3, p4)
+                val losers = if (isTeam1Winner) listOf(p3, p4) else listOf(p1, p2)
+                val duplaVencedora = "${winners[0].displayName}/${winners[1].displayName}"
+                val duplaPerdedora = "${losers[0].displayName}/${losers[1].displayName}"
+
+                val points = when {
+                    newIsBuchoRe -> newWinnerScore + 2
+                    newIsBuchoSimple -> newWinnerScore + 1
+                    else -> abs(state.score1 - state.score2)
+                }
+
                 val match = Match(
                     id = matchId,
-                    date = state.editingMatchDate ?: java.util.Date(),
+                    date = editingDate,
                     team1Player1 = p1,
                     team1Player2 = p2,
                     team2Player1 = p3,
                     team2Player2 = p4,
                     score1 = state.score1,
                     score2 = state.score2,
-                    wasBuchoRe = state.isBuchoRe,
+                    wasBuchoRe = newIsBuchoRe,
                     registeredBy = state.editingMatchRegisteredBy ?: p1,
-                    pts = 0 // Repositório atualizará baseado nos novos placares
+                    pts = points
                 )
 
                 repository.updateMatch(match)
-                
-                _uiState.update { 
+
+                // Ajusta débitos de bucho se o resultado deixou de ser/passou a ser bucho.
+                // Usa as duplas ORIGINAIS (calculadas a partir dos jogadores/placar antes da edição)
+                // para localizar o débito antigo — usar as duplas novas aqui faria a busca falhar
+                // sempre que a edição trocasse algum jogador, deixando o débito antigo órfão e
+                // ainda criando um novo (cobrança em duplicidade).
+                if (oldDebitValue > 0.0 && state.originalPlayers.size == 4) {
+                    val oldP1 = state.originalPlayers[0]
+                    val oldP2 = state.originalPlayers[1]
+                    val oldP3 = state.originalPlayers[2]
+                    val oldP4 = state.originalPlayers[3]
+                    val oldIsTeam1Winner = state.originalScore1 > state.originalScore2
+                    val oldWinners = if (oldIsTeam1Winner) listOf(oldP1, oldP2) else listOf(oldP3, oldP4)
+                    val oldLosers = if (oldIsTeam1Winner) listOf(oldP3, oldP4) else listOf(oldP1, oldP2)
+                    val oldDuplaVencedora = "${oldWinners[0].displayName}/${oldWinners[1].displayName}"
+                    val oldDuplaPerdedora = "${oldLosers[0].displayName}/${oldLosers[1].displayName}"
+
+                    val oldPlacarStr = "${state.originalScore1}x${state.originalScore2}"
+                    val oldDateStr = dateFormat.format(editingDate)
+                    repository.getBuchosResult().getOrNull()
+                        ?.filter {
+                            it.placar == oldPlacarStr && it.data?.take(10) == oldDateStr &&
+                                it.dupla_vencedora == oldDuplaVencedora && it.dupla_perdedora == oldDuplaPerdedora
+                        }
+                        ?.forEach { bucho -> bucho.id?.let { repository.deleteBucho(it.toString()) } }
+                }
+
+                if (newDebitValue > 0.0) {
+                    val dateStr = dateFormat.format(editingDate)
+                    val placarStr = "${state.score1}x${state.score2}"
+
+                    val loser1IsNonMember = isNonMemberPlayer(losers[0])
+                    val loser2IsNonMember = isNonMemberPlayer(losers[1])
+
+                    if (loser1IsNonMember && loser2IsNonMember) {
+                        // Ninguém paga
+                    } else if (loser1IsNonMember) {
+                        repository.registerDebit(DebitRequest(
+                            data = dateStr, jogador = losers[1].name, valor = newDebitValue * 2,
+                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora,
+                            cadastrado_por = match.registeredBy.name, wasBuchoRe = newIsBuchoRe
+                        ))
+                    } else if (loser2IsNonMember) {
+                        repository.registerDebit(DebitRequest(
+                            data = dateStr, jogador = losers[0].name, valor = newDebitValue * 2,
+                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora,
+                            cadastrado_por = match.registeredBy.name, wasBuchoRe = newIsBuchoRe
+                        ))
+                    } else {
+                        repository.registerDebit(DebitRequest(
+                            data = dateStr, jogador = losers[0].name, valor = newDebitValue,
+                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora,
+                            cadastrado_por = match.registeredBy.name, wasBuchoRe = newIsBuchoRe
+                        ))
+                        repository.registerDebit(DebitRequest(
+                            data = dateStr, jogador = losers[1].name, valor = newDebitValue,
+                            pago = false, placar = placarStr, dupla_vencedora = duplaVencedora, dupla_perdedora = duplaPerdedora,
+                            cadastrado_por = match.registeredBy.name, wasBuchoRe = newIsBuchoRe
+                        ))
+                    }
+                }
+
+                _uiState.update {
                     it.copy(
-                        isLoading = false, 
-                        success = true, 
-                        editingMatchId = null 
-                    ) 
+                        isLoading = false,
+                        success = true,
+                        editingMatchId = null
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao atualizar: ${e.message}") }

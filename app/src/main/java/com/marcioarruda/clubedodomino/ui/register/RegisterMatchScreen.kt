@@ -86,7 +86,7 @@ fun RegisterMatchScreen(
             onDismissRequest = {},
             containerColor = DominoSurface,
             title = { Text("⚡ Partida Salva!", color = DominoGreen, fontWeight = FontWeight.Black) },
-            text = { Text("Repetir as mesmas duplas?", color = DominoLight) },
+            text = { Text("Repetir com os mesmos jogadores? As duplas serão sorteadas novamente.", color = DominoLight) },
             confirmButton = {
                 Button(onClick = { viewModel.onRepeatMatch(true) }, colors = ButtonDefaults.buttonColors(containerColor = DominoGreen), shape = RoundedCornerShape(12.dp)) {
                     Text("Sim, vamos!", color = Color.Black, fontWeight = FontWeight.Bold)
@@ -263,30 +263,54 @@ fun RegisterMatchScreen(
 
 @Composable
 private fun PlayerSelectionCard(state: MatchRegistrationState, viewModel: MatchViewModel, enabled: Boolean) {
+    val isEditing = state.editingMatchId != null
     Card(
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
-            TeamHeader("TIME 1", DominoGreen)
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val p1List = state.availablePlayers.filter { it == state.selectedPlayers[0] || it !in state.selectedPlayers }
-                val p2List = state.availablePlayers.filter { it == state.selectedPlayers[1] || it !in state.selectedPlayers }
-                PlayerDropdown(p1List, state.selectedPlayers[0], { viewModel.onPlayerSelected(0, it) }, Modifier.weight(1f), enabled)
-                PlayerDropdown(p2List, state.selectedPlayers[1], { viewModel.onPlayerSelected(1, it) }, Modifier.weight(1f), enabled)
-            }
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = DominoGreen.copy(alpha = 0.2f))
-            Spacer(Modifier.height(16.dp))
-            TeamHeader("TIME 2", DominoOrange)
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val p3List = state.availablePlayers.filter { it == state.selectedPlayers[2] || it !in state.selectedPlayers }
-                val p4List = state.availablePlayers.filter { it == state.selectedPlayers[3] || it !in state.selectedPlayers }
-                PlayerDropdown(p3List, state.selectedPlayers[2], { viewModel.onPlayerSelected(2, it) }, Modifier.weight(1f), enabled)
-                PlayerDropdown(p4List, state.selectedPlayers[3], { viewModel.onPlayerSelected(3, it) }, Modifier.weight(1f), enabled)
+            if (isEditing) {
+                TeamHeader("TIME 1", DominoGreen)
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val p1List = state.availablePlayers.filter { it == state.selectedPlayers[0] || it !in state.selectedPlayers }
+                    val p2List = state.availablePlayers.filter { it == state.selectedPlayers[1] || it !in state.selectedPlayers }
+                    PlayerDropdown(p1List, state.selectedPlayers[0], { viewModel.onPlayerSelected(0, it) }, Modifier.weight(1f), enabled)
+                    PlayerDropdown(p2List, state.selectedPlayers[1], { viewModel.onPlayerSelected(1, it) }, Modifier.weight(1f), enabled)
+                }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = DominoGreen.copy(alpha = 0.2f))
+                Spacer(Modifier.height(16.dp))
+                TeamHeader("TIME 2", DominoOrange)
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val p3List = state.availablePlayers.filter { it == state.selectedPlayers[2] || it !in state.selectedPlayers }
+                    val p4List = state.availablePlayers.filter { it == state.selectedPlayers[3] || it !in state.selectedPlayers }
+                    PlayerDropdown(p3List, state.selectedPlayers[2], { viewModel.onPlayerSelected(2, it) }, Modifier.weight(1f), enabled)
+                    PlayerDropdown(p4List, state.selectedPlayers[3], { viewModel.onPlayerSelected(3, it) }, Modifier.weight(1f), enabled)
+                }
+            } else {
+                TeamHeader("JOGADORES", DominoGreen)
+                Text(
+                    "As duplas serão sorteadas ao confirmar",
+                    color = DominoMuted,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val p1List = state.availablePlayers.filter { it == state.selectedPlayers[0] || it !in state.selectedPlayers }
+                    val p2List = state.availablePlayers.filter { it == state.selectedPlayers[1] || it !in state.selectedPlayers }
+                    PlayerDropdown(p1List, state.selectedPlayers[0], { viewModel.onPlayerSelected(0, it) }, Modifier.weight(1f), enabled)
+                    PlayerDropdown(p2List, state.selectedPlayers[1], { viewModel.onPlayerSelected(1, it) }, Modifier.weight(1f), enabled)
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val p3List = state.availablePlayers.filter { it == state.selectedPlayers[2] || it !in state.selectedPlayers }
+                    val p4List = state.availablePlayers.filter { it == state.selectedPlayers[3] || it !in state.selectedPlayers }
+                    PlayerDropdown(p3List, state.selectedPlayers[2], { viewModel.onPlayerSelected(2, it) }, Modifier.weight(1f), enabled)
+                    PlayerDropdown(p4List, state.selectedPlayers[3], { viewModel.onPlayerSelected(3, it) }, Modifier.weight(1f), enabled)
+                }
             }
         }
     }

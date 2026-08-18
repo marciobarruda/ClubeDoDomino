@@ -52,7 +52,7 @@ fun AdminScreen(
     val viewModel: AdminViewModel = viewModel(factory = factory)
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Partidas", "Buchos", "Jogadores", "Inadimplentes")
+    val tabs = listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes")
 
     // Determine permissions
     val userName = session?.userName?.trim() ?: ""
@@ -67,6 +67,7 @@ fun AdminScreen(
     var showAddPlayerDialog by remember { mutableStateOf(false) }
     var showDbPasswordDialog by remember { mutableStateOf(false) }
     var buchoPlayerFilter by remember { mutableStateOf("Todos os Jogadores") }
+    var mensalidadePlayerFilter by remember { mutableStateOf("Todos os Jogadores") }
 
     if (showDbPasswordDialog) {
         UpdateDbPasswordDialog(
@@ -303,13 +304,76 @@ fun AdminScreen(
                                 )
                             }
                         }
-                        2 -> PlayersList(
+                        2 -> {
+                            var mensalidadeExpanded by remember { mutableStateOf(false) }
+                            val playerNames = remember(uiState.players) {
+                                listOf("Todos os Jogadores") + uiState.players.map { it.user.name }.distinct().sorted()
+                            }
+
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()) {
+                                    ExposedDropdownMenuBox(
+                                        expanded = mensalidadeExpanded,
+                                        onExpandedChange = { mensalidadeExpanded = !mensalidadeExpanded }
+                                    ) {
+                                        OutlinedTextField(
+                                            value = mensalidadePlayerFilter,
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Filtrar por Jogador", color = DominoGold) },
+                                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = mensalidadeExpanded) },
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedTextColor = Color.White,
+                                                unfocusedTextColor = Color.White,
+                                                focusedContainerColor = Color(0xFF2C2C2C),
+                                                unfocusedContainerColor = Color(0xFF2C2C2C),
+                                                focusedBorderColor = DominoGold,
+                                                unfocusedBorderColor = Color.Gray
+                                            )
+                                        )
+                                        ExposedDropdownMenu(
+                                            expanded = mensalidadeExpanded,
+                                            onDismissRequest = { mensalidadeExpanded = false },
+                                            modifier = Modifier.background(Color(0xFF2C2C2C))
+                                        ) {
+                                            playerNames.forEach { name ->
+                                                DropdownMenuItem(
+                                                    text = { Text(name, color = Color.White) },
+                                                    onClick = {
+                                                        mensalidadePlayerFilter = name
+                                                        mensalidadeExpanded = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                val filteredMensalidades = remember(uiState.mensalidades, mensalidadePlayerFilter) {
+                                    if (mensalidadePlayerFilter == "Todos os Jogadores") {
+                                        uiState.mensalidades
+                                    } else {
+                                        uiState.mensalidades.filter { it.jogador?.trim()?.equals(mensalidadePlayerFilter.trim(), ignoreCase = true) == true }
+                                    }
+                                }
+
+                                MensalidadesList(
+                                    mensalidades = filteredMensalidades,
+                                    onDelete = { viewModel.deleteMensalidade(it) },
+                                    onMarkPaid = { viewModel.markMensalidadeAsPaid(it) },
+                                    canEdit = canEdit,
+                                    isMarcio = userName.equals("MÁRCIO", ignoreCase = true)
+                                )
+                            }
+                        }
+                        3 -> PlayersList(
                             players = uiState.players,
                             onToggleActive = { u, a -> viewModel.togglePlayerActive(u, a) },
                             onToggleVacation = { u, v -> viewModel.togglePlayerVacation(u, v) },
                             canEdit = canEdit
                         )
-                        3 -> DebtorsList(debtors = uiState.debtors)
+                        4 -> DebtorsList(debtors = uiState.debtors)
                     }
                 }
             }
@@ -424,6 +488,58 @@ fun BuchosList(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MensalidadesList(
+    mensalidades: List<com.marcioarruda.clubedodomino.data.network.MensalidadeDto>,
+    onDelete: (Long?) -> Unit,
+    onMarkPaid: (Long?) -> Unit,
+    canEdit: Boolean,
+    isMarcio: Boolean
+) {
+    LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        items(mensalidades) { mensalidade ->
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
+                modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(formatMensalidadeReferencia(mensalidade.mensalidade), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                        Text(mensalidade.jogador ?: "", color = Color.White)
+                        Text("Valor: R$ 10,00", color = DominoGold)
+                    }
+                    Row {
+                        if (isMarcio) {
+                            IconButton(onClick = { onMarkPaid(mensalidade.id) }) {
+                                Text("✔️")
+                            }
+                        }
+                        if (canEdit) {
+                            IconButton(onClick = { onDelete(mensalidade.id) }) {
+                                Text("🗑️")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatMensalidadeReferencia(raw: String?): String {
+    if (raw.isNullOrBlank()) return "N/A"
+    return try {
+        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(raw.take(10))
+        if (date != null) SimpleDateFormat("MM/yyyy", Locale.getDefault()).format(date) else raw
+    } catch (_: Exception) {
+        raw
     }
 }
 

@@ -203,6 +203,16 @@ class ClubRepository {
             Unit
         }
 
+    suspend fun deleteMensalidade(id: String): Unit = withContext(Dispatchers.IO) {
+        api.deleteMensalidade(id)
+        Unit
+    }
+
+    suspend fun markMensalidadeAsPaid(id: Long): Unit = withContext(Dispatchers.IO) {
+        api.markMensalidadeAsPaid(id.toString())
+        Unit
+    }
+
     suspend fun createPlayer(
         name: String,
         email: String,

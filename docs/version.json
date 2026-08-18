@@ -1,7 +1,7 @@
 {
-  "version_code": 87,
-  "version_name": "1.52",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v87/clube_v_87.apk",
-  "release_notes": "* v87: Adicionado modo de recuperação na tela de login (\"Não consigo entrar / erro do servidor\") para corrigir a senha do banco de dados usada pelo servidor sem depender de conseguir logar antes — útil quando a senha do banco muda por fora do app.",
+  "version_code": 88,
+  "version_name": "1.53",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v88/clube_v_88.apk",
+  "release_notes": "* v88: Admin agora permite baixar (marcar como pago) e excluir mensalidades, igual já funcionava com buchos. Cadastro de partida sorteia as duplas automaticamente entre os 4 jogadores informados (exceto quando algum é NÃO MEMBRO). O cadastrador de uma partida pode editá-la, desde que seja no mesmo dia e dentro do horário permitido de cadastro.",
   "min_version": 82
 }

@@ -11,6 +11,7 @@ import com.marcioarruda.clubedodomino.data.GlobalStats
 import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.data.User
 import com.marcioarruda.clubedodomino.data.network.BuchoDto
+import com.marcioarruda.clubedodomino.data.network.MensalidadeDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,7 @@ data class AdminUiState(
     val isLoading: Boolean = false,
     val matches: List<Match> = emptyList(),
     val buchos: List<BuchoDto> = emptyList(),
+    val mensalidades: List<MensalidadeDto> = emptyList(),
     val players: List<AdminPlayerItem> = emptyList(),
     val debtors: List<DebtorItem> = emptyList(),
     val globalStats: GlobalStats? = null,
@@ -88,6 +90,7 @@ class AdminViewModel(
 
                 val allBuchos = repository.getBuchosResult().getOrNull() ?: emptyList()
                 val allMensalidades = repository.getMensalidadesResult().getOrNull() ?: emptyList()
+                val mensalidadesNaoPagas = allMensalidades.filter { it.pago != true }.sortedByDescending { it.id }
                 val allEntries = buildList {
                     addAll(allBuchos.mapNotNull { with(repository) { it.toFinancialEntry(users) } })
                     addAll(allMensalidades.mapNotNull { with(repository) { it.toFinancialEntry(users) } })
@@ -118,6 +121,7 @@ class AdminViewModel(
                         isLoading = false,
                         matches = matches,
                         buchos = buchos,
+                        mensalidades = mensalidadesNaoPagas,
                         players = adminPlayers,
                         debtors = debtors,
                         globalStats = stats
@@ -167,6 +171,34 @@ class AdminViewModel(
                 _uiState.update { it.copy(message = "Bucho marcado como pago.") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao marcar bucho como pago: ${e.message}") }
+            }
+        }
+    }
+
+    fun deleteMensalidade(mensalidadeId: Long?) {
+        if (mensalidadeId == null) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                repository.deleteMensalidade(mensalidadeId.toString())
+                loadData() // Refresh
+                _uiState.update { it.copy(message = "Mensalidade excluída com sucesso.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao excluir mensalidade: ${e.message}") }
+            }
+        }
+    }
+
+    fun markMensalidadeAsPaid(mensalidadeId: Long?) {
+        if (mensalidadeId == null) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                repository.markMensalidadeAsPaid(mensalidadeId)
+                loadData() // Refresh
+                _uiState.update { it.copy(message = "Mensalidade marcada como paga.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao marcar mensalidade como paga: ${e.message}") }
             }
         }
     }

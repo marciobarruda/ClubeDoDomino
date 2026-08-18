@@ -117,7 +117,17 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
                     }
                 }
             }
-            selectedMatch?.let { MatchDetailsDialog(it) { selectedMatch = null } }
+            selectedMatch?.let { match ->
+                MatchDetailsDialog(
+                    match = match,
+                    currentUserName = uiState.user?.name,
+                    onDismiss = { selectedMatch = null },
+                    onEdit = {
+                        selectedMatch = null
+                        navController.navigate("register_match?matchId=${match.id}")
+                    }
+                )
+            }
             if (showCelebrationDialog && uiState.championCelebration != null) {
                 ChampionCelebrationDialog(uiState.championCelebration!!) { showCelebrationDialog = false }
             }
@@ -493,10 +503,31 @@ private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
 }
 
 @Composable
-private fun MatchDetailsDialog(match: Match, onDismiss: () -> Unit) {
+private fun MatchDetailsDialog(
+    match: Match,
+    currentUserName: String?,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit
+) {
+    val context = LocalContext.current
+    var canEdit by remember(match.id) { mutableStateOf(false) }
+
+    val isOwner = currentUserName != null &&
+        currentUserName.trim().equals(match.registeredBy.name.trim(), ignoreCase = true)
+
+    LaunchedEffect(match.id, currentUserName) {
+        canEdit = isOwner && com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
+            .canEditMatch(context, currentUserName, match.date)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Fechar", color = DominoGreen) } },
+        dismissButton = {
+            if (canEdit) {
+                TextButton(onClick = onEdit) { Text("✏️ Editar", color = DominoGold) }
+            }
+        },
         containerColor = DominoSurface,
         title = { Text("Detalhes da Partida", color = DominoLight) },
         text = {
