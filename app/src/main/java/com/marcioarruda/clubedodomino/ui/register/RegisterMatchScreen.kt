@@ -270,7 +270,11 @@ private fun PlayerSelectionCard(state: MatchRegistrationState, viewModel: MatchV
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
-            if (isEditing) {
+            // Mostra os times já definidos (Time 1/Time 2) quando a partida está em edição ou já
+            // foi aberta (duplas já sorteadas em startMatch()). Antes de abrir, mostra os 4 campos
+            // soltos, já que a formação das duplas só é decidida ao confirmar a abertura.
+            val showTeams = isEditing || state.isActiveMatchStarted
+            if (showTeams) {
                 TeamHeader("TIME 1", DominoGreen)
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -293,7 +297,7 @@ private fun PlayerSelectionCard(state: MatchRegistrationState, viewModel: MatchV
             } else {
                 TeamHeader("JOGADORES", DominoGreen)
                 Text(
-                    "As duplas serão sorteadas ao confirmar",
+                    "As duplas serão sorteadas ao confirmar a abertura",
                     color = DominoMuted,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(bottom = 12.dp)

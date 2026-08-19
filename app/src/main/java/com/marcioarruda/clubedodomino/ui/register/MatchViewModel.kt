@@ -389,19 +389,13 @@ class MatchViewModel(
                     return@launch
                 }
 
-                // Não sorteia se estiver editando uma partida existente, nem se a partida já foi
-                // iniciada como ativa (a dupla já ficou visível/persistida em partidas_em_andamento
-                // e não deve ser trocada silenciosamente no momento de salvar).
-                val chosenPlayers = state.selectedPlayers.filterNotNull()
-                val shouldShuffle = state.editingMatchId == null &&
-                    !state.isActiveMatchStarted &&
-                    chosenPlayers.none { isNonMemberPlayer(it) }
-                val orderedPlayers = if (shouldShuffle) chosenPlayers.shuffled() else chosenPlayers
-
-                val p1 = orderedPlayers[0]
-                val p2 = orderedPlayers[1]
-                val p3 = orderedPlayers[2]
-                val p4 = orderedPlayers[3]
+                // As duplas já foram sorteadas em startMatch() (ou mantidas na ordem selecionada,
+                // se algum jogador for NÃO MEMBRO) e persistidas em selectedPlayers — aqui só se
+                // usa a ordem já definida, sem sortear de novo.
+                val p1 = state.selectedPlayers[0]!!
+                val p2 = state.selectedPlayers[1]!!
+                val p3 = state.selectedPlayers[2]!!
+                val p4 = state.selectedPlayers[3]!!
 
                 // Lógica de Vencedores e Pontuação
                 val isTeam1Winner = state.score1 > state.score2
@@ -524,8 +518,13 @@ class MatchViewModel(
 
             _uiState.update {
                 if (repeat) {
+                    val chosenPlayers = it.selectedPlayers.filterNotNull()
+                    val shouldShuffle = chosenPlayers.size == 4 && chosenPlayers.none { p -> isNonMemberPlayer(p) }
+                    val reshuffledPlayers = if (shouldShuffle) chosenPlayers.shuffled() else it.selectedPlayers
+
                     it.copy(
                         showRepeatDialog = false,
+                        selectedPlayers = reshuffledPlayers,
                         score1 = 0,
                         score2 = 0,
                         fechas = 0,
@@ -574,7 +573,7 @@ class MatchViewModel(
 
                 val activeMatches = repository.getActiveMatches()
                 val selectedNames = state.selectedPlayers.filterNotNull().map { it.name }
-                
+
                 var conflictPlayer: String? = null
                 for (match in activeMatches) {
                     val activePlayers = listOf(match.player1, match.player2, match.player3, match.player4)
@@ -590,13 +589,18 @@ class MatchViewModel(
                     return@launch
                 }
 
+                // Sorteia as duplas ao abrir a partida, desde que nenhum dos 4 seja NÃO MEMBRO.
+                val chosenPlayers = state.selectedPlayers.filterNotNull()
+                val shouldShuffle = chosenPlayers.none { isNonMemberPlayer(it) }
+                val orderedPlayers = if (shouldShuffle) chosenPlayers.shuffled() else chosenPlayers
+
                 val matchId = UUID.randomUUID().toString()
                 val newActiveMatch = ActiveMatch(
                     id = matchId,
-                    player1 = state.selectedPlayers[0]!!.name,
-                    player2 = state.selectedPlayers[1]!!.name,
-                    player3 = state.selectedPlayers[2]!!.name,
-                    player4 = state.selectedPlayers[3]!!.name,
+                    player1 = orderedPlayers[0].name,
+                    player2 = orderedPlayers[1].name,
+                    player3 = orderedPlayers[2].name,
+                    player4 = orderedPlayers[3].name,
                     cadastrador = currentUserName ?: "Desconhecido"
                 )
 
@@ -607,6 +611,7 @@ class MatchViewModel(
                             isLoading = false,
                             isActiveMatchStarted = true,
                             activeMatchId = matchId,
+                            selectedPlayers = orderedPlayers,
                             error = null
                         )
                     }

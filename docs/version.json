@@ -1,7 +1,7 @@
 {
-  "version_code": 88,
-  "version_name": "1.53",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v88/clube_v_88.apk",
-  "release_notes": "* v88: Admin agora permite baixar (marcar como pago) e excluir mensalidades, igual já funcionava com buchos. Cadastro de partida sorteia as duplas automaticamente entre os 4 jogadores informados (exceto quando algum é NÃO MEMBRO). O cadastrador de uma partida pode editá-la, desde que seja no mesmo dia e dentro do horário permitido de cadastro.",
+  "version_code": 89,
+  "version_name": "1.54",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v89/clube_v_89.apk",
+  "release_notes": "* v89: Corrigido o sorteio de duplas — no v88 ele não funcionava no fluxo normal de cadastro. Agora as duplas são sorteadas no momento de confirmar a abertura da partida, e novamente sorteadas ao optar por repetir com os mesmos jogadores.",
   "min_version": 82
 }
