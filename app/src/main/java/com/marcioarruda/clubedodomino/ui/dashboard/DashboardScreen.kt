@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -87,7 +86,10 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
                     )
             )
             when {
-                uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = DominoGreen)
+                uiState.isLoading -> com.marcioarruda.clubedodomino.ui.DominoLoadingAnimation(
+                    modifier = Modifier.align(Alignment.Center),
+                    artworkSize = 140.dp
+                )
                 uiState.error != null -> ErrorView(uiState.error!!) { viewModel.loadDashboardData(userId) }
                 uiState.user != null -> {
                     PullToRefreshBox(
@@ -297,7 +299,7 @@ private fun DashboardContent(state: DashboardUiState, navController: NavControll
 
         item { ShortcutsGrid(navController, userId) }
 
-        item { StatsRow(state) }
+        item { StatsRow(state, navController, userId) }
 
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -360,16 +362,16 @@ private fun TopBar(user: User, onAvatarClick: () -> Unit) {
 @Composable
 private fun ShortcutsGrid(navController: NavController, userId: String) {
     val shortcuts = listOf(
-        ShortcutItem("Nova partida", Icons.Default.Add) {
+        ShortcutItem("Jogar", "🎲") {
             navController.navigate("register_match")
         },
-        ShortcutItem("Ranking", Icons.Default.BarChart) {
+        ShortcutItem("Ranking", "🏅") {
             navController.navigate("ranking")
         },
-        ShortcutItem("Finanças", Icons.Default.MonetizationOn) {
+        ShortcutItem("Finanças", "💳") {
             navController.navigate("finance/$userId")
         },
-        ShortcutItem("Admin", Icons.Default.AdminPanelSettings) {
+        ShortcutItem("Admin", "⚙️") {
             navController.navigate("admin")
         }
     )
@@ -399,7 +401,7 @@ private fun ShortcutCard(item: ShortcutItem, modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(item.icon, contentDescription = item.label, tint = DominoGreen, modifier = Modifier.size(24.dp))
+            Text(item.emoji, fontSize = 22.sp)
             Spacer(Modifier.height(6.dp))
             Text(
                 item.label,
@@ -407,16 +409,16 @@ private fun ShortcutCard(item: ShortcutItem, modifier: Modifier = Modifier) {
                 color = DominoLight,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
-                maxLines = 2
+                maxLines = 1
             )
         }
     }
 }
 
-data class ShortcutItem(val label: String, val icon: ImageVector, val onClick: () -> Unit)
+data class ShortcutItem(val label: String, val emoji: String, val onClick: () -> Unit)
 
 @Composable
-private fun StatsRow(state: DashboardUiState) {
+private fun StatsRow(state: DashboardUiState, navController: NavController, userId: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -427,15 +429,22 @@ private fun StatsRow(state: DashboardUiState) {
             "Meu débito",
             "R$ ${String.format(Locale("pt", "BR"), "%.2f", state.totalDebt)}",
             Modifier.weight(1f),
-            valueColor = if (state.totalDebt > 0) DominoOrange else DominoGreen
+            valueColor = if (state.totalDebt > 0) DominoOrange else DominoGreen,
+            onClick = { navController.navigate("finance/$userId") }
         )
     }
 }
 
 @Composable
-private fun StatMiniCard(label: String, value: String, modifier: Modifier = Modifier, valueColor: Color = DominoLight) {
+private fun StatMiniCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = DominoLight,
+    onClick: (() -> Unit)? = null
+) {
     Card(
-        modifier = modifier,
+        modifier = modifier.let { if (onClick != null) it.clickable(onClick = onClick) else it },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)

@@ -33,8 +33,10 @@ import com.marcioarruda.clubedodomino.data.FinancialEntry
 import com.marcioarruda.clubedodomino.data.FinancialEntryStatus
 import com.marcioarruda.clubedodomino.data.FinancialEntryType
 import com.marcioarruda.clubedodomino.ui.ViewModelFactory
+import com.marcioarruda.clubedodomino.ui.theme.DominoAmber
 import com.marcioarruda.clubedodomino.ui.theme.DominoBg
 import com.marcioarruda.clubedodomino.ui.theme.DominoCyan
+import com.marcioarruda.clubedodomino.ui.theme.DominoError
 import com.marcioarruda.clubedodomino.ui.theme.DominoGreen
 import com.marcioarruda.clubedodomino.ui.theme.DominoLight
 import com.marcioarruda.clubedodomino.ui.theme.DominoMuted
@@ -216,7 +218,7 @@ fun FinanceScreen(
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
                             item {
-                                TotalDueCard(uiState.totalDue + uiState.totalUpcoming, pendingCount)
+                                TotalDueCard(uiState.totalDue, uiState.totalUpcoming, pendingCount)
                             }
 
                             item {
@@ -554,7 +556,7 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-fun TotalDueCard(total: Double, pendingCount: Int) {
+fun TotalDueCard(totalVencido: Double, totalAVencer: Double, pendingCount: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -570,25 +572,52 @@ fun TotalDueCard(total: Double, pendingCount: Int) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "SALDO EM ABERTO",
+                "MEU SALDO",
                 color = DominoYellow,
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp,
                 letterSpacing = 1.sp
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "R$ ${String.format("%.2f", total)}",
-                color = DominoOnDark,
-                fontWeight = FontWeight.Black,
-                fontSize = 32.sp
-            )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                SaldoColumn(label = "VENCIDO", value = totalVencido, color = DominoError)
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(44.dp)
+                        .background(DominoOnDark.copy(alpha = 0.15f))
+                )
+                SaldoColumn(label = "A VENCER", value = totalAVencer, color = DominoAmber)
+            }
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = if (pendingCount == 1) "1 cobrança pendente" else "$pendingCount cobranças pendentes",
                 color = DominoOnDarkMuted,
                 fontSize = 13.sp
             )
         }
+    }
+}
+
+@Composable
+private fun SaldoColumn(label: String, value: Double, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "R$ ${String.format("%.2f", value)}",
+            color = color,
+            fontWeight = FontWeight.Black,
+            fontSize = 24.sp
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            label,
+            color = DominoOnDarkMuted,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.sp,
+            letterSpacing = 0.5.sp
+        )
     }
 }

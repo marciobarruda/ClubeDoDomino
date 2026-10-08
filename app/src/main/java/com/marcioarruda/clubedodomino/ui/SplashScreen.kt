@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.marcioarruda.clubedodomino.R
@@ -45,28 +46,26 @@ import com.marcioarruda.clubedodomino.ui.theme.DominoOrange
 import com.marcioarruda.clubedodomino.ui.theme.DominoYellow
 import kotlinx.coroutines.delay
 
+// Animação da peça de dominó (fade-in + escala + leve rotação de entrada, seguida de uma
+// pulsação contínua sutil) compartilhada entre a tela de splash inicial e o loading da
+// Dashboard — mesma identidade visual em qualquer tela de carregamento do app.
 @Composable
-fun SplashScreen() {
-    val scaleAnim  = remember { Animatable(0.8f) }
-    val alphaAnim  = remember { Animatable(0f) }
+fun DominoLoadingAnimation(
+    modifier: Modifier = Modifier,
+    artworkSize: Dp = 220.dp,
+    showLoadingDots: Boolean = true
+) {
+    val scaleAnim = remember { Animatable(0.8f) }
+    val alphaAnim = remember { Animatable(0f) }
     val rotationAnim = remember { Animatable(-6f) }
-    val textAlpha  = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
         scaleAnim.animateTo(1f, tween(700, easing = EaseOutBack))
         alphaAnim.animateTo(1f, tween(500))
         rotationAnim.animateTo(0f, tween(700, easing = EaseOutCubic))
-        delay(200)
-        textAlpha.animateTo(1f, tween(600, easing = EaseOutCubic))
     }
 
-    // Subtle continuous pulse while the loading screen is visible.
     val pulse = rememberInfiniteTransition(label = "pulse")
-    val glowAlpha by pulse.animateFloat(
-        initialValue = 0.3f, targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse),
-        label = "glow"
-    )
     val dotPulse by pulse.animateFloat(
         initialValue = 0.4f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
@@ -76,6 +75,65 @@ fun SplashScreen() {
         initialValue = 0.98f, targetValue = 1.03f,
         animationSpec = infiniteRepeatable(tween(1400, easing = EaseOutCubic), RepeatMode.Reverse),
         label = "tilePulse"
+    )
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.domino_pieces),
+            contentDescription = null,
+            modifier = Modifier
+                .size(artworkSize)
+                .scale(scaleAnim.value * tilePulse)
+                .rotate(rotationAnim.value)
+                .alpha(alphaAnim.value)
+        )
+
+        if (showLoadingDots) {
+            Spacer(Modifier.height(20.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                listOf(0, 1, 2).forEach { idx ->
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .alpha(if (idx == 1) dotPulse else (1f - dotPulse * 0.5f))
+                            .background(
+                                when (idx) {
+                                    0 -> DominoYellow
+                                    1 -> DominoGreen
+                                    else -> DominoOrange
+                                },
+                                CircleShape
+                            )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SplashScreen() {
+    val alphaAnim = remember { Animatable(0f) }
+    val textAlpha = remember { Animatable(0f) }
+
+    LaunchedEffect(Unit) {
+        alphaAnim.animateTo(1f, tween(500))
+        delay(400)
+        textAlpha.animateTo(1f, tween(600, easing = EaseOutCubic))
+    }
+
+    val pulse = rememberInfiniteTransition(label = "glowPulse")
+    val glowAlpha by pulse.animateFloat(
+        initialValue = 0.3f, targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse),
+        label = "glow"
     )
 
     Box(
@@ -105,21 +163,10 @@ fun SplashScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Domino pieces artwork (real image, fade-in + scale-up + gentle rotation settle,
-            // followed by a subtle continuous pulse while loading)
-            Image(
-                painter = painterResource(R.drawable.domino_pieces),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(220.dp)
-                    .scale(scaleAnim.value * tilePulse)
-                    .rotate(rotationAnim.value)
-                    .alpha(alphaAnim.value)
-            )
+            DominoLoadingAnimation(showLoadingDots = false)
 
             Spacer(Modifier.height(40.dp))
 
-            // Club name
             Column(
                 modifier = Modifier.alpha(textAlpha.value),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -150,7 +197,6 @@ fun SplashScreen() {
 
             Spacer(Modifier.height(60.dp))
 
-            // Animated loading dots
             Row(
                 modifier = Modifier.alpha(textAlpha.value),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -160,7 +206,6 @@ fun SplashScreen() {
                     Box(
                         modifier = Modifier
                             .size(8.dp)
-                            .alpha(if (idx == 1) dotPulse else (1f - dotPulse * 0.5f))
                             .background(
                                 when (idx) {
                                     0 -> DominoYellow

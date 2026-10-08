@@ -14,7 +14,8 @@ val DominoPurple   = Color(0xFF7A6D96)  // Tertiary — reserved for special/neu
 val DominoCyan     = Color(0xFF1F8A5A)  // Accent — positive/wins highlight
 val DominoBg       = Color(0xFFFBF4E4)  // Background — warm cream table felt
 val DominoSurface  = Color(0xFFFFFFFF)  // Card surfaces — white
-val DominoError    = Color(0xFFD1573F)  // Error states (same as secondary coral)
+val DominoError    = Color(0xFFE2493A)  // Error / overdue — distinct red, more urgent than the terracotta secondary
+val DominoAmber    = Color(0xFFE0A030)  // Upcoming/due-soon — warm amber, between gold and orange
 val DominoLight    = Color(0xFF1F3327)  // Primary text over light backgrounds (dark green-black)
 val DominoMuted    = Color(0xFF8A6F3D)  // Muted/secondary text (warm brown-gold)
 
