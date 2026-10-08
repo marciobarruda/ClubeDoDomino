@@ -88,12 +88,7 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                     fun avgBalance(r: com.marcioarruda.clubedodomino.data.network.RankingDto) =
                         r.saldo_dia.toDouble() / r.partidas_dia
 
-                    // Exige pelo menos 2 saldos médios distintos no dia — com só 1 jogador elegível
-                    // (ou todos empatados), craque e piorzinho seriam a mesma pessoa, o que não faz
-                    // sentido: não há "melhor" e "pior" quando só existe um nível de desempenho.
-                    val saldosDistintos = eligibleToday.map { avgBalance(it) }.distinct()
-
-                    if (saldosDistintos.size >= 2) {
+                    if (eligibleToday.isNotEmpty()) {
                         // Craque do dia: maior saldo médio por partida; empate desempatado por mais partidas jogadas.
                         val bestRanked = eligibleToday.sortedWith(
                             compareByDescending<com.marcioarruda.clubedodomino.data.network.RankingDto> { avgBalance(it) }
@@ -104,29 +99,32 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                             avgBalance(it) == avgBalance(bestTop) && it.partidas_dia == bestTop.partidas_dia
                         }
 
-                        // Piorzinho do dia: menor saldo médio por partida; mesma regra de desempate do
-                        // craque, só invertida (mais partidas jogadas também desempata aqui). Exclui quem
-                        // já foi eleito craque, para as duas listas nunca colidirem no mesmo jogador.
-                        val worstCandidates = eligibleToday.filterNot { candidate ->
-                            bestTied.any { it.jogador == candidate.jogador }
-                        }
-                        val worstRanked = worstCandidates.sortedWith(
-                            compareBy<com.marcioarruda.clubedodomino.data.network.RankingDto> { avgBalance(it) }
-                                .thenByDescending { it.partidas_dia }
-                        )
-                        val worstTop = worstRanked.first()
-                        val worstTied = worstRanked.filter {
-                            avgBalance(it) == avgBalance(worstTop) && it.partidas_dia == worstTop.partidas_dia
-                        }
-
                         topPlayers = bestTied.mapNotNull { r ->
                             val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
                             playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia) }
                         }
 
-                        bottomPlayers = worstTied.mapNotNull { r ->
-                            val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
-                            playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia) }
+                        // Piorzinho do dia: menor saldo médio por partida entre quem NÃO foi eleito
+                        // craque — evita que a mesma pessoa apareça nos dois cards (possível quando só
+                        // há 1 jogador elegível, ou quando todos empatam no mesmo saldo médio). Se depois
+                        // de excluir o(s) craque(s) não sobrar ninguém, simplesmente não há piorzinho hoje.
+                        val worstCandidates = eligibleToday.filterNot { candidate ->
+                            bestTied.any { it.jogador == candidate.jogador }
+                        }
+                        if (worstCandidates.isNotEmpty()) {
+                            val worstRanked = worstCandidates.sortedWith(
+                                compareBy<com.marcioarruda.clubedodomino.data.network.RankingDto> { avgBalance(it) }
+                                    .thenByDescending { it.partidas_dia }
+                            )
+                            val worstTop = worstRanked.first()
+                            val worstTied = worstRanked.filter {
+                                avgBalance(it) == avgBalance(worstTop) && it.partidas_dia == worstTop.partidas_dia
+                            }
+
+                            bottomPlayers = worstTied.mapNotNull { r ->
+                                val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
+                                playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia) }
+                            }
                         }
                     }
                 }
