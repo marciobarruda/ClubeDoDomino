@@ -4,9 +4,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,26 +23,35 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.marcioarruda.clubedodomino.data.FinancialEntryType
 import com.marcioarruda.clubedodomino.ui.ViewModelFactory
+import com.marcioarruda.clubedodomino.ui.theme.DominoBg
 import com.marcioarruda.clubedodomino.ui.theme.DominoGold
 import com.marcioarruda.clubedodomino.ui.theme.DominoGreen
 import com.marcioarruda.clubedodomino.ui.theme.DominoLight
 import com.marcioarruda.clubedodomino.ui.theme.DominoMuted
+import com.marcioarruda.clubedodomino.ui.theme.DominoOrange
 import com.marcioarruda.clubedodomino.ui.theme.DominoSurface
 import com.marcioarruda.clubedodomino.ui.util.AvatarImage
 import androidx.compose.ui.platform.LocalContext
 import com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+
+// Borda sutil para itens de alerta/pendência (mensalidade vencida, bucho não pago)
+private val AlertBorderColor = Color(0xFFD1573F).copy(alpha = 0.27f) // DominoOrange ~ #D1573F44
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,23 +106,24 @@ fun AdminScreen(
     if (showReleaseNotes) {
         AlertDialog(
             onDismissRequest = { showReleaseNotes = false },
-            title = { Text("Notas da Versão") },
+            containerColor = DominoSurface,
+            title = { Text("Notas da Versão", color = DominoLight, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Sua Versão: ${com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME} (${com.marcioarruda.clubedodomino.BuildConfig.VERSION_CODE})", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Text("Sua Versão: ${com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME} (${com.marcioarruda.clubedodomino.BuildConfig.VERSION_CODE})", fontWeight = FontWeight.Bold, color = DominoLight)
                     if (releaseInfo != null) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Última disponível: v${releaseInfo?.second}", color = DominoGold)
+                        Text("Última disponível: v${releaseInfo?.second}", color = DominoGreen, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("O que mudou:", fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-                        Text(releaseInfo?.third ?: "Nenhuma nota disponível.", color = Color.White)
+                        Text("O que mudou:", fontWeight = FontWeight.Medium, color = DominoLight)
+                        Text(releaseInfo?.third ?: "Nenhuma nota disponível.", color = DominoMuted)
                     } else {
-                        CircularProgressIndicator(modifier = Modifier.padding(16.dp).align(androidx.compose.ui.Alignment.CenterHorizontally))
+                        CircularProgressIndicator(modifier = Modifier.padding(16.dp).align(androidx.compose.ui.Alignment.CenterHorizontally), color = DominoGreen)
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showReleaseNotes = false }) { Text("Fechar") }
+                TextButton(onClick = { showReleaseNotes = false }) { Text("Fechar", color = DominoGreen) }
             }
         )
     }
@@ -129,43 +142,52 @@ fun AdminScreen(
     if (uiState.message != null) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissMessage() },
-            confirmButton = { TextButton(onClick = { viewModel.dismissMessage() }) { Text("OK") } },
-            text = { Text(uiState.message!!) }
+            containerColor = DominoSurface,
+            confirmButton = { TextButton(onClick = { viewModel.dismissMessage() }) { Text("OK", color = DominoGreen) } },
+            text = { Text(uiState.message!!, color = DominoLight) }
         )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Administração") },
+                title = {
+                    Text(
+                        "Administração",
+                        color = DominoGreen,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Voltar", tint = DominoGold)
+                        Icon(androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Voltar", tint = DominoGreen)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent, 
-                    titleContentColor = Color.White
+                    containerColor = DominoBg,
+                    titleContentColor = DominoGreen
                 )
             )
         },
-        containerColor = Color.Black 
+        containerColor = DominoBg
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            
+
             val isMarcio = userName.equals("MÁRCIO", ignoreCase = true)
             if (isMarcio) {
                 val context = LocalContext.current
-                var bypassEnabled by remember { 
-                    mutableStateOf(MatchAvailabilityManager.getBypassEnabled(context)) 
+                var bypassEnabled by remember {
+                    mutableStateOf(MatchAvailabilityManager.getBypassEnabled(context))
                 }
 
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
-                    shape = RoundedCornerShape(12.dp)
+                        .padding(16.dp)
+                        .shadow(1.dp, RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -177,13 +199,13 @@ fun AdminScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Liberar Horário de Cadastro",
-                                color = Color.White,
+                                color = DominoLight,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
                             Text(
                                 text = "Permite que você cadastre partidas fora do horário padrão (11h45 às 14h)",
-                                color = Color.Gray,
+                                color = DominoMuted,
                                 fontSize = 12.sp
                             )
                         }
@@ -199,7 +221,7 @@ fun AdminScreen(
                             )
                         )
                     }
-                    HorizontalDivider(color = Color(0xFF444444), modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(color = Color(0xFFE6DAB8), modifier = Modifier.padding(horizontal = 16.dp))
                     TextButton(
                         onClick = { showAddPlayerDialog = true },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
@@ -208,38 +230,59 @@ fun AdminScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Cadastrar Novo Jogador", color = DominoGreen, fontWeight = FontWeight.SemiBold)
                     }
-                    HorizontalDivider(color = Color(0xFF444444), modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(color = Color(0xFFE6DAB8), modifier = Modifier.padding(horizontal = 16.dp))
                     TextButton(
                         onClick = { showDbPasswordDialog = true },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Icon(Icons.Default.Storage, contentDescription = null, tint = DominoGold)
+                        Icon(Icons.Default.Storage, contentDescription = null, tint = DominoMuted)
                         Spacer(Modifier.width(8.dp))
-                        Text("Alterar Senha do Banco de Dados", color = DominoGold, fontWeight = FontWeight.SemiBold)
+                        Text("Alterar Senha do Banco de Dados", color = DominoMuted, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
 
-            TabRow(selectedTabIndex = selectedTab, containerColor = Color.Transparent, contentColor = DominoGold) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { Text(title) }
-                    )
+            // Abas em formato de "pills" roláveis horizontalmente
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(tabs.size) { index ->
+                    val title = tabs[index]
+                    val selected = selectedTab == index
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(if (selected) DominoGreen else DominoSurface)
+                            .border(
+                                width = 1.dp,
+                                color = if (selected) DominoGreen else Color(0xFFE6DAB8),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .clickable { selectedTab = index }
+                            .padding(horizontal = 18.dp, vertical = 10.dp)
+                    ) {
+                        Text(
+                            text = title,
+                            color = if (selected) DominoGold else DominoMuted,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (uiState.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = DominoGreen)
                 } else {
                     when (selectedTab) {
                         0 -> MatchesList(
-                            matches = uiState.matches, 
+                            matches = uiState.matches,
                             onDelete = { viewModel.deleteMatch(it) },
                             onEdit = { matchId -> onEditMatch(matchId) },
-                            canEdit = canEdit 
+                            canEdit = canEdit
                         )
                         1 -> {
                             var expanded by remember { mutableStateOf(false) }
@@ -257,26 +300,26 @@ fun AdminScreen(
                                             value = buchoPlayerFilter,
                                             onValueChange = {},
                                             readOnly = true,
-                                            label = { Text("Filtrar por Jogador", color = DominoGold) },
+                                            label = { Text("Filtrar por Jogador", color = DominoMuted) },
                                             modifier = Modifier.fillMaxWidth().menuAnchor(),
                                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                             colors = OutlinedTextFieldDefaults.colors(
-                                                focusedTextColor = Color.White,
-                                                unfocusedTextColor = Color.White,
-                                                focusedContainerColor = Color(0xFF2C2C2C),
-                                                unfocusedContainerColor = Color(0xFF2C2C2C),
-                                                focusedBorderColor = DominoGold,
-                                                unfocusedBorderColor = Color.Gray
+                                                focusedTextColor = DominoLight,
+                                                unfocusedTextColor = DominoLight,
+                                                focusedContainerColor = DominoSurface,
+                                                unfocusedContainerColor = DominoSurface,
+                                                focusedBorderColor = DominoGreen,
+                                                unfocusedBorderColor = Color(0xFFE6DAB8)
                                             )
                                         )
                                         ExposedDropdownMenu(
                                             expanded = expanded,
                                             onDismissRequest = { expanded = false },
-                                            modifier = Modifier.background(Color(0xFF2C2C2C))
+                                            modifier = Modifier.background(DominoSurface)
                                         ) {
                                             playerNames.forEach { name ->
                                                 DropdownMenuItem(
-                                                    text = { Text(name, color = Color.White) },
+                                                    text = { Text(name, color = DominoLight) },
                                                     onClick = {
                                                         buchoPlayerFilter = name
                                                         expanded = false
@@ -320,26 +363,26 @@ fun AdminScreen(
                                             value = mensalidadePlayerFilter,
                                             onValueChange = {},
                                             readOnly = true,
-                                            label = { Text("Filtrar por Jogador", color = DominoGold) },
+                                            label = { Text("Filtrar por Jogador", color = DominoMuted) },
                                             modifier = Modifier.fillMaxWidth().menuAnchor(),
                                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = mensalidadeExpanded) },
                                             colors = OutlinedTextFieldDefaults.colors(
-                                                focusedTextColor = Color.White,
-                                                unfocusedTextColor = Color.White,
-                                                focusedContainerColor = Color(0xFF2C2C2C),
-                                                unfocusedContainerColor = Color(0xFF2C2C2C),
-                                                focusedBorderColor = DominoGold,
-                                                unfocusedBorderColor = Color.Gray
+                                                focusedTextColor = DominoLight,
+                                                unfocusedTextColor = DominoLight,
+                                                focusedContainerColor = DominoSurface,
+                                                unfocusedContainerColor = DominoSurface,
+                                                focusedBorderColor = DominoGreen,
+                                                unfocusedBorderColor = Color(0xFFE6DAB8)
                                             )
                                         )
                                         ExposedDropdownMenu(
                                             expanded = mensalidadeExpanded,
                                             onDismissRequest = { mensalidadeExpanded = false },
-                                            modifier = Modifier.background(Color(0xFF2C2C2C))
+                                            modifier = Modifier.background(DominoSurface)
                                         ) {
                                             playerNames.forEach { name ->
                                                 DropdownMenuItem(
-                                                    text = { Text(name, color = Color.White) },
+                                                    text = { Text(name, color = DominoLight) },
                                                     onClick = {
                                                         mensalidadePlayerFilter = name
                                                         mensalidadeExpanded = false
@@ -377,7 +420,7 @@ fun AdminScreen(
                     }
                 }
             }
-            
+
             // Footer with Version
             TextButton(
                 onClick = { showReleaseNotes = true },
@@ -385,7 +428,7 @@ fun AdminScreen(
             ) {
                 Text(
                     text = "Versão: ${com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME} (Ver Notas)",
-                    color = Color.Gray,
+                    color = DominoMuted,
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -394,43 +437,73 @@ fun AdminScreen(
 }
 
 @Composable
+private fun AdminAvatarBadge(
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 40.dp,
+    backgroundColor: Color = DominoGreen,
+    alert: Boolean = false,
+    icon: String? = null
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(if (alert) DominoOrange else backgroundColor),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = icon ?: if (alert) "!" else "",
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = (size.value * 0.42f).sp
+        )
+    }
+}
+
+@Composable
 fun MatchesList(
-    matches: List<com.marcioarruda.clubedodomino.data.Match>, 
+    matches: List<com.marcioarruda.clubedodomino.data.Match>,
     onDelete: (String) -> Unit,
     onEdit: (String) -> Unit,
-    canEdit: Boolean 
+    canEdit: Boolean
 ) {
     val dateFormat = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault())
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
         items(matches) { match ->
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
-                modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .fillMaxWidth()
+                    .shadow(1.dp, RoundedCornerShape(16.dp))
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    AdminAvatarBadge(backgroundColor = DominoGreen, icon = "🁣")
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(dateFormat.format(match.date), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                        Text("${match.team1Player1.displayName}/${match.team1Player2.displayName} vs ${match.team2Player1.displayName}/${match.team2Player2.displayName}", color = Color.White)
+                        Text(dateFormat.format(match.date), color = DominoMuted, style = MaterialTheme.typography.bodySmall)
+                        Text("${match.team1Player1.displayName}/${match.team1Player2.displayName} vs ${match.team2Player1.displayName}/${match.team2Player2.displayName}", color = DominoLight, fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Placar: ${match.score1} x ${match.score2}", color = DominoGold)
+                            Text("Placar: ${match.score1} x ${match.score2}", color = DominoGreen, fontWeight = FontWeight.SemiBold)
                             if (match.wasBuchoRe) {
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("🔥 BUCHO DE RÉ", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                                Text("🔥 BUCHO DE RÉ", color = DominoOrange, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             }
                         }
-                        Text("Cadastrado por: ${match.registeredBy.name}", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                        Text("Cadastrado por: ${match.registeredBy.name}", color = DominoMuted, style = MaterialTheme.typography.labelSmall)
                     }
                     if (canEdit) {
                         Row {
                             IconButton(onClick = { onEdit(match.id) }) {
-                                 Text("✏️") 
+                                 Text("✏️")
                             }
                             IconButton(onClick = { onDelete(match.id) }) {
-                                 Text("🗑️") 
+                                 Text("🗑️")
                             }
                         }
                     }
@@ -450,27 +523,35 @@ fun BuchosList(
 ) {
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
         items(buchos) { bucho ->
+            val isPending = isMarcio // um bucho listado aqui ainda não foi marcado como pago
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
-                modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = if (isPending) BorderStroke(1.dp, AlertBorderColor) else null,
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .fillMaxWidth()
+                    .shadow(1.dp, RoundedCornerShape(16.dp))
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    AdminAvatarBadge(backgroundColor = DominoMuted, alert = isPending)
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(bucho.data ?: "", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                        Text(bucho.jogador ?: "", color = Color.White)
+                        Text(bucho.data ?: "", color = DominoMuted, style = MaterialTheme.typography.bodySmall)
+                        Text(bucho.jogador ?: "", color = DominoLight, fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Valor: R$ ${bucho.valor}", color = DominoGold)
+                            Text("Valor: R$ ${bucho.valor}", color = DominoGreen, fontWeight = FontWeight.SemiBold)
                             if (bucho.buchore == true) {
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("🔥 BUCHO DE RÉ", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                                Text("🔥 BUCHO DE RÉ", color = DominoOrange, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             }
                         }
                         if (!bucho.cadastrado_por.isNullOrBlank()) {
-                            Text("Cadastrado por: ${bucho.cadastrado_por}", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                            Text("Cadastrado por: ${bucho.cadastrado_por}", color = DominoMuted, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     Row {
@@ -501,19 +582,27 @@ fun MensalidadesList(
 ) {
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
         items(mensalidades) { mensalidade ->
+            val isPending = isMarcio // mensalidade listada aqui ainda está em aberto
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
-                modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = if (isPending) BorderStroke(1.dp, AlertBorderColor) else null,
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .fillMaxWidth()
+                    .shadow(1.dp, RoundedCornerShape(16.dp))
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    AdminAvatarBadge(backgroundColor = DominoMuted, alert = isPending)
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(formatMensalidadeReferencia(mensalidade.mensalidade), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                        Text(mensalidade.jogador ?: "", color = Color.White)
-                        Text("Valor: R$ 10,00", color = DominoGold)
+                        Text(formatMensalidadeReferencia(mensalidade.mensalidade), color = DominoMuted, style = MaterialTheme.typography.bodySmall)
+                        Text(mensalidade.jogador ?: "", color = DominoLight, fontWeight = FontWeight.Bold)
+                        Text("Valor: R$ 10,00", color = DominoGreen, fontWeight = FontWeight.SemiBold)
                     }
                     Row {
                         if (isMarcio) {
@@ -554,8 +643,8 @@ fun DebtorsList(debtors: List<DebtorItem>) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("✅", fontSize = 48.sp)
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Nenhum inadimplente!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text("Todos os jogadores estão em dia.", color = Color.Gray, fontSize = 14.sp)
+                Text("Nenhum inadimplente!", color = DominoLight, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("Todos os jogadores estão em dia.", color = DominoMuted, fontSize = 14.sp)
             }
         }
         return
@@ -564,9 +653,13 @@ fun DebtorsList(debtors: List<DebtorItem>) {
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF3A1A1A)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, AlertBorderColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .shadow(1.dp, RoundedCornerShape(16.dp))
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -574,15 +667,16 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Total em Aberto", color = Color.Gray, fontSize = 12.sp)
+                        Text("Total em Aberto", color = DominoMuted, fontSize = 12.sp)
                         Text(
                             "${debtors.size} inadimplente${if (debtors.size > 1) "s" else ""}",
-                            color = Color.White, fontSize = 13.sp
+                            color = DominoLight, fontSize = 13.sp, fontWeight = FontWeight.Medium
                         )
                     }
                     Text(
                         "R$ ${"%.2f".format(totalGeral)}",
-                        color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold, fontSize = 20.sp
+                        color = DominoOrange, fontWeight = FontWeight.Bold, fontSize = 20.sp,
+                        fontFamily = FontFamily.Serif
                     )
                 }
             }
@@ -591,9 +685,13 @@ fun DebtorsList(debtors: List<DebtorItem>) {
         items(debtors, key = { it.user.id }) { debtor ->
             var expanded by remember { mutableStateOf(false) }
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, AlertBorderColor),
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .fillMaxWidth()
+                    .shadow(1.dp, RoundedCornerShape(16.dp))
             ) {
                 Column {
                     // Header clicável
@@ -604,31 +702,43 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AvatarImage(
-                            url = debtor.user.photoUrl,
-                            size = 44.dp,
-                            borderColor = Color(0xFFFF6B6B),
-                            borderWidth = 2.dp
-                        )
+                        Box {
+                            AvatarImage(
+                                url = debtor.user.photoUrl,
+                                size = 44.dp,
+                                borderColor = DominoOrange,
+                                borderWidth = 2.dp
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .align(Alignment.TopEnd)
+                                    .clip(CircleShape)
+                                    .background(DominoOrange),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            }
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 debtor.user.displayName,
-                                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp
+                                color = DominoLight, fontWeight = FontWeight.Bold, fontSize = 15.sp
                             )
                             Text(
                                 "${debtor.debts.size} débito${if (debtor.debts.size > 1) "s" else ""} em aberto",
-                                color = Color.Gray, fontSize = 12.sp
+                                color = DominoMuted, fontSize = 12.sp
                             )
                         }
                         Text(
                             "R$ ${"%.2f".format(debtor.totalDue)}",
-                            color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold, fontSize = 15.sp
+                            color = DominoOrange, fontWeight = FontWeight.Bold, fontSize = 15.sp
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = null, tint = Color.Gray
+                            contentDescription = null, tint = DominoMuted
                         )
                     }
 
@@ -641,10 +751,10 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF222222))
+                                .background(Color(0xFFF2EADB))
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
-                            HorizontalDivider(color = Color(0xFF444444), modifier = Modifier.padding(bottom = 8.dp))
+                            HorizontalDivider(color = Color(0xFFE6DAB8), modifier = Modifier.padding(bottom = 8.dp))
                             debtor.debts.forEach { entry ->
                                 val icon = when (entry.type) {
                                     FinancialEntryType.MONTHLY_FEE -> "📅"
@@ -668,7 +778,7 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                                         Text(icon, fontSize = 16.sp)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column {
-                                            Text(typeLabel, color = Color.White, fontSize = 13.sp)
+                                            Text(typeLabel, color = DominoLight, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                             Text(
                                                 when (entry.type) {
                                                     FinancialEntryType.MONTHLY_FEE, FinancialEntryType.EXTRA_TAX ->
@@ -676,25 +786,25 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                                                     else ->
                                                         fullDateFormat.format(entry.dueDate)
                                                 },
-                                                color = Color.Gray, fontSize = 11.sp
+                                                color = DominoMuted, fontSize = 11.sp
                                             )
                                         }
                                     }
                                     Text(
                                         "R$ ${"%.2f".format(entry.amount)}",
-                                        color = Color(0xFFFF9B9B), fontSize = 13.sp, fontWeight = FontWeight.Medium
+                                        color = DominoOrange, fontSize = 13.sp, fontWeight = FontWeight.Medium
                                     )
                                 }
                             }
-                            HorizontalDivider(color = Color(0xFF444444), modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                            HorizontalDivider(color = Color(0xFFE6DAB8), modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End
                             ) {
-                                Text("Total: ", color = Color.Gray, fontSize = 13.sp)
+                                Text("Total: ", color = DominoMuted, fontSize = 13.sp)
                                 Text(
                                     "R$ ${"%.2f".format(debtor.totalDue)}",
-                                    color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold, fontSize = 13.sp
+                                    color = DominoOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp
                                 )
                             }
                             Spacer(modifier = Modifier.height(4.dp))
@@ -757,8 +867,8 @@ fun AddPlayerDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
-                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
-                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                        focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
                     )
                 )
                 OutlinedTextField(
@@ -770,8 +880,8 @@ fun AddPlayerDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
-                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
-                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                        focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
                     )
                 )
                 OutlinedTextField(
@@ -784,8 +894,8 @@ fun AddPlayerDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
-                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
-                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                        focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
                     )
                 )
 
@@ -799,8 +909,8 @@ fun AddPlayerDialog(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
-                            focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
-                            focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                            focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                            focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
                         )
                     )
                     OutlinedTextField(
@@ -811,8 +921,8 @@ fun AddPlayerDialog(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
-                            focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
-                            focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                            focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                            focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
                         )
                     )
                     OutlinedTextField(
@@ -823,8 +933,8 @@ fun AddPlayerDialog(
                         modifier = Modifier.weight(1.5f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
-                            focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
-                            focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                            focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                            focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
                         )
                     )
                 }
@@ -845,7 +955,7 @@ fun AddPlayerDialog(
                                     url = avatarId,
                                     size = 48.dp,
                                     borderWidth = if (selectedAvatar == avatarId) 3.dp else 1.dp,
-                                    borderColor = if (selectedAvatar == avatarId) DominoGreen else Color.Gray
+                                    borderColor = if (selectedAvatar == avatarId) DominoGreen else Color(0xFFE6DAB8)
                                 )
                             }
                         }
@@ -866,12 +976,13 @@ fun AddPlayerDialog(
                     }
                 },
                 enabled = !nameError && !emailError && !passwordError && !isLoading,
-                colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DominoGold, disabledContainerColor = DominoGold.copy(alpha = 0.5f))
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = DominoGreen, strokeWidth = 2.dp)
                 } else {
-                    Text("Cadastrar", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Cadastrar", color = DominoGreen, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -891,36 +1002,56 @@ fun PlayersList(
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
         items(players, key = { it.user.id }) { item ->
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
-                modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .fillMaxWidth()
+                    .shadow(1.dp, RoundedCornerShape(16.dp))
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(item.user.displayName, color = Color.White, style = MaterialTheme.typography.titleMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AdminAvatarBadge(
+                            size = 36.dp,
+                            backgroundColor = DominoGreen,
+                            alert = !item.isActive
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(item.user.displayName, color = DominoLight, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Ativo", color = Color.LightGray)
+                        Text("Ativo", color = DominoMuted)
                         Switch(
                             checked = item.isActive,
                             onCheckedChange = { if(canEdit) onToggleActive(item.user, it) },
-                            enabled = canEdit
+                            enabled = canEdit,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = DominoGreen,
+                                checkedTrackColor = DominoGreen.copy(alpha = 0.5f)
+                            )
                         )
                     }
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Modo Férias", color = Color.LightGray)
+                        Text("Modo Férias", color = DominoMuted)
                         Switch(
                             checked = item.isOnVacation,
                             onCheckedChange = { if(canEdit) onToggleVacation(item.user, it) },
-                            enabled = canEdit
+                            enabled = canEdit,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = DominoGold,
+                                checkedTrackColor = DominoGold.copy(alpha = 0.5f)
+                            )
                         )
                     }
                 }
@@ -945,7 +1076,8 @@ private fun UpdateDbPasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Alterar Senha do Banco de Dados", color = DominoGold) },
+        containerColor = DominoSurface,
+        title = { Text("Alterar Senha do Banco de Dados", color = DominoLight, fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 Text(
@@ -964,12 +1096,12 @@ private fun UpdateDbPasswordDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
-                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
-                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                        focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
                     )
                 )
                 Spacer(Modifier.height(8.dp))
-                HorizontalDivider(color = Color(0xFF444444))
+                HorizontalDivider(color = Color(0xFFE6DAB8))
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = novaSenha,
@@ -981,8 +1113,8 @@ private fun UpdateDbPasswordDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
-                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
-                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                        focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
                     )
                 )
                 Spacer(Modifier.height(8.dp))
@@ -996,14 +1128,14 @@ private fun UpdateDbPasswordDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
-                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color.Gray,
-                        focusedContainerColor = Color(0xFF1A3A2A), unfocusedContainerColor = Color(0xFF1A3A2A)
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                        focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
                     )
                 )
                 if (senhasNaoConferem) {
-                    Text("As senhas não conferem.", color = Color(0xFFE57373), fontSize = 11.sp)
+                    Text("As senhas não conferem.", color = DominoOrange, fontSize = 11.sp)
                 } else if (senhaMuitoCurta) {
-                    Text("A senha deve ter pelo menos 4 caracteres.", color = Color(0xFFE57373), fontSize = 11.sp)
+                    Text("A senha deve ter pelo menos 4 caracteres.", color = DominoOrange, fontSize = 11.sp)
                 }
             }
         },
@@ -1011,12 +1143,13 @@ private fun UpdateDbPasswordDialog(
             Button(
                 onClick = { onConfirm(senhaLogin, novaSenha) },
                 enabled = podeConfirmar && !isLoading,
-                colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DominoGold, disabledContainerColor = DominoGold.copy(alpha = 0.5f))
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = DominoGreen, strokeWidth = 2.dp)
                 } else {
-                    Text("Atualizar", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Atualizar", color = DominoGreen, fontWeight = FontWeight.Bold)
                 }
             }
         },

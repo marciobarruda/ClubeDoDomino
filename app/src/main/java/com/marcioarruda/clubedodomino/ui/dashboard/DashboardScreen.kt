@@ -33,13 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.marcioarruda.clubedodomino.data.BestPlayer
 import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.data.User
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import com.marcioarruda.clubedodomino.ui.theme.*
 import com.marcioarruda.clubedodomino.ui.util.AvatarImage
 import java.io.ByteArrayOutputStream
@@ -68,34 +64,25 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
     }
 
     Scaffold(
-        bottomBar = {
-            BottomNavigationBar(
-                navController = navController,
-                currentUserId = userId,
-                isNewMatchVisible = uiState.isNewMatchVisible
-            )
-        }
+        containerColor = DominoBg
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Image(
-                painter = painterResource(id = com.marcioarruda.clubedodomino.R.drawable.bg_dashboard),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
+            // "Mesa de Dominó": warm cream background with a subtle gold radial glow
+            // in the top-right corner (kept lightweight for Compose — a two-stop
+            // radial brush rather than a full image-based gradient).
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(DominoBg)
                     .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Black.copy(alpha = 0.5f),
-                                DominoBg.copy(alpha = 0.8f)
-                            )
+                        Brush.radialGradient(
+                            colors = listOf(DominoYellow.copy(alpha = 0.10f), Color.Transparent),
+                            center = androidx.compose.ui.geometry.Offset(x = Float.POSITIVE_INFINITY, y = 0f),
+                            radius = 900f
                         )
                     )
             )
@@ -111,6 +98,7 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
                         DashboardContent(
                             state = uiState,
                             navController = navController,
+                            userId = userId,
                             onAvatarClick = { showProfileDialog = true },
                             onMatchClick = { matchId -> selectedMatch = uiState.groupedMatches.values.flatten().find { it.id == matchId } }
                         )
@@ -145,7 +133,7 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
         Text(message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)) {
-            Text("Tentar novamente", color = Color.Black)
+            Text("Tentar novamente", color = DominoOnDark)
         }
     }
 }
@@ -269,7 +257,7 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
                         onClick = { showAvatarSelector = true },
                         modifier = Modifier.align(Alignment.BottomEnd).background(DominoGreen, CircleShape).size(36.dp)
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar Foto", tint = Color.Black, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Edit, contentDescription = "Editar Foto", tint = DominoOnDark, modifier = Modifier.size(18.dp))
                     }
                 }
                 Spacer(Modifier.height(16.dp))
@@ -285,7 +273,7 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
         },
         confirmButton = {
             Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)) {
-                Text("Fechar", color = Color.Black)
+                Text("Fechar", color = DominoOnDark)
             }
         },
         dismissButton = { TextButton(onClick = onLogout) { Text("Sair", color = DominoError) } }
@@ -293,7 +281,7 @@ private fun ProfileDialog(user: User, onDismiss: () -> Unit, onImageSelected: (S
 }
 
 @Composable
-private fun DashboardContent(state: DashboardUiState, navController: NavController, onAvatarClick: () -> Unit, onMatchClick: (String) -> Unit) {
+private fun DashboardContent(state: DashboardUiState, navController: NavController, userId: String, onAvatarClick: () -> Unit, onMatchClick: (String) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -303,22 +291,13 @@ private fun DashboardContent(state: DashboardUiState, navController: NavControll
             TopBar(state.user!!, onAvatarClick)
         }
 
-        item {
-            Button(
-                onClick = { navController.navigate("admin") },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7F1D1D)),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("ÁREA ADMINISTRATIVA", color = Color.White, fontWeight = FontWeight.Bold)
-            }
+        if (state.bestPlayers.isNotEmpty() || state.worstPlayers.isNotEmpty()) {
+            item { DailyAwardsRow(state.bestPlayers, state.worstPlayers) }
         }
 
-        if (state.bestPlayers.isNotEmpty() || state.worstPlayers.isNotEmpty()) {
-            item { DailyAwardsCard(state.bestPlayers, state.worstPlayers) }
-        }
+        item { ShortcutsGrid(navController, userId) }
+
+        item { StatsRow(state) }
 
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -333,7 +312,7 @@ private fun DashboardContent(state: DashboardUiState, navController: NavControll
                 Text(
                     text = "📅 $date",
                     style = MaterialTheme.typography.labelLarge,
-                    color = DominoCyan,
+                    color = DominoMuted,
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
@@ -346,115 +325,199 @@ private fun DashboardContent(state: DashboardUiState, navController: NavControll
 
 @Composable
 private fun TopBar(user: User, onAvatarClick: () -> Unit) {
+    val today = remember { SimpleDateFormat("EEEE, d 'de' MMMM", Locale("pt", "BR")).format(java.util.Date()) }
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
         Column {
-            Text("Olá, ${user.name.split(" ").first()} 👋", style = MaterialTheme.typography.headlineSmall, color = DominoLight, fontWeight = FontWeight.Bold)
-            Text("Bora jogar!", color = DominoGreen, fontSize = 13.sp)
+            Text(
+                text = today.replaceFirstChar { it.uppercase() },
+                color = DominoMuted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(Modifier.height(2.dp))
+            // TODO: fonte "Fraunces" (serifada) pendente — usando peso Black da fonte padrão
+            // para simular destaque serifado até integrarmos Downloadable Fonts com segurança.
+            Text(
+                text = "Olá, ${user.name.split(" ").first()}",
+                fontSize = 28.sp,
+                color = DominoLight,
+                fontWeight = FontWeight.Black
+            )
         }
-        IconButton(onClick = onAvatarClick) {
-            AvatarImage(url = user.photoUrl, size = 56.dp, borderWidth = 3.dp)
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(DominoGreen)
+                .clickable(onClick = onAvatarClick),
+            contentAlignment = Alignment.Center
+        ) {
+            AvatarImage(url = user.photoUrl, size = 56.dp, borderWidth = 3.dp, borderColor = DominoYellow)
         }
     }
 }
 
 @Composable
-private fun BottomNavigationBar(navController: NavController, currentUserId: String, isNewMatchVisible: Boolean) {
-    val baseItems = listOf(
-        BottomNavItem("Início", Icons.Default.Home, "dashboard/$currentUserId"),
-        BottomNavItem("Finanças", Icons.Default.MonetizationOn, "finance/$currentUserId"),
-        BottomNavItem("Ranking", Icons.Default.BarChart, "ranking")
+private fun ShortcutsGrid(navController: NavController, userId: String) {
+    val shortcuts = listOf(
+        ShortcutItem("Nova partida", Icons.Default.Add) {
+            navController.navigate("register_match")
+        },
+        ShortcutItem("Ranking", Icons.Default.BarChart) {
+            navController.navigate("ranking")
+        },
+        ShortcutItem("Finanças", Icons.Default.MonetizationOn) {
+            navController.navigate("finance/$userId")
+        },
+        ShortcutItem("Admin", Icons.Default.AdminPanelSettings) {
+            navController.navigate("admin")
+        }
     )
-    val allItems = remember(isNewMatchVisible) {
-        if (isNewMatchVisible) baseItems + BottomNavItem("Jogar!", Icons.Default.Add, "register_match")
-        else baseItems
-    }
 
-    NavigationBar(
-        containerColor = DominoSurface,
-        tonalElevation = 0.dp,
-        modifier = Modifier.clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
+        shortcuts.forEach { shortcut ->
+            ShortcutCard(shortcut, modifier = Modifier.weight(1f))
+        }
+    }
+}
 
-        allItems.forEach { item ->
-            val isSelected = currentRoute?.startsWith(item.route.substringBefore('/')) == true
-            NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.title) },
-                label = { Text(item.title, fontSize = 10.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                selected = isSelected,
-                onClick = {
-                    if (!isSelected) navController.navigate(item.route) {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = DominoGreen,
-                    unselectedIconColor = DominoMuted,
-                    selectedTextColor = DominoGreen,
-                    unselectedTextColor = DominoMuted,
-                    indicatorColor = DominoGreen.copy(alpha = 0.15f)
-                )
+@Composable
+private fun ShortcutCard(item: ShortcutItem, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier
+            .aspectRatio(0.85f)
+            .clickable(onClick = item.onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = DominoSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(item.icon, contentDescription = item.label, tint = DominoGreen, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.height(6.dp))
+            Text(
+                item.label,
+                fontSize = 11.sp,
+                color = DominoLight,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            )
+        }
+    }
+}
+
+data class ShortcutItem(val label: String, val icon: ImageVector, val onClick: () -> Unit)
+
+@Composable
+private fun StatsRow(state: DashboardUiState) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        StatMiniCard("Jogadores", state.totalPlayers.toString(), Modifier.weight(1f))
+        StatMiniCard("Partidas hoje", state.totalMatchesToday.toString(), Modifier.weight(1f))
+        StatMiniCard(
+            "Meu débito",
+            "R$ ${String.format(Locale("pt", "BR"), "%.2f", state.totalDebt)}",
+            Modifier.weight(1f),
+            valueColor = if (state.totalDebt > 0) DominoOrange else DominoGreen
+        )
+    }
+}
+
+@Composable
+private fun StatMiniCard(label: String, value: String, modifier: Modifier = Modifier, valueColor: Color = DominoLight) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = DominoSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(value, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = valueColor, maxLines = 1)
+            Spacer(Modifier.height(2.dp))
+            Text(label, fontSize = 10.sp, color = DominoMuted, textAlign = TextAlign.Center, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun DailyAwardsRow(bestPlayers: List<BestPlayer>, worstPlayers: List<BestPlayer>) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (bestPlayers.isNotEmpty()) {
+            AwardCard(
+                modifier = Modifier.weight(1f),
+                backgroundColor = DominoGreen,
+                label = "🏆 CRAQUE DO DIA",
+                labelColor = DominoYellow,
+                player = bestPlayers[0]
+            )
+        }
+        if (worstPlayers.isNotEmpty()) {
+            AwardCard(
+                modifier = Modifier.weight(1f),
+                backgroundColor = DominoPiorBg,
+                label = "🫠 PIORZINHO",
+                labelColor = DominoPiorAccent,
+                player = worstPlayers[0]
             )
         }
     }
 }
 
 @Composable
-private fun DailyAwardsCard(bestPlayers: List<BestPlayer>, worstPlayers: List<BestPlayer>) {
+private fun AwardCard(modifier: Modifier = Modifier, backgroundColor: Color, label: String, labelColor: Color, player: BestPlayer) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(listOf(Color(0xFF1B5E20), Color(0xFF0C381E)))
-                )
-                .padding(16.dp)
-        ) {
-            Column {
-                if (bestPlayers.isNotEmpty()) {
-                    AwardSection(
-                        title = "🂓 CRAQUE DO DIA",
-                        players = bestPlayers,
-                        nameColor = DominoYellow,
-                        pointsColor = DominoGreen
-                    )
+        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+            Text(label, color = labelColor, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp)
+            Spacer(Modifier.height(6.dp))
+            // TODO: fonte "Fraunces" pendente — peso Black simula o destaque serifado por ora.
+            Text(
+                text = player.player.name.split(" ").first(),
+                color = DominoOnDark,
+                fontWeight = FontWeight.Black,
+                fontSize = 20.sp,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(color = DominoOnDark.copy(alpha = 0.15f))
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("PONTOS", color = DominoOnDarkMuted, fontSize = 9.sp, letterSpacing = 0.5.sp)
+                    Text("${player.points}", color = DominoOnDark, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                 }
-                if (bestPlayers.isNotEmpty() && worstPlayers.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
-                    Spacer(Modifier.height(12.dp))
-                }
-                if (worstPlayers.isNotEmpty()) {
-                    AwardSection(
-                        title = "😬 PIORZINHO",
-                        players = worstPlayers,
-                        nameColor = DominoOrange,
-                        pointsColor = DominoOrange.copy(alpha = 0.7f)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("RESULTADO", color = DominoOnDarkMuted, fontSize = 9.sp, letterSpacing = 0.5.sp)
+                    Text(
+                        "${player.wins}V–${player.matches - player.wins}D · ${player.matches} part.",
+                        color = DominoOnDark,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        maxLines = 1
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun AwardSection(title: String, players: List<BestPlayer>, nameColor: Color, pointsColor: Color) {
-    Column {
-        Text(title, color = DominoMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp)
-        Spacer(Modifier.height(4.dp))
-        val names = players.joinToString(", ") { it.player.name.split(" ").first() }
-        Text(names, color = nameColor, fontWeight = FontWeight.Black, fontSize = 18.sp)
-        if (players.isNotEmpty()) {
-            val p = players[0]
-            val winRatePct = (p.winRate * 100).toInt()
-            Text("$winRatePct% aproveitamento (${p.wins}/${p.matches}) · ${p.points} pontos hoje", color = pointsColor, fontSize = 12.sp)
         }
     }
 }
@@ -479,8 +542,9 @@ private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
 
             // Team 1
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                Text(match.team1Player1.displayName.substringBefore(" "), fontSize = 11.sp, color = if (isTeam1Winner) DominoGreen else DominoMuted, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
-                Text(match.team1Player2.displayName.substringBefore(" "), fontSize = 11.sp, color = if (isTeam1Winner) DominoGreen else DominoMuted, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
+                val team1Color = if (isTeam1Winner) DominoGreen else DominoOrange
+                Text(match.team1Player1.displayName.substringBefore(" "), fontSize = 11.sp, color = team1Color, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
+                Text(match.team1Player2.displayName.substringBefore(" "), fontSize = 11.sp, color = team1Color, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
             }
 
             // Score
@@ -495,8 +559,9 @@ private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
 
             // Team 2
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                Text(match.team2Player1.displayName.substringBefore(" "), fontSize = 11.sp, color = if (!isTeam1Winner) DominoGreen else DominoMuted, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (!isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
-                Text(match.team2Player2.displayName.substringBefore(" "), fontSize = 11.sp, color = if (!isTeam1Winner) DominoGreen else DominoMuted, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (!isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
+                val team2Color = if (!isTeam1Winner) DominoGreen else DominoOrange
+                Text(match.team2Player1.displayName.substringBefore(" "), fontSize = 11.sp, color = team2Color, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (!isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
+                Text(match.team2Player2.displayName.substringBefore(" "), fontSize = 11.sp, color = team2Color, textAlign = TextAlign.Center, maxLines = 1, fontWeight = if (!isTeam1Winner) FontWeight.Bold else FontWeight.Normal)
             }
         }
     }
@@ -525,7 +590,7 @@ private fun MatchDetailsDialog(
         confirmButton = { TextButton(onClick = onDismiss) { Text("Fechar", color = DominoGreen) } },
         dismissButton = {
             if (canEdit) {
-                TextButton(onClick = onEdit) { Text("✏️ Editar", color = DominoGold) }
+                TextButton(onClick = onEdit) { Text("✏️ Editar", color = DominoOrange, fontWeight = FontWeight.Bold) }
             }
         },
         containerColor = DominoSurface,
@@ -533,7 +598,7 @@ private fun MatchDetailsDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 DetailRow("Data", SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(match.date))
-                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                HorizontalDivider(color = DominoMuted.copy(alpha = 0.2f))
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Time 1 ${if (match.score1 > match.score2) "🂓" else ""}", fontSize = 11.sp, color = DominoMuted)
                     Text("${match.team1Player1.name} / ${match.team1Player2.name}", color = if (match.score1 > match.score2) DominoGreen else DominoLight, fontWeight = FontWeight.Bold)
@@ -542,7 +607,7 @@ private fun MatchDetailsDialog(
                     Text("Time 2 ${if (match.score2 > match.score1) "🂓" else ""}", fontSize = 11.sp, color = DominoMuted)
                     Text("${match.team2Player1.name} / ${match.team2Player2.name}", color = if (match.score2 > match.score1) DominoGreen else DominoLight, fontWeight = FontWeight.Bold)
                 }
-                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                HorizontalDivider(color = DominoMuted.copy(alpha = 0.2f))
                 DetailRow("Placar Final", "${match.score1} × ${match.score2}", highlight = true)
                 if (match.wasBuchoRe) DetailRow("Status", "🔥 BUCHO DE RÉ", highlight = true)
                 DetailRow("Pontos", "${match.pts} pts")
@@ -643,7 +708,7 @@ fun ChampionCelebrationDialog(
         title = {
             Text(
                 text = "🂓 CAMPEÃO DE ${celebration.monthName.uppercase()} 🂓",
-                color = RoyalGold,
+                color = DominoGreen,
                 fontWeight = FontWeight.Black,
                 fontSize = 20.sp,
                 textAlign = TextAlign.Center,
@@ -671,7 +736,7 @@ fun ChampionCelebrationDialog(
                             url = celebration.player.photoUrl,
                             size = 120.dp,
                             borderWidth = 4.dp,
-                            borderColor = RoyalGold
+                            borderColor = DominoYellow
                         )
                         Text(
                             text = "👑",
@@ -686,7 +751,7 @@ fun ChampionCelebrationDialog(
 
                     Text(
                         text = celebration.player.name,
-                        color = Color.White,
+                        color = DominoLight,
                         fontWeight = FontWeight.Bold,
                         fontSize = 22.sp,
                         textAlign = TextAlign.Center
@@ -713,7 +778,7 @@ fun ChampionCelebrationDialog(
             ) {
                 Text(
                     text = "Reconhecer Campeão! 🤝",
-                    color = Color.Black,
+                    color = DominoOnDark,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
@@ -721,5 +786,3 @@ fun ChampionCelebrationDialog(
         }
     )
 }
-
-data class BottomNavItem(val title: String, val icon: ImageVector, val route: String)

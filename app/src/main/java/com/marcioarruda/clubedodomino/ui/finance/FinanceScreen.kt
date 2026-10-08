@@ -4,22 +4,21 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -34,18 +33,27 @@ import com.marcioarruda.clubedodomino.data.FinancialEntry
 import com.marcioarruda.clubedodomino.data.FinancialEntryStatus
 import com.marcioarruda.clubedodomino.data.FinancialEntryType
 import com.marcioarruda.clubedodomino.ui.ViewModelFactory
-import com.marcioarruda.clubedodomino.ui.theme.GlassyColor
-import com.marcioarruda.clubedodomino.ui.theme.RoyalGold
-import com.marcioarruda.clubedodomino.ui.util.LifecycleEffect
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.graphics.Brush
+import com.marcioarruda.clubedodomino.ui.theme.DominoBg
+import com.marcioarruda.clubedodomino.ui.theme.DominoCyan
+import com.marcioarruda.clubedodomino.ui.theme.DominoGreen
+import com.marcioarruda.clubedodomino.ui.theme.DominoLight
+import com.marcioarruda.clubedodomino.ui.theme.DominoMuted
+import com.marcioarruda.clubedodomino.ui.theme.DominoOnDark
+import com.marcioarruda.clubedodomino.ui.theme.DominoOnDarkMuted
+import com.marcioarruda.clubedodomino.ui.theme.DominoOrange
+import com.marcioarruda.clubedodomino.ui.theme.DominoSurface
+import com.marcioarruda.clubedodomino.ui.theme.DominoYellow
 import java.text.SimpleDateFormat
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Locale
+
+private enum class FinanceFilter(val label: String) {
+    ALL("TODAS"),
+    MONTHLY("MENSALIDADES"),
+    BUCHO("BUCHOS")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +69,7 @@ fun FinanceScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     var selectedEntry by remember { mutableStateOf<FinancialEntry?>(null) }
+    var selectedFilter by remember { mutableStateOf(FinanceFilter.ALL) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -115,10 +124,17 @@ fun FinanceScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Financeiro", color = RoyalGold) },
+                title = {
+                    Text(
+                        "Minhas finanças",
+                        color = DominoGreen,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = RoyalGold)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = DominoGreen)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
@@ -126,55 +142,38 @@ fun FinanceScreen(
         },
         floatingActionButton = {
             // Show FAB if there is ANY pending debt that has a remote identifier (payable)
-            val hasPayableDebt = uiState.debts.any { 
-                it.status == FinancialEntryStatus.PENDING && (it.originalRemoteId != null || it.originalReference != null) 
+            val hasPayableDebt = uiState.debts.any {
+                it.status == FinancialEntryStatus.PENDING && (it.originalRemoteId != null || it.originalReference != null)
             }
-            
+
             if (hasPayableDebt && uiState.uploadStatus != UploadStatus.UPLOADING) {
                 FloatingActionButton(
                     onClick = { filePickerLauncher.launch(arrayOf("image/*", "application/pdf")) },
-                    containerColor = RoyalGold
+                    containerColor = DominoYellow
                 ) {
-                    Icon(Icons.Default.ReceiptLong, contentDescription = "Enviar Comprovante", tint = Color.Black)
+                    Icon(Icons.Default.ReceiptLong, contentDescription = "Enviar Comprovante", tint = DominoGreen)
                 }
             } else if (uiState.uploadStatus == UploadStatus.UPLOADING) {
                 FloatingActionButton(
                     onClick = { },
-                    containerColor = Color.Gray
+                    containerColor = DominoMuted
                 ) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(color = DominoOnDark, modifier = Modifier.size(24.dp))
                 }
             }
         },
-        containerColor = Color.Transparent
+        containerColor = DominoBg
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(DominoBg)
                 .padding(paddingValues)
         ) {
-            Image(
-                painter = painterResource(id = com.marcioarruda.clubedodomino.R.drawable.bg_finance),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Black.copy(alpha = 0.5f),
-                                com.marcioarruda.clubedodomino.ui.theme.DominoBg.copy(alpha = 0.8f)
-                            )
-                        )
-                    )
-            )
             when {
                 uiState.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = RoyalGold)
+                        CircularProgressIndicator(color = DominoGreen)
                     }
                 }
                 uiState.error != null -> {
@@ -196,6 +195,17 @@ fun FinanceScreen(
                     )
                 }
                 else -> {
+                    val filteredDebts = when (selectedFilter) {
+                        FinanceFilter.ALL -> uiState.debts
+                        FinanceFilter.MONTHLY -> uiState.debts.filter { it.type == FinancialEntryType.MONTHLY_FEE }
+                        FinanceFilter.BUCHO -> uiState.debts.filter {
+                            it.type == FinancialEntryType.BUCHO || it.type == FinancialEntryType.BUCHO_RE
+                        }
+                    }
+                    val pendingItems = filteredDebts.filter { it.status != FinancialEntryStatus.PAID }
+                    val paidItems = filteredDebts.filter { it.status == FinancialEntryStatus.PAID }
+                    val pendingCount = uiState.debts.count { it.status == FinancialEntryStatus.PENDING }
+
                     PullToRefreshBox(
                         isRefreshing = uiState.isRefreshing,
                         onRefresh = { viewModel.loadFinancialData(userId, isRefreshing = true) },
@@ -206,38 +216,72 @@ fun FinanceScreen(
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
                             item {
-                                TotalDueCard(uiState.totalDue, uiState.totalUpcoming)
+                                TotalDueCard(uiState.totalDue + uiState.totalUpcoming, pendingCount)
                             }
-                            
 
+                            item {
+                                FilterPills(
+                                    selected = selectedFilter,
+                                    onSelect = { selectedFilter = it }
+                                )
+                            }
 
-                            if (uiState.debts.isEmpty()) {
+                            if (filteredDebts.isEmpty()) {
                                 item {
                                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                                         Text(
-                                            "Nenhum débito pendente! \uD83C\uDF89",
-                                            color = Color.Green,
+                                            "Nenhum débito pendente! 🎉",
+                                            color = DominoCyan,
                                             style = MaterialTheme.typography.bodyLarge
                                         )
                                     }
                                 }
                             } else {
-                                item {
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        text = "Detalhamento de Débitos",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                    )
+                                if (pendingItems.isNotEmpty()) {
+                                    item {
+                                        Text(
+                                            text = "PENDENTES",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = DominoMuted,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            letterSpacing = 1.sp,
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                        )
+                                    }
+                                    items(
+                                        items = pendingItems,
+                                        key = { entry -> entry.id }
+                                    ) { entry ->
+                                        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                            FinancialEntryItem(entry, onClick = { showDetails(entry) })
+                                        }
+                                    }
                                 }
-                                
-                                items(
-                                    items = uiState.debts,
-                                    key = { entry -> entry.id }
-                                ) { entry ->
-                                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                                        FinancialEntryItem(entry, onClick = { showDetails(entry) })
+
+                                if (paidItems.isNotEmpty()) {
+                                    item {
+                                        Text(
+                                            text = "PAGAS",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = DominoMuted,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            letterSpacing = 1.sp,
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                        )
+                                    }
+                                    items(
+                                        items = paidItems,
+                                        key = { entry -> entry.id }
+                                    ) { entry ->
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                                .alpha(0.65f)
+                                        ) {
+                                            FinancialEntryItem(entry, onClick = { showDetails(entry) })
+                                        }
                                     }
                                 }
                             }
@@ -251,9 +295,43 @@ fun FinanceScreen(
             ModalBottomSheet(
                 onDismissRequest = { dismissDetails() },
                 sheetState = sheetState,
-                containerColor = Color(0xFF1E1E1E)
+                containerColor = DominoSurface
             ) {
                 MatchDetailsBottomSheet(entry = selectedEntry!!, onDismiss = { dismissDetails() })
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterPills(selected: FinanceFilter, onSelect: (FinanceFilter) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FinanceFilter.entries.forEach { filter ->
+            val isSelected = filter == selected
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(if (isSelected) DominoGreen else DominoSurface)
+                    .border(
+                        width = 1.dp,
+                        color = if (isSelected) DominoGreen else Color(0xFFE7DEC9),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .clickable { onSelect(filter) }
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = filter.label,
+                    color = if (isSelected) DominoYellow else DominoMuted,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    letterSpacing = 0.5.sp
+                )
             }
         }
     }
@@ -266,24 +344,30 @@ fun FinancialEntryItem(entry: FinancialEntry, onClick: () -> Unit) {
 
     val isMonthly = entry.type == FinancialEntryType.MONTHLY_FEE
     val icon = if (isMonthly) Icons.Default.CalendarToday else Icons.Default.MoneyOff
-    val iconBgColor = if (isMonthly) Color(0xFF2196F3) else Color(0xFFFF9800)
     val dateLabel = if (isMonthly) "Vencimento" else "Data da partida"
-    
+    val typeLabel = if (isMonthly) "Mensalidade" else "Bucho"
+
     // Check if entry is from current month (or future) to display "A Vencer"
     val currentCal = java.util.Calendar.getInstance()
     val entryCal = java.util.Calendar.getInstance().apply { time = entry.dueDate }
-    
+
     val isCurrentMonthOrFuture = (entryCal.get(java.util.Calendar.YEAR) > currentCal.get(java.util.Calendar.YEAR)) ||
-            (entryCal.get(java.util.Calendar.YEAR) == currentCal.get(java.util.Calendar.YEAR) && 
+            (entryCal.get(java.util.Calendar.YEAR) == currentCal.get(java.util.Calendar.YEAR) &&
              entryCal.get(java.util.Calendar.MONTH) >= currentCal.get(java.util.Calendar.MONTH))
-    
+
+    val isPaid = entry.status == FinancialEntryStatus.PAID
+    val borderColor = if (isPaid) Color.Transparent else DominoOrange.copy(alpha = 0.35f)
+    val amountColor = if (isPaid) DominoCyan else DominoOrange
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = GlassyColor.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = DominoSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -292,38 +376,33 @@ fun FinancialEntryItem(entry: FinancialEntry, onClick: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(iconBgColor.copy(alpha = 0.2f), CircleShape),
+                    .background(DominoGreen.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = iconBgColor,
-                    modifier = Modifier.size(24.dp)
+                    tint = DominoGreen,
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isMonthly) "Mensalidade" else "Bucho",
+                    text = "$typeLabel · ${entry.description}",
                     fontWeight = FontWeight.Bold,
-                    color = iconBgColor,
-                    fontSize = 12.sp
-                )
-                Text(
-                    text = entry.description,
-                    color = Color.White,
-                    fontSize = 16.sp,
+                    color = DominoLight,
+                    fontSize = 15.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "$dateLabel: $dateStr",
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = DominoMuted
                 )
             }
-            
+
             when (entry.status) {
                 FinancialEntryStatus.PENDING -> {
                     if (isCurrentMonthOrFuture) {
@@ -331,20 +410,20 @@ fun FinancialEntryItem(entry: FinancialEntry, onClick: () -> Unit) {
                              Text(
                                 text = "R$ ${String.format("%.2f", entry.amount)}",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color(0xFFFFA000), // Amber for "To Mature"
+                                color = DominoYellow,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "A Vencer",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFFFFA000)
+                                color = DominoMuted
                             )
                          }
                     } else {
                         Text(
                             text = "R$ ${String.format("%.2f", entry.amount)}",
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color(0xFFFF5252),
+                            color = amountColor,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -353,16 +432,25 @@ fun FinancialEntryItem(entry: FinancialEntry, onClick: () -> Unit) {
                     Text(
                         text = "Em Análise",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFFF9800),
+                        color = DominoYellow,
                         fontWeight = FontWeight.Bold
                     )
                 }
                 FinancialEntryStatus.PAID -> {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Pago",
-                        tint = Color.Green
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "R$ ${String.format("%.2f", entry.amount)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = amountColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Pago",
+                            tint = DominoCyan,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -390,12 +478,12 @@ fun MatchDetailsBottomSheet(entry: FinancialEntry, onDismiss: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isMonthly) "Detalhes da Mensalidade" else "Detalhes da Partida", 
-                    style = MaterialTheme.typography.titleLarge, 
-                    color = Color.White
+                    text = if (isMonthly) "Detalhes da Mensalidade" else "Detalhes da Partida",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = DominoLight
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Fechar", tint = Color.White)
+                    Icon(Icons.Default.Close, contentDescription = "Fechar", tint = DominoLight)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -409,7 +497,7 @@ fun MatchDetailsBottomSheet(entry: FinancialEntry, onDismiss: () -> Unit) {
                 DetailRow(label = "Dupla Perdedora", value = entry.losingPair ?: "Não informado")
                 DetailRow(label = "Placar", value = entry.description)
             }
-            
+
             DetailRow(label = if(isMonthly) "Vencimento" else "Data", value = dateStr)
             DetailRow(label = "Valor", value = "R$ ${String.format("%.2f", entry.amount)}", isHighlight = true)
 
@@ -426,10 +514,10 @@ private fun DetailRow(label: String, value: String, isHighlight: Boolean = false
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = Color.LightGray, fontSize = 14.sp)
+        Text(label, color = DominoMuted, fontSize = 14.sp)
         Text(
             value,
-            color = if (isHighlight) RoyalGold else Color.White,
+            color = if (isHighlight) DominoGreen else DominoLight,
             fontWeight = if (isHighlight) FontWeight.Bold else FontWeight.Normal,
             fontSize = 16.sp
         )
@@ -446,65 +534,61 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
         Icon(
             imageVector = Icons.Default.Warning,
             contentDescription = "Erro",
-            tint = Color.Red,
+            tint = DominoOrange,
             modifier = Modifier.size(48.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = message,
-            color = Color.LightGray,
+            color = DominoMuted,
             style = MaterialTheme.typography.bodyLarge
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(containerColor = RoyalGold)
+            colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)
         ) {
-            Text("Tentar Novamente", color = Color.Black)
+            Text("Tentar Novamente", color = DominoOnDark)
         }
     }
 }
 
 @Composable
-fun TotalDueCard(total: Double, upcoming: Double) {
+fun TotalDueCard(total: Double, pendingCount: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = GlassyColor),
+        colors = CardDefaults.cardColors(containerColor = DominoGreen),
         shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .padding(24.dp)
                 .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Pendente", color = Color.LightGray, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "R$ ${String.format("%.2f", total)}",
-                    color = if (total > 0) Color(0xFFFF5252) else Color(0xFF4CAF50),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                )
-            }
-            
-            Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.White.copy(alpha = 0.1f)))
-            
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("A Vencer", color = Color.LightGray, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "R$ ${String.format("%.2f", upcoming)}",
-                    color = if (upcoming > 0) Color(0xFFFFA000) else Color(0xFF4CAF50),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                )
-            }
+            Text(
+                "SALDO EM ABERTO",
+                color = DominoYellow,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                letterSpacing = 1.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "R$ ${String.format("%.2f", total)}",
+                color = DominoOnDark,
+                fontWeight = FontWeight.Black,
+                fontSize = 32.sp
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = if (pendingCount == 1) "1 cobrança pendente" else "$pendingCount cobranças pendentes",
+                color = DominoOnDarkMuted,
+                fontSize = 13.sp
+            )
         }
     }
 }

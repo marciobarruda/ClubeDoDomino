@@ -21,8 +21,11 @@ import androidx.navigation.NavController
 import com.marcioarruda.clubedodomino.data.ClubRepository
 import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.ui.ViewModelFactory
-import com.marcioarruda.clubedodomino.ui.theme.DominoGold
-import com.marcioarruda.clubedodomino.ui.theme.GlassyColor
+import com.marcioarruda.clubedodomino.ui.theme.DominoGreen
+import com.marcioarruda.clubedodomino.ui.theme.DominoLight
+import com.marcioarruda.clubedodomino.ui.theme.DominoMuted
+import com.marcioarruda.clubedodomino.ui.theme.DominoOrange
+import com.marcioarruda.clubedodomino.ui.theme.DominoSurface
 import com.marcioarruda.clubedodomino.ui.util.LifecycleEffect
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -41,12 +44,13 @@ fun MatchDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Detalhes da Partida", color = DominoGold) },
+                title = { Text("Detalhes da Partida", color = DominoLight, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = DominoGold)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = DominoGreen)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
@@ -85,6 +89,7 @@ fun MatchDetailsContent(match: Match) {
 
     val team1Names = listOf(match.team1Player1.displayName, match.team1Player2.displayName).sorted()
     val team2Names = listOf(match.team2Player1.displayName, match.team2Player2.displayName).sorted()
+    val isTeam1Winner = match.score1 > match.score2
 
     Column(
         modifier = Modifier
@@ -95,7 +100,8 @@ fun MatchDetailsContent(match: Match) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = GlassyColor)
+            colors = CardDefaults.cardColors(containerColor = DominoSurface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -106,7 +112,7 @@ fun MatchDetailsContent(match: Match) {
                 Text(
                     text = dateStr,
                     style = MaterialTheme.typography.labelLarge,
-                    color = Color.LightGray
+                    color = DominoMuted
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -115,21 +121,21 @@ fun MatchDetailsContent(match: Match) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    TeamColumn(team1Names[0], team1Names[1], match.score1)
-                    Text("X", fontSize = 32.sp, color = DominoGold, fontWeight = FontWeight.Bold)
-                    TeamColumn(team2Names[0], team2Names[1], match.score2)
+                    TeamColumn(team1Names[0], team1Names[1], match.score1, isWinner = isTeam1Winner)
+                    Text("×", fontSize = 28.sp, color = DominoMuted, fontWeight = FontWeight.Bold)
+                    TeamColumn(team2Names[0], team2Names[1], match.score2, isWinner = !isTeam1Winner)
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 if (match.wasBuchoRe) {
-                    Text("BUCHO DE RÉ!", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text("🔥 BUCHO DE RÉ!", color = DominoOrange, fontWeight = FontWeight.Black, fontSize = 20.sp)
                 } else if (match.score1 == 0 || match.score2 == 0) {
-                    Text("BUCHO!", color = DominoGold, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text("BUCHO!", color = DominoGreen, fontWeight = FontWeight.Black, fontSize = 20.sp)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = Color.Gray)
+                HorizontalDivider(color = DominoMuted.copy(alpha = 0.2f))
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val registeredByName = try { match.registeredBy.displayName } catch(e: Exception) { "Desconhecido" }
@@ -137,7 +143,7 @@ fun MatchDetailsContent(match: Match) {
                 Text(
                     text = "Registrado por: $registeredByName",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = DominoMuted
                 )
             }
         }
@@ -145,11 +151,14 @@ fun MatchDetailsContent(match: Match) {
 }
 
 @Composable
-fun TeamColumn(p1Name: String, p2Name: String, score: Int) {
+fun TeamColumn(p1Name: String, p2Name: String, score: Int, isWinner: Boolean = false) {
+    // Números grandes usam peso Black para simular o destaque serifado da fonte
+    // "Fraunces" — integração com Google Fonts (Downloadable Fonts) ficou pendente.
+    val scoreColor = if (isWinner) DominoGreen else DominoOrange
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(p1Name, color = Color.White, fontWeight = FontWeight.Bold)
-        Text(p2Name, color = Color.White, fontWeight = FontWeight.Bold)
+        Text(p1Name, color = DominoLight, fontWeight = FontWeight.Bold)
+        Text(p2Name, color = DominoLight, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(score.toString(), fontSize = 48.sp, color = DominoGold, fontWeight = FontWeight.Bold)
+        Text(score.toString(), fontSize = 48.sp, color = scoreColor, fontWeight = FontWeight.Black)
     }
 }

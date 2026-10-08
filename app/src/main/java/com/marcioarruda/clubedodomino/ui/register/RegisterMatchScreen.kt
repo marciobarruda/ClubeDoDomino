@@ -1,6 +1,6 @@
 package com.marcioarruda.clubedodomino.ui.register
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,11 +16,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -30,6 +31,11 @@ import androidx.navigation.NavController
 import com.marcioarruda.clubedodomino.data.User
 import com.marcioarruda.clubedodomino.ui.theme.*
 import com.marcioarruda.clubedodomino.ui.util.AvatarImage
+
+// Bege claro para os "slots" de jogador e borda tracejada areia (paleta "Mesa de Dominó").
+private val SlotBg = Color(0xFFF5EDD6)
+private val SlotBorder = Color(0xFFCBB088)
+private val Team2AvatarColor = Color(0xFF3A2A1E)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,8 +94,8 @@ fun RegisterMatchScreen(
             title = { Text("⚡ Partida Salva!", color = DominoGreen, fontWeight = FontWeight.Black) },
             text = { Text("Repetir com os mesmos jogadores? As duplas serão sorteadas novamente.", color = DominoLight) },
             confirmButton = {
-                Button(onClick = { viewModel.onRepeatMatch(true) }, colors = ButtonDefaults.buttonColors(containerColor = DominoGreen), shape = RoundedCornerShape(12.dp)) {
-                    Text("Sim, vamos!", color = Color.Black, fontWeight = FontWeight.Bold)
+                Button(onClick = { viewModel.onRepeatMatch(true) }, colors = ButtonDefaults.buttonColors(containerColor = DominoYellow), shape = RoundedCornerShape(12.dp)) {
+                    Text("Sim, vamos!", color = DominoGreen, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -101,13 +107,16 @@ fun RegisterMatchScreen(
     }
 
     Scaffold(
+        containerColor = DominoBg,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        if (state.editingMatchId != null) "✏️ Editar Partida" else "🎯 Nova Partida",
+                        if (state.editingMatchId != null) "Editar Partida" else "Nova Partida",
                         color = DominoGreen,
-                        fontWeight = FontWeight.Black
+                        fontFamily = FontFamily.Serif,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp
                     )
                 },
                 navigationIcon = {
@@ -115,148 +124,136 @@ fun RegisterMatchScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = DominoGreen)
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = DominoBg)
             )
         }
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(DominoBg)
                 .padding(padding)
         ) {
-            Image(
-                painter = painterResource(id = com.marcioarruda.clubedodomino.R.drawable.bg_partidas),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Black.copy(alpha = 0.5f),
-                                DominoBg.copy(alpha = 0.85f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (state.remainingSecondsToClose != null) {
+                    val mins = state.remainingSecondsToClose!! / 60
+                    val secs = state.remainingSecondsToClose!! % 60
+                    val timeStr = String.format("%02d:%02d", mins, secs)
+
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = DominoError.copy(alpha = 0.12f)),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Warning, contentDescription = "Atenção", tint = DominoError)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Fechamento em: $timeStr",
+                                color = DominoError,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
                             )
-                        )
-                    )
-            )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (state.remainingSecondsToClose != null) {
-                val mins = state.remainingSecondsToClose!! / 60
-                val secs = state.remainingSecondsToClose!! % 60
-                val timeStr = String.format("%02d:%02d", mins, secs)
-                
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = DominoError.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(androidx.compose.material.icons.Icons.Default.Warning, contentDescription = "Atenção", tint = DominoError)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Fechamento em: $timeStr",
-                            color = DominoError,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                    }
-                }
-            }
-            
-            val isEditing = state.editingMatchId != null
-            val isGameplayEnabled = isEditing || state.isActiveMatchStarted
-
-            PlayerSelectionCard(state, viewModel, isEditing || !state.isActiveMatchStarted)
-            Spacer(Modifier.height(16.dp))
-            ScoreInputCard(state, viewModel, isGameplayEnabled)
-            Spacer(Modifier.height(16.dp))
-            OptionsCard(state, viewModel, isGameplayEnabled)
-            Spacer(Modifier.height(24.dp))
-
-            if (state.error != null) {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = DominoError.copy(alpha = 0.12f))
-                ) {
-                    Text(
-                        state.error!!,
-                        color = DominoError,
-                        modifier = Modifier.padding(16.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-                Spacer(Modifier.height(16.dp))
-            }
-
-            if (!isEditing && !state.isActiveMatchStarted) {
-                Button(
-                    onClick = { viewModel.startMatch() },
-                    colors = ButtonDefaults.buttonColors(containerColor = DominoGreen),
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    enabled = !state.isLoading && state.isModuleAvailable
-                ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.Black)
-                    } else {
-                        Text("🎮 Confirmar Abertura da Partida", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    }
-                }
-            } else {
-                Button(
-                    onClick = {
-                        if (isEditing) {
-                            viewModel.updateMatch(state.editingMatchId!!)
-                        } else {
-                            val currentUser = state.availablePlayers.find { it.id == session?.userEmail }
-                                ?: state.availablePlayers.firstOrNull()
-                                ?: User("0", "User", "User", "", "c1")
-                            viewModel.saveMatch(registeredBy = currentUser)
                         }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (state.isModuleAvailable) DominoGreen else DominoMuted
-                    ),
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    enabled = !state.isLoading && state.isModuleAvailable
-                ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.Black)
-                    } else if (!state.isModuleAvailable) {
-                        Text("⏰ Fora do Horário", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    } else {
-                        Text(if (isEditing) "✅ Atualizar Partida" else "🎮 Salvar Partida", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
 
-                if (!isEditing && state.isActiveMatchStarted) {
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = { viewModel.cancelActiveMatch() },
-                        colors = ButtonDefaults.buttonColors(containerColor = DominoError),
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        enabled = !state.isLoading
+                val isEditing = state.editingMatchId != null
+                val isGameplayEnabled = isEditing || state.isActiveMatchStarted
+
+                PlayerSelectionCard(state, viewModel, isEditing || !state.isActiveMatchStarted)
+                Spacer(Modifier.height(16.dp))
+                ScoreInputCard(state, viewModel, isGameplayEnabled)
+                Spacer(Modifier.height(16.dp))
+                OptionsCard(state, viewModel, isGameplayEnabled)
+                Spacer(Modifier.height(24.dp))
+
+                if (state.error != null) {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = DominoError.copy(alpha = 0.12f))
                     ) {
-                        Text("❌ Cancelar Partida", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(
+                            state.error!!,
+                            color = DominoError,
+                            modifier = Modifier.padding(16.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                if (!isEditing && !state.isActiveMatchStarted) {
+                    Button(
+                        onClick = { viewModel.startMatch() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (state.isModuleAvailable) DominoYellow else DominoMuted,
+                            disabledContainerColor = DominoMuted
+                        ),
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        enabled = !state.isLoading && state.isModuleAvailable
+                    ) {
+                        if (state.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DominoGreen)
+                        } else {
+                            Text("🎲 Confirmar Abertura da Partida", color = DominoGreen, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            if (isEditing) {
+                                viewModel.updateMatch(state.editingMatchId!!)
+                            } else {
+                                val currentUser = state.availablePlayers.find { it.id == session?.userEmail }
+                                    ?: state.availablePlayers.firstOrNull()
+                                    ?: User("0", "User", "User", "", "c1")
+                                viewModel.saveMatch(registeredBy = currentUser)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (state.isModuleAvailable) DominoYellow else DominoMuted,
+                            disabledContainerColor = DominoMuted
+                        ),
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        enabled = !state.isLoading && state.isModuleAvailable
+                    ) {
+                        if (state.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DominoGreen)
+                        } else if (!state.isModuleAvailable) {
+                            Text("⏰ Fora do Horário", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        } else {
+                            Text(if (isEditing) "✅ Atualizar Partida" else "🎮 Salvar Partida", color = DominoGreen, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        }
+                    }
+
+                    if (!isEditing && state.isActiveMatchStarted) {
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.cancelActiveMatch() },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = DominoOrange),
+                            border = BorderStroke(1.5.dp, DominoOrange),
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(28.dp),
+                            enabled = !state.isLoading
+                        ) {
+                            Text("❌ Cancelar Partida", color = DominoOrange, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
                     }
                 }
             }
-        }
         }
     }
 }
@@ -267,7 +264,7 @@ private fun PlayerSelectionCard(state: MatchRegistrationState, viewModel: MatchV
     Card(
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
             // Mostra os times já definidos (Time 1/Time 2) quando a partida está em edição ou já
@@ -280,40 +277,54 @@ private fun PlayerSelectionCard(state: MatchRegistrationState, viewModel: MatchV
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val p1List = state.availablePlayers.filter { it == state.selectedPlayers[0] || it !in state.selectedPlayers }
                     val p2List = state.availablePlayers.filter { it == state.selectedPlayers[1] || it !in state.selectedPlayers }
-                    PlayerDropdown(p1List, state.selectedPlayers[0], { viewModel.onPlayerSelected(0, it) }, Modifier.weight(1f), enabled)
-                    PlayerDropdown(p2List, state.selectedPlayers[1], { viewModel.onPlayerSelected(1, it) }, Modifier.weight(1f), enabled)
+                    PlayerSlot(p1List, state.selectedPlayers[0], { viewModel.onPlayerSelected(0, it) }, DominoGreen, Modifier.weight(1f), enabled)
+                    PlayerSlot(p2List, state.selectedPlayers[1], { viewModel.onPlayerSelected(1, it) }, DominoGreen, Modifier.weight(1f), enabled)
                 }
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider(color = DominoGreen.copy(alpha = 0.2f))
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(4.dp))
+                VsPill()
+                Spacer(Modifier.height(4.dp))
                 TeamHeader("TIME 2", DominoOrange)
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val p3List = state.availablePlayers.filter { it == state.selectedPlayers[2] || it !in state.selectedPlayers }
                     val p4List = state.availablePlayers.filter { it == state.selectedPlayers[3] || it !in state.selectedPlayers }
-                    PlayerDropdown(p3List, state.selectedPlayers[2], { viewModel.onPlayerSelected(2, it) }, Modifier.weight(1f), enabled)
-                    PlayerDropdown(p4List, state.selectedPlayers[3], { viewModel.onPlayerSelected(3, it) }, Modifier.weight(1f), enabled)
+                    PlayerSlot(p3List, state.selectedPlayers[2], { viewModel.onPlayerSelected(2, it) }, Team2AvatarColor, Modifier.weight(1f), enabled)
+                    PlayerSlot(p4List, state.selectedPlayers[3], { viewModel.onPlayerSelected(3, it) }, Team2AvatarColor, Modifier.weight(1f), enabled)
                 }
             } else {
                 TeamHeader("JOGADORES", DominoGreen)
-                Text(
-                    "As duplas serão sorteadas ao confirmar a abertura",
-                    color = DominoMuted,
-                    fontSize = 11.sp,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
+                Spacer(Modifier.height(10.dp))
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = SlotBg),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🎲", fontSize = 16.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "As duplas serão sorteadas ao confirmar a abertura",
+                            color = DominoMuted,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val p1List = state.availablePlayers.filter { it == state.selectedPlayers[0] || it !in state.selectedPlayers }
                     val p2List = state.availablePlayers.filter { it == state.selectedPlayers[1] || it !in state.selectedPlayers }
-                    PlayerDropdown(p1List, state.selectedPlayers[0], { viewModel.onPlayerSelected(0, it) }, Modifier.weight(1f), enabled)
-                    PlayerDropdown(p2List, state.selectedPlayers[1], { viewModel.onPlayerSelected(1, it) }, Modifier.weight(1f), enabled)
+                    PlayerSlot(p1List, state.selectedPlayers[0], { viewModel.onPlayerSelected(0, it) }, DominoGreen, Modifier.weight(1f), enabled)
+                    PlayerSlot(p2List, state.selectedPlayers[1], { viewModel.onPlayerSelected(1, it) }, DominoGreen, Modifier.weight(1f), enabled)
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val p3List = state.availablePlayers.filter { it == state.selectedPlayers[2] || it !in state.selectedPlayers }
                     val p4List = state.availablePlayers.filter { it == state.selectedPlayers[3] || it !in state.selectedPlayers }
-                    PlayerDropdown(p3List, state.selectedPlayers[2], { viewModel.onPlayerSelected(2, it) }, Modifier.weight(1f), enabled)
-                    PlayerDropdown(p4List, state.selectedPlayers[3], { viewModel.onPlayerSelected(3, it) }, Modifier.weight(1f), enabled)
+                    PlayerSlot(p3List, state.selectedPlayers[2], { viewModel.onPlayerSelected(2, it) }, Team2AvatarColor, Modifier.weight(1f), enabled)
+                    PlayerSlot(p4List, state.selectedPlayers[3], { viewModel.onPlayerSelected(3, it) }, Team2AvatarColor, Modifier.weight(1f), enabled)
                 }
             }
         }
@@ -326,6 +337,84 @@ private fun TeamHeader(label: String, color: Color) {
         Box(modifier = Modifier.size(6.dp).background(color, CircleShape))
         Spacer(Modifier.width(8.dp))
         Text(label, color = color, fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 2.sp)
+    }
+}
+
+/** Pílula "VS" centralizada entre os dois times: fundo verde-escuro, texto dourado. */
+@Composable
+private fun VsPill() {
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .background(DominoGreen, RoundedCornerShape(50))
+                .padding(horizontal = 14.dp, vertical = 4.dp)
+        ) {
+            Text(
+                "VS",
+                color = DominoYellow,
+                fontWeight = FontWeight.Black,
+                fontSize = 11.sp,
+                letterSpacing = 1.sp
+            )
+        }
+    }
+}
+
+/**
+ * "Slot" de seleção de jogador: fundo bege claro, borda tracejada areia, avatar circular
+ * (cor passada via [avatarColor] para diferenciar Time 1 / Time 2) + dropdown de seleção.
+ * Mantém o PlayerDropdown existente (mesma lógica de filtro/seleção), apenas reestilizado
+ * visualmente dentro do slot.
+ */
+@Composable
+private fun PlayerSlot(
+    players: List<User>,
+    selectedPlayer: User?,
+    onPlayerSelected: (User) -> Unit,
+    avatarColor: Color,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val dashColor = SlotBorder
+    Column(
+        modifier = modifier
+            .drawBehind {
+                val stroke = Stroke(
+                    width = 1.5.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f), 0f)
+                )
+                val radius = 14.dp.toPx()
+                drawRoundRect(
+                    color = dashColor,
+                    cornerRadius = CornerRadius(radius, radius),
+                    style = stroke
+                )
+            }
+            .background(SlotBg, RoundedCornerShape(14.dp))
+            .padding(10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(32.dp).background(avatarColor, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (selectedPlayer != null) {
+                    AvatarImage(url = selectedPlayer.photoUrl, size = 32.dp, borderWidth = 0.dp, borderColor = Color.Transparent)
+                } else {
+                    Text("?", color = DominoOnDark, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                selectedPlayer?.displayName?.substringBefore(" ") ?: "Selecionar",
+                color = if (selectedPlayer != null) DominoLight else DominoMuted,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                maxLines = 1
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        PlayerDropdown(players, selectedPlayer, onPlayerSelected, Modifier.fillMaxWidth(), enabled)
     }
 }
 
@@ -352,9 +441,10 @@ fun PlayerDropdown(
         TextField(
             value = displayText,
             onValueChange = { if (enabled) { filterText = it; expanded = true } },
-            modifier = Modifier.menuAnchor(),
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
             enabled = enabled,
-            label = { Text("Jogador", fontSize = 12.sp) },
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp),
+            label = { Text("Jogador", fontSize = 11.sp) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = ExposedDropdownMenuDefaults.textFieldColors(
                 focusedContainerColor = Color.Transparent,
@@ -362,7 +452,8 @@ fun PlayerDropdown(
                 focusedTextColor = DominoLight,
                 unfocusedTextColor = DominoLight,
                 focusedLabelColor = DominoGreen,
-                focusedIndicatorColor = DominoGreen
+                focusedIndicatorColor = DominoGreen,
+                unfocusedIndicatorColor = SlotBorder
             )
         )
         val filteredPlayers = if (filterText == (selectedPlayer?.displayName ?: "")) players
@@ -386,7 +477,7 @@ private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewMo
     Card(
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
             Row(
@@ -395,6 +486,7 @@ private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewMo
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ScoreControl(
+                    label = "TIME 1",
                     p1 = state.selectedPlayers[0],
                     p2 = state.selectedPlayers[1],
                     score = state.score1,
@@ -404,8 +496,9 @@ private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewMo
                     modifier = Modifier.weight(1f),
                     enabled = enabled
                 )
-                Text("×", fontSize = 28.sp, color = DominoMuted, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp))
+                Text("×", fontSize = 24.sp, color = Color(0xFFCBB088), fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp))
                 ScoreControl(
+                    label = "TIME 2",
                     p1 = state.selectedPlayers[2],
                     p2 = state.selectedPlayers[3],
                     score = state.score2,
@@ -416,7 +509,7 @@ private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewMo
                     enabled = enabled
                 )
             }
-            HorizontalDivider(color = DominoGreen.copy(alpha = 0.2f))
+            HorizontalDivider(color = DominoMuted.copy(alpha = 0.15f))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 horizontalArrangement = Arrangement.Center,
@@ -452,6 +545,7 @@ private fun ScoreInputCard(state: MatchRegistrationState, viewModel: MatchViewMo
 
 @Composable
 private fun ScoreControl(
+    label: String,
     p1: User?,
     p2: User?,
     score: Int,
@@ -463,9 +557,17 @@ private fun ScoreControl(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = modifier
     ) {
+        Text(
+            text = label,
+            color = DominoMuted,
+            fontWeight = FontWeight.Black,
+            fontSize = 11.sp,
+            letterSpacing = 1.sp
+        )
+
         // Avatars Row
         Row(
             horizontalArrangement = Arrangement.spacedBy((-12).dp),
@@ -473,29 +575,29 @@ private fun ScoreControl(
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .background(Color.DarkGray, CircleShape)
             ) {
                 if (p1 != null) {
                     AvatarImage(
                         url = p1.photoUrl,
-                        size = 44.dp,
+                        size = 40.dp,
                         borderWidth = 1.5.dp,
-                        borderColor = accentColor
+                        borderColor = DominoSurface
                     )
                 }
             }
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .background(Color.DarkGray, CircleShape)
             ) {
                 if (p2 != null) {
                     AvatarImage(
                         url = p2.photoUrl,
-                        size = 44.dp,
+                        size = 40.dp,
                         borderWidth = 1.5.dp,
-                        borderColor = accentColor
+                        borderColor = DominoSurface
                     )
                 }
             }
@@ -503,10 +605,10 @@ private fun ScoreControl(
 
         val name1 = p1?.displayName?.substringBefore(" ") ?: "Time"
         val name2 = p2?.displayName?.substringBefore(" ") ?: ""
-        val label = if (name2.isNotEmpty()) "$name1 / $name2" else name1
+        val nameLabel = if (name2.isNotEmpty()) "$name1 / $name2" else name1
 
         Text(
-            text = label,
+            text = nameLabel,
             style = MaterialTheme.typography.labelMedium,
             color = DominoMuted,
             textAlign = TextAlign.Center,
@@ -517,22 +619,25 @@ private fun ScoreControl(
             IconButton(
                 onClick = { if (score > 0) onDecrement() },
                 enabled = enabled,
-                modifier = Modifier.size(36.dp).background(if (enabled) accentColor.copy(alpha = 0.12f) else Color.Transparent, CircleShape)
+                modifier = Modifier.size(32.dp).background(if (enabled) accentColor.copy(alpha = 0.1f) else Color.Transparent, CircleShape)
             ) {
-                Icon(Icons.Default.Remove, contentDescription = "-", tint = if (enabled) accentColor else DominoMuted, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Remove, contentDescription = "-", tint = if (enabled) accentColor else DominoMuted, modifier = Modifier.size(16.dp))
             }
-            Box(
-                modifier = Modifier.size(60.dp).background(accentColor.copy(alpha = 0.08f), RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(score.toString(), fontSize = 36.sp, textAlign = TextAlign.Center, color = if (enabled) accentColor else DominoMuted, fontWeight = FontWeight.Black)
-            }
+            Text(
+                score.toString(),
+                fontFamily = FontFamily.Serif,
+                fontSize = 36.sp,
+                textAlign = TextAlign.Center,
+                color = if (enabled) DominoLight else DominoMuted,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.width(56.dp)
+            )
             IconButton(
                 onClick = onIncrement,
                 enabled = enabled,
-                modifier = Modifier.size(36.dp).background(if (enabled) accentColor.copy(alpha = 0.12f) else Color.Transparent, CircleShape)
+                modifier = Modifier.size(32.dp).background(if (enabled) accentColor.copy(alpha = 0.1f) else Color.Transparent, CircleShape)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "+", tint = if (enabled) accentColor else DominoMuted, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Add, contentDescription = "+", tint = if (enabled) accentColor else DominoMuted, modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -543,7 +648,7 @@ private fun OptionsCard(state: MatchRegistrationState, viewModel: MatchViewModel
     Card(
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
