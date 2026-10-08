@@ -92,7 +92,11 @@ class FinanceViewModel(
                     false
                 }
                 
-                val buchos = pendingDebts.filter { it.type == FinancialEntryType.BUCHO }
+                // Taxa extra é fisicamente um registro na tabela `buchos` no servidor (ver
+                // gerarTaxaExtraBuchosParaMes em server.js), então precisa ir junto com os buchos
+                // no `bucho_ids` do comprovante — senão o valor entra no total cobrado mas o ID
+                // nunca chega para o fluxo de baixa conseguir marcá-la como paga.
+                val buchos = pendingDebts.filter { it.type == FinancialEntryType.BUCHO || it.type == FinancialEntryType.EXTRA_TAX }
                 val mensalidades = pendingDebts.filter { it.type == FinancialEntryType.MONTHLY_FEE }
                 val valorTotal = pendingDebts.sumOf { it.amount }
                 val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
