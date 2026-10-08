@@ -300,10 +300,109 @@ app.post('/webhook/jogador/avatar', async (req, res) => {
   }
 });
 
+// Retorna a última data útil (dia de semana) do mês informado, no formato 'yyyy-MM-dd'.
+const getLastBusinessDayOfMonth = (year, month) => {
+  const date = new Date(year, month, 0); // dia 0 do mês seguinte = último dia do mês atual
+  while (date.getDay() === 0 || date.getDay() === 6) {
+    date.setDate(date.getDate() - 1);
+  }
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// Gera a "Taxa Extra" de buchos do mês anterior (que acabou de fechar) para jogadores ativos que
+// jogaram menos partidas que a média do grupo naquele mês. Para cada jogador abaixo da média de
+// partidas, lança um débito de buchos igual ao déficit entre a média de buchos sofridos pelo grupo
+// e o que ele próprio já sofreu — complementando o valor até a média, não substituindo-o.
+// Idempotente — verifica se já existe um débito do tipo "Taxa extra" para aquele jogador/mês antes de inserir.
+const gerarTaxaExtraBuchosMesAnterior = async () => {
+  const { year, month } = getSaoPauloDateParts();
+  let targetYear = year;
+  let targetMonth = month - 1;
+  if (targetMonth === 0) { targetMonth = 12; targetYear -= 1; }
+
+  const mesInicio = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`;
+  const proxMesAno = targetMonth === 12 ? targetYear + 1 : targetYear;
+  const proxMes = targetMonth === 12 ? 1 : targetMonth + 1;
+  const mesFim = `${proxMesAno}-${String(proxMes).padStart(2, '0')}-01`;
+
+  try {
+    const [jogadoresRows] = await pool.query(
+      "SELECT jogador FROM jogadores WHERE (ativo IS NULL OR ativo = 1) AND (ferias IS NULL OR ferias = 0) AND jogador NOT LIKE '%NÃO MEMBRO%'"
+    );
+    const jogadoresAtivos = jogadoresRows.map(r => (r.jogador || '').trim()).filter(Boolean);
+    if (jogadoresAtivos.length === 0) return;
+
+    const [partidasRows] = await pool.query(
+      'SELECT jogador1, jogador2, jogador3, jogador4 FROM partidas WHERE data >= ? AND data < ?',
+      [mesInicio, mesFim]
+    );
+
+    const partidasPorJogador = {};
+    for (const nome of jogadoresAtivos) partidasPorJogador[nome.toUpperCase()] = 0;
+    for (const r of partidasRows) {
+      for (const jogador of [r.jogador1, r.jogador2, r.jogador3, r.jogador4]) {
+        const nome = (jogador || '').trim().toUpperCase();
+        if (nome in partidasPorJogador) partidasPorJogador[nome]++;
+      }
+    }
+
+    const [buchosRows] = await pool.query(
+      'SELECT jogador, valor FROM buchos WHERE data >= ? AND data < ?',
+      [mesInicio, mesFim]
+    );
+    const buchosPorJogador = {};
+    for (const nome of jogadoresAtivos) buchosPorJogador[nome.toUpperCase()] = 0;
+    for (const r of buchosRows) {
+      const nome = (r.jogador || '').trim().toUpperCase();
+      if (nome in buchosPorJogador) buchosPorJogador[nome] += parseFloat(r.valor) || 0;
+    }
+
+    const activeCount = jogadoresAtivos.length;
+    const totalPartidas = Object.values(partidasPorJogador).reduce((a, b) => a + b, 0);
+    const totalBuchos = Object.values(buchosPorJogador).reduce((a, b) => a + b, 0);
+    const avgMatches = totalPartidas / activeCount;
+    const avgBuchos = totalBuchos / activeCount;
+
+    const [existentesRows] = await pool.query(
+      "SELECT jogador FROM buchos WHERE obs = 'Taxa extra' AND data >= ? AND data < ?",
+      [mesInicio, mesFim]
+    );
+    const jaGerados = new Set(existentesRows.map(r => (r.jogador || '').trim().toUpperCase()));
+
+    const lastBusinessDay = getLastBusinessDayOfMonth(targetYear, targetMonth);
+    let geradosCount = 0;
+
+    for (const nome of jogadoresAtivos) {
+      const key = nome.toUpperCase();
+      if (jaGerados.has(key)) continue;
+
+      const playerMatches = partidasPorJogador[key] || 0;
+      if (playerMatches >= avgMatches) continue;
+
+      const playerBuchosValue = buchosPorJogador[key] || 0;
+      const deficit = avgBuchos - playerBuchosValue;
+      if (deficit <= 0.01) continue;
+
+      await pool.query(
+        'INSERT INTO buchos (data, jogador, valor, pago, obs, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+        [lastBusinessDay, nome, String(deficit.toFixed(2)), 'false', 'Taxa extra']
+      );
+      geradosCount++;
+    }
+
+    console.log(`✅ Taxa extra de buchos de ${mesInicio} gerada para ${geradosCount} jogador(es) (média de ${avgMatches.toFixed(1)} partidas / ${avgBuchos.toFixed(2)} de bucho).`);
+  } catch (error) {
+    console.error('❌ Erro ao gerar taxa extra de buchos do mês anterior:', error.message);
+  }
+};
+
 // Gera mensalidades retroativas para um jogador, do mês de início (startDate) até o mês anterior ao atual.
 const gerarMensalidadesRetroativas = async (playerName, startYear, startMonth) => {
   const [existentesRows] = await pool.query(
-    'SELECT mensalidade FROM mensalidades WHERE jogador = ?',
+    'SELECT mensalidade FROM mensalidades WHERE UPPER(TRIM(jogador)) = UPPER(?)',
     [playerName]
   );
   const existentes = new Set(existentesRows.map(r => r.mensalidade));
@@ -596,7 +695,7 @@ app.post('/webhook/buscar-info-mensalidade', async (req, res) => {
 
   try {
     const [existing] = await pool.query(
-      'SELECT id_tabela as id, mensalidade, jogador, pago FROM mensalidades WHERE jogador = ? AND mensalidade = ?',
+      'SELECT id_tabela as id, mensalidade, jogador, pago FROM mensalidades WHERE UPPER(TRIM(jogador)) = UPPER(?) AND mensalidade = ?',
       [jogador.trim(), data_vencimento.trim()]
     );
 
@@ -683,6 +782,7 @@ app.get('/webhook/listar-ranking', async (req, res) => {
             jogador,
             partidas_dia: 0,
             pontos_dia: 0,
+            saldo_dia: 0,
             vitorias_dia: 0,
             derrotas_dia: 0,
             partidas_mes: 0,
@@ -708,8 +808,10 @@ app.get('/webhook/listar-ranking', async (req, res) => {
               s.partidas_dia++;
               if (isWinner) {
                 s.pontos_dia += pontos;
+                s.saldo_dia += pontos;
                 s.vitorias_dia++;
               } else {
+                s.saldo_dia -= pontos;
                 s.derrotas_dia++;
               }
             }
@@ -749,23 +851,16 @@ app.post('/webhook/receber-comprovante', async (req, res) => {
   }
 });
 
-// 11. POST /webhook/estatisticas-globais (Proxy para n8n original)
+// 11. POST /webhook/estatisticas-globais — aciona sob demanda o cálculo de taxa extra de
+// buchos do mês anterior (mesma rotina do cron mensal). Idempotente, pode ser chamado
+// manualmente mais de uma vez sem gerar cobranças duplicadas.
 app.post('/webhook/estatisticas-globais', async (req, res) => {
-  const n8nUrl = `${process.env.N8N_BASE_URL}webhook/estatisticas-globais`;
   try {
-    const response = await axios.post(n8nUrl, req.body, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    res.status(response.status).send(response.data);
+    await gerarTaxaExtraBuchosMesAnterior();
+    res.json({ status: 'success' });
   } catch (error) {
-    console.error('Erro ao repassar estatisticas-globais para n8n:', error.message);
-    if (error.response) {
-      res.status(error.response.status).send(error.response.data);
-    } else {
-      res.status(500).json({ error: 'Erro ao acionar rotina de estatísticas no n8n.' });
-    }
+    console.error('Erro ao acionar geração de taxa extra de buchos:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao gerar taxa extra de buchos.' });
   }
 });
 
@@ -978,11 +1073,18 @@ cron.schedule('5 0 1 * *', gerarMensalidadesDoMesAtual, {
   timezone: 'America/Sao_Paulo'
 });
 
+// Cron: todo dia 1º às 00:10 (horário de Recife/São Paulo), gera a taxa extra de
+// buchos do mês que acabou de fechar, para jogadores que jogaram abaixo da média.
+cron.schedule('10 0 1 * *', gerarTaxaExtraBuchosMesAnterior, {
+  timezone: 'America/Sao_Paulo'
+});
+
 // Inicialização do servidor
 app.listen(port, () => {
   console.log(`🚀 Servidor rodando na porta ${port}`);
   // Checagem de segurança no boot: cobre o caso do servidor estar fora do ar
-  // exatamente na virada do mês, garantindo que a mensalidade do mês corrente
-  // seja gerada assim que o processo voltar a subir.
+  // exatamente na virada do mês, garantindo que a mensalidade e a taxa extra do
+  // mês sejam geradas assim que o processo voltar a subir.
   gerarMensalidadesDoMesAtual();
+  gerarTaxaExtraBuchosMesAnterior();
 });

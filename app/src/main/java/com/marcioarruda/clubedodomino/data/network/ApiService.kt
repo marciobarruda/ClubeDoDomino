@@ -122,7 +122,8 @@ data class RankingDto(
     val vitorias_ano: Int = 0,
     val derrotas_ano: Int = 0,
     val vitorias_dia: Int = 0,
-    val derrotas_dia: Int = 0
+    val derrotas_dia: Int = 0,
+    val saldo_dia: Int = 0
 )
 
 data class DebitRequest(

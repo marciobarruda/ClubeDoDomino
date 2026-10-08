@@ -146,39 +146,11 @@ class FinanceViewModel(
                         allDebts.addAll(mensalidades.mapNotNull { with(repository) { it.toFinancialEntry(users) } })
                     }
 
-                    // --- RETROACTIVE FINANCIAL TRIGGERS (Looping last 3 months) ---
-                    val isActive = currentUser.isActive
-                    val isOnVacation = currentUser.isOnVacation
-
-                    // 1. Extra Fee Check (Trigger n8n API)
-                    if (isActive && !isOnVacation) {
-                        try {
-                            repository.triggerTaxasExtras()
-                        } catch(e: Exception) {
-                            Log.e("FinanceViewModel", "Erro ao acionar API de taxas extras", e)
-                        }
-                    }
-
-                    // 2. Monthly Fee Check
-                    for (i in 1..3) {
-                        val targetCal = Calendar.getInstance().apply { add(Calendar.MONTH, -i) }
-                        val targetMonth = targetCal.get(Calendar.MONTH)
-                        val targetYear = targetCal.get(Calendar.YEAR)
-
-                        val hasMonthly = allDebts.any { m ->
-                            val mCal = Calendar.getInstance().apply { time = m.dueDate }
-                            m.userId == currentUser.id && m.type == FinancialEntryType.MONTHLY_FEE &&
-                                    mCal.get(Calendar.MONTH) == targetMonth && mCal.get(Calendar.YEAR) == targetYear
-                        }
-
-                        if (!hasMonthly && isActive && !isOnVacation) {
-                            try {
-                                repository.createMensalidade(currentUser.name, targetMonth, targetYear)
-                            } catch (e: Exception) {
-                                Log.e("FinanceViewModel", "Falha ao gerar mensalidade retroativa", e)
-                            }
-                        }
-                    }
+                    // Geração de mensalidades e de taxa extra de buchos agora é feita centralmente pelo
+                    // servidor (cron mensal, dia 1º) — ver gerarMensalidadesDoMesAtual e
+                    // gerarTaxaExtraBuchosMesAnterior em server/server.js. O disparo client-side que
+                    // existia aqui foi removido porque rodava toda vez que qualquer jogador abria esta
+                    // tela, gerando mensalidades em duplicidade com o cron do servidor.
 
                     // Final Refresh
                     val finalBuchos = repository.getBuchosResult().getOrNull()?.mapNotNull { with(repository) { it.toFinancialEntry(users) } } ?: emptyList()

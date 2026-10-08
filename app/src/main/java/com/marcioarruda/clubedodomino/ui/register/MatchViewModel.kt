@@ -74,6 +74,34 @@ class MatchViewModel(
             u.id == "7"
     }
 
+    // Sorteia as duplas (índices 0-1 vs 2-3) a partir dos 4 jogadores informados, em qualquer ordem
+    // de entrada. Com 4 jogadores só existem 3 formações de dupla possíveis, então um shuffle puro
+    // tem ~1/3 de chance de repetir a formação anterior por acaso — o que é perceptível pelo usuário
+    // como "o sorteio não aconteceu". Quando `previousPairing` é informado (ex.: ao repetir uma
+    // partida), repete o sorteio até garantir uma formação diferente da anterior.
+    private fun shuffleAvoidingSamePairing(
+        players: List<User>,
+        previousPairing: Pair<Set<String>, Set<String>>? = null
+    ): List<User> {
+        require(players.size == 4) { "O sorteio de duplas exige exatamente 4 jogadores." }
+
+        fun pairingOf(ordered: List<User>): Pair<Set<String>, Set<String>> =
+            setOf(ordered[0].id, ordered[1].id) to setOf(ordered[2].id, ordered[3].id)
+
+        fun isSamePairing(a: Pair<Set<String>, Set<String>>, b: Pair<Set<String>, Set<String>>): Boolean =
+            (a.first == b.first && a.second == b.second) || (a.first == b.second && a.second == b.first)
+
+        var attempt = players.shuffled()
+        if (previousPairing != null) {
+            var guard = 0
+            while (isSamePairing(pairingOf(attempt), previousPairing) && guard < 20) {
+                attempt = players.shuffled()
+                guard++
+            }
+        }
+        return attempt
+    }
+
     fun setCurrentUser(name: String?) {
         if (name == currentUserName) return
         currentUserName = name
@@ -450,12 +478,8 @@ class MatchViewModel(
                     val placarStr = "${state.score1}x${state.score2}"
 
                     // Regra 4: Jogador Não Membro
-                    fun isNonMember(u: User): Boolean {
-                        return u.name.contains("NÃO MEMBRO", ignoreCase = true) || u.id == "7"
-                    }
-
-                    val loser1IsNonMember = isNonMember(losers[0])
-                    val loser2IsNonMember = isNonMember(losers[1])
+                    val loser1IsNonMember = isNonMemberPlayer(losers[0])
+                    val loser2IsNonMember = isNonMemberPlayer(losers[1])
 
                     // Logica de pagamento
                     if (loser1IsNonMember && loser2IsNonMember) {
@@ -506,33 +530,18 @@ class MatchViewModel(
     fun onRepeatMatch(repeat: Boolean) {
         viewModelScope.launch {
             if (repeat && !matchAvailabilityManager.isModuleAvailable(com.marcioarruda.clubedodomino.DominoClubApplication.instance, currentUserName)) {
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
-                        showRepeatDialog = false, 
+                        showRepeatDialog = false,
                         error = "Fora do horário permitido para iniciar partidas!",
                         success = false
-                    ) 
+                    )
                 }
                 return@launch
             }
 
-            _uiState.update {
-                if (repeat) {
-                    val chosenPlayers = it.selectedPlayers.filterNotNull()
-                    val shouldShuffle = chosenPlayers.size == 4 && chosenPlayers.none { p -> isNonMemberPlayer(p) }
-                    val reshuffledPlayers = if (shouldShuffle) chosenPlayers.shuffled() else it.selectedPlayers
-
-                    it.copy(
-                        showRepeatDialog = false,
-                        selectedPlayers = reshuffledPlayers,
-                        score1 = 0,
-                        score2 = 0,
-                        fechas = 0,
-                        isBuchoRe = false,
-                        isBuchoReEnabled = false,
-                        success = false
-                    )
-                } else {
+            if (!repeat) {
+                _uiState.update {
                     it.copy(
                         showRepeatDialog = false,
                         selectedPlayers = listOf(null, null, null, null),
@@ -544,6 +553,48 @@ class MatchViewModel(
                         success = true
                     )
                 }
+                return@launch
+            }
+
+            val state = _uiState.value
+            val chosenPlayers = state.selectedPlayers.filterNotNull()
+            val shouldShuffle = chosenPlayers.size == 4 && chosenPlayers.none { p -> isNonMemberPlayer(p) }
+            val previousPairing = if (chosenPlayers.size == 4)
+                setOf(chosenPlayers[0].id, chosenPlayers[1].id) to setOf(chosenPlayers[2].id, chosenPlayers[3].id)
+            else null
+            val reshuffledPlayers = if (shouldShuffle)
+                shuffleAvoidingSamePairing(chosenPlayers, previousPairing)
+            else chosenPlayers
+
+            // A partida anterior já foi encerrada e removida das partidas ativas em saveMatch().
+            // Registra a partida repetida como uma nova partida ativa, com a dupla já sorteada acima
+            // (garantidamente diferente da anterior), em vez de deixá-la só em memória local até o
+            // usuário clicar em "Confirmar Abertura" de novo — o que exigiria um segundo sorteio.
+            val matchId = UUID.randomUUID().toString()
+            val newActiveMatch = ActiveMatch(
+                id = matchId,
+                player1 = reshuffledPlayers[0].name,
+                player2 = reshuffledPlayers[1].name,
+                player3 = reshuffledPlayers[2].name,
+                player4 = reshuffledPlayers[3].name,
+                cadastrador = currentUserName ?: "Desconhecido"
+            )
+            val success = repository.startActiveMatch(newActiveMatch)
+
+            _uiState.update {
+                it.copy(
+                    showRepeatDialog = false,
+                    selectedPlayers = reshuffledPlayers,
+                    isActiveMatchStarted = success,
+                    activeMatchId = if (success) matchId else null,
+                    score1 = 0,
+                    score2 = 0,
+                    fechas = 0,
+                    isBuchoRe = false,
+                    isBuchoReEnabled = false,
+                    success = false,
+                    error = if (!success) "Erro ao iniciar partida repetida no banco de dados." else null
+                )
             }
         }
     }
@@ -592,7 +643,7 @@ class MatchViewModel(
                 // Sorteia as duplas ao abrir a partida, desde que nenhum dos 4 seja NÃO MEMBRO.
                 val chosenPlayers = state.selectedPlayers.filterNotNull()
                 val shouldShuffle = chosenPlayers.none { isNonMemberPlayer(it) }
-                val orderedPlayers = if (shouldShuffle) chosenPlayers.shuffled() else chosenPlayers
+                val orderedPlayers = if (shouldShuffle) shuffleAvoidingSamePairing(chosenPlayers) else chosenPlayers
 
                 val matchId = UUID.randomUUID().toString()
                 val newActiveMatch = ActiveMatch(

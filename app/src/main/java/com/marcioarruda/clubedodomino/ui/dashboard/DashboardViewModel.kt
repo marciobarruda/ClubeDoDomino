@@ -76,36 +76,38 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 val allPlayers = repository.getPlayers()
 
                 rankingResult.onSuccess { ranking ->
-                    // Só concorre ao destaque do dia quem jogou pelo menos 2 partidas —
-                    // evita que 1 partida isolada (vitória ou derrota) decida o prêmio.
-                    val eligibleToday = ranking.filter { it.partidas_dia >= 2 && !it.jogador.contains("NÃO MEMBRO", ignoreCase = true) }
+                    // Só concorre ao destaque do dia quem jogou pelo menos 3 partidas — evita que
+                    // uma amostra pequena (ex.: 1 vitória em 1 partida = 100%) vença quem jogou bem
+                    // mais partidas no dia com um saldo de pontos sólido, porém taxa menor.
+                    val eligibleToday = ranking.filter { it.partidas_dia >= 3 && !it.jogador.contains("NÃO MEMBRO", ignoreCase = true) }
 
                     if (eligibleToday.isNotEmpty()) {
-                        fun winRate(r: com.marcioarruda.clubedodomino.data.network.RankingDto) =
-                            r.vitorias_dia.toDouble() / r.partidas_dia
+                        // Critério: saldo médio de pontos por partida (pontos ganhos nas vitórias menos
+                        // pontos perdidos nas derrotas, dividido pelo número de partidas). Ao contrário da
+                        // taxa de aproveitamento, não trata 2 partidas e 10 partidas como equivalentes, e
+                        // ao contrário do saldo bruto, não dá vantagem a quem só jogou mais partidas no dia.
+                        fun avgBalance(r: com.marcioarruda.clubedodomino.data.network.RankingDto) =
+                            r.saldo_dia.toDouble() / r.partidas_dia
 
-                        // Craque do dia: maior taxa de aproveitamento; empate desempatado por mais pontos.
+                        // Craque do dia: maior saldo médio por partida; empate desempatado por mais partidas jogadas.
                         val bestRanked = eligibleToday.sortedWith(
-                            compareByDescending<com.marcioarruda.clubedodomino.data.network.RankingDto> { winRate(it) }
-                                .thenByDescending { it.pontos_dia }
+                            compareByDescending<com.marcioarruda.clubedodomino.data.network.RankingDto> { avgBalance(it) }
+                                .thenByDescending { it.partidas_dia }
                         )
                         val bestTop = bestRanked.first()
                         val bestTied = bestRanked.filter {
-                            winRate(it) == winRate(bestTop) && it.pontos_dia == bestTop.pontos_dia
+                            avgBalance(it) == avgBalance(bestTop) && it.partidas_dia == bestTop.partidas_dia
                         }
 
-                        // Piorzinho do dia: menor taxa de aproveitamento; empate desempatado por mais
-                        // derrotas (pior sequência) e depois por menos pontos.
+                        // Piorzinho do dia: menor saldo médio por partida; mesma regra de desempate do
+                        // craque, só invertida (mais partidas jogadas também desempata aqui).
                         val worstRanked = eligibleToday.sortedWith(
-                            compareBy<com.marcioarruda.clubedodomino.data.network.RankingDto> { winRate(it) }
-                                .thenByDescending { it.derrotas_dia }
-                                .thenBy { it.pontos_dia }
+                            compareBy<com.marcioarruda.clubedodomino.data.network.RankingDto> { avgBalance(it) }
+                                .thenByDescending { it.partidas_dia }
                         )
                         val worstTop = worstRanked.first()
                         val worstTied = worstRanked.filter {
-                            winRate(it) == winRate(worstTop) &&
-                                it.derrotas_dia == worstTop.derrotas_dia &&
-                                it.pontos_dia == worstTop.pontos_dia
+                            avgBalance(it) == avgBalance(worstTop) && it.partidas_dia == worstTop.partidas_dia
                         }
 
                         topPlayers = bestTied.mapNotNull { r ->
