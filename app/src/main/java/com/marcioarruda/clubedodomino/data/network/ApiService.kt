@@ -10,6 +10,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.PATCH
 import retrofit2.http.PUT
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -46,7 +47,16 @@ data class ActiveMatchDto(
     val jogador3: String?,
     val jogador4: String?,
     val cadastrador: String?,
+    val score1: Int = 0,
+    val score2: Int = 0,
+    val fechas: Int = 0,
     @SerializedName("data_criacao") val dataCriacao: String?
+)
+
+data class ActiveMatchScoreUpdate(
+    val score1: Int,
+    val score2: Int,
+    val fechas: Int
 )
 
 data class UpdateDbPasswordRequest(
@@ -274,6 +284,9 @@ interface ApiService {
 
     @DELETE("webhook/partidas-em-andamento/{id}")
     suspend fun deleteActiveMatch(@Path("id") id: String): SimpleStatusResponse
+
+    @PATCH("webhook/partidas-em-andamento/{id}")
+    suspend fun updateActiveMatchScore(@Path("id") id: String, @Body score: ActiveMatchScoreUpdate): SimpleStatusResponse
 
     @POST("webhook/admin/atualizar-senha-db")
     suspend fun updateDbPassword(@Body request: UpdateDbPasswordRequest): SimpleStatusResponse

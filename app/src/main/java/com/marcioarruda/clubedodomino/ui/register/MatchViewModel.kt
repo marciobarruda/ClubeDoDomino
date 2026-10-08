@@ -102,19 +102,22 @@ class MatchViewModel(
         return attempt
     }
 
-    fun setCurrentUser(name: String?) {
-        if (name == currentUserName) return
-        currentUserName = name
-        if (name != null) loadActiveMatchForUser(name)
-    }
+    // `loadPlayers()` (chamado no init, assíncrono) e `setCurrentUser()` (chamado pela tela assim
+    // que a sessão carrega, também assíncrono) podem terminar em qualquer ordem. A reidratação de
+    // uma partida ativa precisa dos dois — nome do usuário E a lista de jogadores carregada —, por
+    // isso fica centralizada aqui e é chamada pelos dois pontos de entrada; só executa quando ambas
+    // as dependências já estão disponíveis, e tenta de novo (não trava com uma flag "já tentei") até
+    // ter sucesso, evitando a corrida que antes podia deixar os 4 slots como null permanentemente.
+    private fun tryLoadActiveMatchForCurrentUser() {
+        val username = currentUserName ?: return
+        val state = _uiState.value
+        if (state.isActiveMatchStarted) return
+        if (state.availablePlayers.isEmpty()) return
 
-    private fun loadActiveMatchForUser(username: String) {
         viewModelScope.launch {
             try {
-                val state = _uiState.value
-                if (state.isActiveMatchStarted) return@launch
                 val activeMatch = repository.getActiveMatchForUser(username) ?: return@launch
-                val players = state.availablePlayers
+                val players = _uiState.value.availablePlayers
                 val p1 = players.find { it.name == activeMatch.player1 }
                 val p2 = players.find { it.name == activeMatch.player2 }
                 val p3 = players.find { it.name == activeMatch.player3 }
@@ -123,11 +126,20 @@ class MatchViewModel(
                     it.copy(
                         selectedPlayers = listOf(p1, p2, p3, p4),
                         isActiveMatchStarted = true,
-                        activeMatchId = activeMatch.id
+                        activeMatchId = activeMatch.id,
+                        score1 = activeMatch.score1,
+                        score2 = activeMatch.score2,
+                        fechas = activeMatch.fechas
                     )
                 }
             } catch (_: Exception) {}
         }
+    }
+
+    fun setCurrentUser(name: String?) {
+        if (name == currentUserName) return
+        currentUserName = name
+        if (name != null) tryLoadActiveMatchForCurrentUser()
     }
 
     init {
@@ -289,31 +301,14 @@ class MatchViewModel(
                     }
                     .sortedBy { it.displayName }
 
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
                         availablePlayers = eligiblePlayers,
                         isLoading = false
-                    ) 
+                    )
                 }
 
-                currentUserName?.let { username ->
-                    val activeMatch = repository.getActiveMatchForUser(username)
-                    if (activeMatch != null) {
-                        val p1 = eligiblePlayers.find { it.name == activeMatch.player1 }
-                        val p2 = eligiblePlayers.find { it.name == activeMatch.player2 }
-                        val p3 = eligiblePlayers.find { it.name == activeMatch.player3 }
-                        val p4 = eligiblePlayers.find { it.name == activeMatch.player4 }
-                        _uiState.update {
-                            it.copy(
-                                selectedPlayers = listOf(p1, p2, p3, p4),
-                                isActiveMatchStarted = true,
-                                activeMatchId = activeMatch.id
-                            )
-                        }
-                    }
-                } ?: run {
-                    // currentUserName ainda não chegou — loadActiveMatchForUser será chamado pelo setCurrentUser
-                }
+                tryLoadActiveMatchForCurrentUser()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Falha ao carregar jogadores: ${e.message}") }
             }
@@ -345,6 +340,18 @@ class MatchViewModel(
                 isBuchoRe = isBuchoRe
             )
         }
+        persistActiveMatchScoreDraft()
+    }
+
+    // Salva o placar parcial (rascunho) da partida já aberta no servidor, para sobreviver a sair
+    // da tela de registro sem salvar. Sem efeito antes de "Confirmar Abertura" (quando ainda não
+    // existe activeMatchId) — nesse caso o estado só volta a existir em memória, como já era.
+    private fun persistActiveMatchScoreDraft() {
+        val state = _uiState.value
+        val matchId = state.activeMatchId ?: return
+        viewModelScope.launch {
+            repository.updateActiveMatchScore(matchId, state.score1, state.score2, state.fechas)
+        }
     }
 
     fun onScoreIncrement(team: Int) {
@@ -359,6 +366,7 @@ class MatchViewModel(
 
     fun onFechasChange(value: Int) {
         _uiState.update { it.copy(fechas = if (value < 0) 0 else value) }
+        persistActiveMatchScoreDraft()
     }
 
     fun onBatidaSelected(tipo: TipoBatida) {

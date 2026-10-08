@@ -75,10 +75,23 @@ let pool = mysql.createPool({
         jogador3 VARCHAR(100) NOT NULL,
         jogador4 VARCHAR(100) NOT NULL,
         cadastrador VARCHAR(100) NOT NULL,
+        score1 INT NOT NULL DEFAULT 0,
+        score2 INT NOT NULL DEFAULT 0,
+        fechas INT NOT NULL DEFAULT 0,
         data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       )`
     );
+    // Colunas de placar adicionadas depois da criação inicial da tabela — ALTER idempotente
+    // para instalações que já tinham a tabela sem elas (MySQL não suporta "ADD COLUMN IF NOT
+    // EXISTS" em todas as versões usadas aqui, então ignoramos o erro de coluna duplicada).
+    for (const coluna of ['score1 INT NOT NULL DEFAULT 0', 'score2 INT NOT NULL DEFAULT 0', 'fechas INT NOT NULL DEFAULT 0']) {
+      try {
+        await pool.query(`ALTER TABLE partidas_em_andamento ADD COLUMN ${coluna}`);
+      } catch (e) {
+        if (!/Duplicate column/i.test(e.message)) throw e;
+      }
+    }
   } catch (error) {
     console.error('❌ Falha ao conectar ao banco de dados MySQL:', error.message);
   }
@@ -344,8 +357,11 @@ const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
     }
   }
 
+  // Exclui lançamentos de "Taxa extra" do cálculo da média: são cobranças corretivas, não
+  // desempenho real do jogador no mês — incluí-las infla a média a cada execução (rodar o
+  // backfill duas vezes geraria uma 2ª cobrança sobre a média já distorcida pela 1ª).
   const [buchosRows] = await pool.query(
-    'SELECT jogador, valor FROM buchos WHERE data >= ? AND data < ?',
+    "SELECT jogador, valor FROM buchos WHERE data >= ? AND data < ? AND (obs IS NULL OR obs != 'Taxa extra')",
     [mesInicio, mesFim]
   );
   const buchosPorJogador = {};
@@ -1084,7 +1100,7 @@ app.get('/webhook/partidas-em-andamento', async (req, res) => {
     let rows;
     if (jogador) {
       [rows] = await pool.query(
-        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao
+        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, score1, score2, fechas, data_criacao
          FROM partidas_em_andamento
          WHERE (jogador1 = ? OR jogador2 = ? OR jogador3 = ? OR jogador4 = ?)
          AND DATE(data_criacao) = CURDATE() LIMIT 1`,
@@ -1092,7 +1108,7 @@ app.get('/webhook/partidas-em-andamento', async (req, res) => {
       );
     } else {
       [rows] = await pool.query(
-        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao
+        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, score1, score2, fechas, data_criacao
          FROM partidas_em_andamento WHERE DATE(data_criacao) = CURDATE()`
       );
     }
@@ -1104,6 +1120,9 @@ app.get('/webhook/partidas-em-andamento', async (req, res) => {
       jogador3: r.jogador3,
       jogador4: r.jogador4,
       cadastrador: r.cadastrador,
+      score1: r.score1 || 0,
+      score2: r.score2 || 0,
+      fechas: r.fechas || 0,
       data_criacao: r.data_criacao
     }));
 
@@ -1130,6 +1149,23 @@ app.post('/webhook/partidas-em-andamento', async (req, res) => {
   } catch (error) {
     console.error('Erro ao iniciar partida em andamento:', error.message);
     res.status(500).json({ status: 'error', message: 'Erro ao iniciar partida em andamento.' });
+  }
+});
+
+// 13b. PATCH /webhook/partidas-em-andamento/:id — salva o placar parcial de uma partida ativa
+// como rascunho, para não se perder se o usuário sair da tela antes de confirmar a partida.
+app.patch('/webhook/partidas-em-andamento/:id', async (req, res) => {
+  const { id } = req.params;
+  const { score1, score2, fechas } = req.body;
+  try {
+    await pool.query(
+      'UPDATE partidas_em_andamento SET score1 = ?, score2 = ?, fechas = ?, updated_at = NOW() WHERE id = ?',
+      [score1 || 0, score2 || 0, fechas || 0, id]
+    );
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao salvar placar da partida em andamento:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao salvar placar.' });
   }
 });
 

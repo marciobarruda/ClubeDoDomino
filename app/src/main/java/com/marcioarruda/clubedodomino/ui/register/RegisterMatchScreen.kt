@@ -443,8 +443,9 @@ fun PlayerDropdown(
             onValueChange = { if (enabled) { filterText = it; expanded = true } },
             modifier = Modifier.menuAnchor().fillMaxWidth(),
             enabled = enabled,
+            singleLine = true,
             textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp),
-            label = { Text("Jogador", fontSize = 11.sp) },
+            label = { Text("Jogador", fontSize = 11.sp, maxLines = 1) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = ExposedDropdownMenuDefaults.textFieldColors(
                 focusedContainerColor = Color.Transparent,

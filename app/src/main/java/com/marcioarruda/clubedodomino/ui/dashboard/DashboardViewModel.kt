@@ -81,14 +81,19 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                     // mais partidas no dia com um saldo de pontos sólido, porém taxa menor.
                     val eligibleToday = ranking.filter { it.partidas_dia >= 3 && !it.jogador.contains("NÃO MEMBRO", ignoreCase = true) }
 
-                    if (eligibleToday.isNotEmpty()) {
-                        // Critério: saldo médio de pontos por partida (pontos ganhos nas vitórias menos
-                        // pontos perdidos nas derrotas, dividido pelo número de partidas). Ao contrário da
-                        // taxa de aproveitamento, não trata 2 partidas e 10 partidas como equivalentes, e
-                        // ao contrário do saldo bruto, não dá vantagem a quem só jogou mais partidas no dia.
-                        fun avgBalance(r: com.marcioarruda.clubedodomino.data.network.RankingDto) =
-                            r.saldo_dia.toDouble() / r.partidas_dia
+                    // Critério: saldo médio de pontos por partida (pontos ganhos nas vitórias menos
+                    // pontos perdidos nas derrotas, dividido pelo número de partidas). Ao contrário da
+                    // taxa de aproveitamento, não trata 2 partidas e 10 partidas como equivalentes, e
+                    // ao contrário do saldo bruto, não dá vantagem a quem só jogou mais partidas no dia.
+                    fun avgBalance(r: com.marcioarruda.clubedodomino.data.network.RankingDto) =
+                        r.saldo_dia.toDouble() / r.partidas_dia
 
+                    // Exige pelo menos 2 saldos médios distintos no dia — com só 1 jogador elegível
+                    // (ou todos empatados), craque e piorzinho seriam a mesma pessoa, o que não faz
+                    // sentido: não há "melhor" e "pior" quando só existe um nível de desempenho.
+                    val saldosDistintos = eligibleToday.map { avgBalance(it) }.distinct()
+
+                    if (saldosDistintos.size >= 2) {
                         // Craque do dia: maior saldo médio por partida; empate desempatado por mais partidas jogadas.
                         val bestRanked = eligibleToday.sortedWith(
                             compareByDescending<com.marcioarruda.clubedodomino.data.network.RankingDto> { avgBalance(it) }
@@ -100,8 +105,12 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                         }
 
                         // Piorzinho do dia: menor saldo médio por partida; mesma regra de desempate do
-                        // craque, só invertida (mais partidas jogadas também desempata aqui).
-                        val worstRanked = eligibleToday.sortedWith(
+                        // craque, só invertida (mais partidas jogadas também desempata aqui). Exclui quem
+                        // já foi eleito craque, para as duas listas nunca colidirem no mesmo jogador.
+                        val worstCandidates = eligibleToday.filterNot { candidate ->
+                            bestTied.any { it.jogador == candidate.jogador }
+                        }
+                        val worstRanked = worstCandidates.sortedWith(
                             compareBy<com.marcioarruda.clubedodomino.data.network.RankingDto> { avgBalance(it) }
                                 .thenByDescending { it.partidas_dia }
                         )

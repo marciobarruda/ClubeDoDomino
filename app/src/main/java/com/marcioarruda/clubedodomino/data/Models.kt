@@ -87,5 +87,8 @@ data class ActiveMatch(
     val player3: String,
     val player4: String,
     val cadastrador: String,
+    val score1: Int = 0,
+    val score2: Int = 0,
+    val fechas: Int = 0,
     val createdAt: Date = Date()
 )

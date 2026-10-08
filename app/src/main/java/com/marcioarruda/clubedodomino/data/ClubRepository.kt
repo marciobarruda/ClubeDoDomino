@@ -609,6 +609,20 @@ class ClubRepository {
         }
     }
 
+    // Salva o placar parcial da partida ativa como rascunho, para não se perder se o usuário
+    // sair da tela de registro antes de confirmar a partida. Falha silenciosamente — é uma
+    // conveniência de recuperação, não deve interromper o fluxo de marcar pontos na tela.
+    suspend fun updateActiveMatchScore(id: String, score1: Int, score2: Int, fechas: Int): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                api.updateActiveMatchScore(id, com.marcioarruda.clubedodomino.data.network.ActiveMatchScoreUpdate(score1, score2, fechas))
+                true
+            } catch (t: Throwable) {
+                t.printStackTrace()
+                false
+            }
+        }
+
     suspend fun getActiveMatchForUser(username: String): ActiveMatch? = withContext(Dispatchers.IO) {
         try {
             api.getActiveMatches(jogador = username).firstOrNull()?.toActiveMatch()
@@ -625,6 +639,9 @@ class ClubRepository {
         player3 = this.jogador3 ?: "",
         player4 = this.jogador4 ?: "",
         cadastrador = this.cadastrador ?: "",
+        score1 = this.score1,
+        score2 = this.score2,
+        fechas = this.fechas,
         createdAt = parseAnyDate(this.dataCriacao) ?: Date()
     )
 
