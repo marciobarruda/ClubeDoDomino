@@ -839,18 +839,55 @@ app.get('/webhook/listar-ranking', async (req, res) => {
   }
 });
 
-// Envia uma notificação ao Telegram do responsável financeiro (Amilton) quando um comprovante
-// é submetido pelo app. Usa a API HTTP do Telegram Bot diretamente — requer as variáveis de
-// ambiente TELEGRAM_BOT_TOKEN (token do bot, gerado pelo @BotFather) e TELEGRAM_CHAT_ID (chat_id
-// obtido após o destinatário iniciar uma conversa com o bot). Se não configuradas, a notificação
-// é pulada silenciosamente (não bloqueia o recebimento do comprovante).
-const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, imagemBase64 }) => {
+// ─── Notificação de comprovante no Telegram, com confirmação de baixa ────────
+//
+// Substitui o fluxo antigo do n8n (webhooks "receber-comprovante" e
+// "baixar-pagamentos"): quando um comprovante chega do app, manda a imagem pro
+// Telegram do responsável financeiro com botões "Confirmo"/"Não Confirmo". Os
+// IDs de bucho/mensalidade daquele comprovante viajam dentro do callback_data
+// do botão; ao clicar, o Telegram chama de volta /webhook/telegram-callback,
+// que dá baixa no banco (reaproveitando as mesmas rotas de "marcar como
+// pago" já usadas pelo app) e edita a mensagem removendo os botões.
+//
+// Requer as variáveis de ambiente TELEGRAM_BOT_TOKEN (gerado pelo @BotFather)
+// e TELEGRAM_CHAT_ID (chat_id obtido após o destinatário iniciar uma conversa
+// com o bot). Se não configuradas, a notificação é pulada silenciosamente —
+// não bloqueia o recebimento do comprovante pelo app.
+
+const telegramApi = (method) => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`;
+
+// O callback_data do Telegram tem limite de 64 bytes, então os IDs de bucho/mensalidade não
+// cabem direto nele quando há vários. Guardamos o payload completo numa tabela (chaveada por um
+// id curto, auto-incremento) e repassamos só esse id no botão — persistente, sobrevive a um
+// restart do servidor entre o envio da notificação e o clique do Amilton.
+const garantirTabelaPagamentosPendentes = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pagamentos_pendentes_telegram (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      jogador_nome VARCHAR(255) NOT NULL,
+      bucho_ids TEXT,
+      mensalidade_ids TEXT,
+      resolvido TINYINT(1) NOT NULL DEFAULT 0,
+      createdAt DATETIME NOT NULL,
+      updatedAt DATETIME NOT NULL
+    )
+  `);
+};
+
+const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, buchoIds, mensalidadeIds, imagemBase64 }) => {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) {
     console.warn('⚠️ TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID não configurados — notificação de comprovante pulada.');
     return;
   }
+
+  await garantirTabelaPagamentosPendentes();
+  const [result] = await pool.query(
+    'INSERT INTO pagamentos_pendentes_telegram (jogador_nome, bucho_ids, mensalidade_ids, createdAt, updatedAt) VALUES (?, ?, ?, NOW(), NOW())',
+    [jogadorNome, JSON.stringify(buchoIds || []), JSON.stringify(mensalidadeIds || [])]
+  );
+  const pagamentoId = result.insertId;
 
   const valorFormatado = (valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const agora = new Date().toLocaleString('pt-BR', {
@@ -860,7 +897,13 @@ const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, imagemB
     hour: '2-digit',
     minute: '2-digit'
   });
-  const caption = `🧾 Comprovante recebido!\n\n👤 ${jogadorNome}\n💵 R$ ${valorFormatado}\n🕒 ${agora}\n\nConfira e dê baixa no app quando confirmar o pagamento.`;
+  const caption = `🧾 *Comprovante recebido!*\n\n👤 *Jogador:* ${jogadorNome}\n💵 *Valor:* R$ ${valorFormatado}\n🕒 ${agora}`;
+  const replyMarkup = JSON.stringify({
+    inline_keyboard: [[
+      { text: '❌ Não Confirmo', callback_data: `NAO|${pagamentoId}` },
+      { text: 'Confirmo ✅', callback_data: `SIM|${pagamentoId}` }
+    ]]
+  });
 
   try {
     if (imagemBase64) {
@@ -872,20 +915,19 @@ const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, imagemB
       const form = new FormData();
       form.append('chat_id', chatId);
       form.append('caption', caption);
+      form.append('parse_mode', 'Markdown');
+      form.append('reply_markup', replyMarkup);
       form.append('photo', new Blob([buffer], { type: 'image/jpeg' }), 'comprovante.jpg');
 
-      const response = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-        method: 'POST',
-        body: form
-      });
+      const response = await fetch(telegramApi('sendPhoto'), { method: 'POST', body: form });
       if (!response.ok) {
         console.error('❌ Erro ao notificar comprovante no Telegram:', await response.text());
       }
     } else {
-      const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      const response = await fetch(telegramApi('sendMessage'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: caption })
+        body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown', reply_markup: replyMarkup })
       });
       if (!response.ok) {
         console.error('❌ Erro ao notificar comprovante no Telegram:', await response.text());
@@ -898,17 +940,96 @@ const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, imagemB
 
 // 10. POST /webhook/receber-comprovante
 app.post('/webhook/receber-comprovante', async (req, res) => {
-  const { jogador_nome, valor_total, imagem_base64 } = req.body;
+  const { jogador_nome, valor_total, bucho_ids, mensalidade_ids, imagem_base64 } = req.body;
   try {
     await notificarComprovanteNoTelegram({
       jogadorNome: jogador_nome,
       valorTotal: valor_total,
+      buchoIds: bucho_ids,
+      mensalidadeIds: mensalidade_ids,
       imagemBase64: imagem_base64
     });
     res.json({ status: 'success' });
   } catch (error) {
     console.error('Erro ao processar comprovante:', error.message);
     res.status(500).json({ error: 'Erro ao processar comprovante.' });
+  }
+});
+
+// 10b. POST /webhook/telegram-callback — configurado como webhook do bot do Telegram
+// (ver setup em README/instruções de deploy). Recebe o clique nos botões "Confirmo"/
+// "Não Confirmo" da notificação de comprovante e dá baixa no banco quando confirmado.
+app.post('/webhook/telegram-callback', async (req, res) => {
+  const callback = req.body?.callback_query;
+  if (!callback || !callback.data) {
+    return res.sendStatus(200); // outros tipos de update do Telegram — nada a fazer aqui
+  }
+
+  res.sendStatus(200); // responde já ao Telegram; o processamento continua em background
+
+  try {
+    const [decisao, pagamentoIdStr] = callback.data.split('|');
+    const pagamentoId = parseInt(pagamentoIdStr);
+
+    const chatId = callback.message.chat.id;
+    const messageId = callback.message.message_id;
+    const captionOriginal = callback.message.caption || '';
+
+    await garantirTabelaPagamentosPendentes();
+    const [rows] = await pool.query(
+      'SELECT bucho_ids, mensalidade_ids, resolvido FROM pagamentos_pendentes_telegram WHERE id = ?',
+      [pagamentoId]
+    );
+    const pendente = rows[0];
+
+    if (!pendente || pendente.resolvido) {
+      // Pagamento não encontrado (dado antigo demais) ou já resolvido (clique duplicado).
+      if (!pendente) {
+        await fetch(telegramApi('editMessageCaption'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            message_id: messageId,
+            caption: `${captionOriginal}\n\n⚠️ *Não foi possível processar — tente dar baixa manualmente pelo app.*`,
+            parse_mode: 'Markdown'
+          })
+        });
+      }
+      return;
+    }
+
+    const buchoIds = JSON.parse(pendente.bucho_ids || '[]');
+    const mensalidadeIds = JSON.parse(pendente.mensalidade_ids || '[]');
+
+    if (decisao === 'SIM') {
+      for (const buchoId of buchoIds) {
+        await pool.query("UPDATE buchos SET pago = 'true' WHERE id_tabela = ?", [buchoId]);
+      }
+      for (const mensalidadeId of mensalidadeIds) {
+        await pool.query("UPDATE mensalidades SET pago = 'true' WHERE id_tabela = ?", [mensalidadeId]);
+      }
+    }
+
+    await pool.query(
+      'UPDATE pagamentos_pendentes_telegram SET resolvido = 1, updatedAt = NOW() WHERE id = ?',
+      [pagamentoId]
+    );
+
+    const statusTexto = decisao === 'SIM' ? '✅ Pagamento Aprovado e Baixado' : '❌ Pagamento Rejeitado';
+    await fetch(telegramApi('editMessageCaption'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        caption: `${captionOriginal}\n\n*Status: ${statusTexto}*`,
+        parse_mode: 'Markdown',
+        reply_markup: JSON.stringify({ inline_keyboard: [] })
+      })
+    });
+  } catch (error) {
+    console.error('❌ Erro ao processar callback do Telegram:', error.message);
   }
 });
 
