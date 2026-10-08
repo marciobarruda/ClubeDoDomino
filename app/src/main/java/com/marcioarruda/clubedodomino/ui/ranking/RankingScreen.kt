@@ -5,11 +5,13 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -113,18 +115,26 @@ fun RankingScreen(
                     val podium = uiState.rankingList.take(3)
                     val rest = uiState.rankingList.drop(3)
 
+                    // Jogador do pódio em destaque no card de métricas — começa no líder (1º lugar)
+                    // e muda para quem for clicado no pódio.
+                    var selectedPlayer by remember(podium) { mutableStateOf(podium.getOrNull(0)) }
+
                     LazyColumn(
                         contentPadding = PaddingValues(bottom = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
                         if (podium.isNotEmpty()) {
                             item {
-                                PodiumSection(podium)
+                                PodiumSection(
+                                    podium = podium,
+                                    selectedPlayerName = selectedPlayer?.playerName,
+                                    onPlayerClick = { selectedPlayer = it }
+                                )
                             }
                         }
-                        if (podium.isNotEmpty()) {
+                        selectedPlayer?.let { highlighted ->
                             item {
-                                LeaderHighlightCard(podium[0])
+                                LeaderHighlightCard(highlighted)
                             }
                         }
                         if (rest.isNotEmpty()) {
@@ -153,7 +163,11 @@ fun RankingScreen(
 }
 
 @Composable
-private fun PodiumSection(podium: List<RankingPlayer>) {
+private fun PodiumSection(
+    podium: List<RankingPlayer>,
+    selectedPlayerName: String?,
+    onPlayerClick: (RankingPlayer) -> Unit
+) {
     val first = podium.getOrNull(0)
     val second = podium.getOrNull(1)
     val third = podium.getOrNull(2)
@@ -166,17 +180,35 @@ private fun PodiumSection(podium: List<RankingPlayer>) {
         verticalAlignment = Alignment.Bottom
     ) {
         if (second != null) {
-            PodiumSlot(player = second, position = 2, modifier = Modifier.weight(1f))
+            PodiumSlot(
+                player = second,
+                position = 2,
+                isSelected = second.playerName == selectedPlayerName,
+                onClick = { onPlayerClick(second) },
+                modifier = Modifier.weight(1f)
+            )
         } else {
             Spacer(modifier = Modifier.weight(1f))
         }
         if (first != null) {
-            PodiumSlot(player = first, position = 1, modifier = Modifier.weight(1.15f))
+            PodiumSlot(
+                player = first,
+                position = 1,
+                isSelected = first.playerName == selectedPlayerName,
+                onClick = { onPlayerClick(first) },
+                modifier = Modifier.weight(1.15f)
+            )
         } else {
             Spacer(modifier = Modifier.weight(1.15f))
         }
         if (third != null) {
-            PodiumSlot(player = third, position = 3, modifier = Modifier.weight(1f))
+            PodiumSlot(
+                player = third,
+                position = 3,
+                isSelected = third.playerName == selectedPlayerName,
+                onClick = { onPlayerClick(third) },
+                modifier = Modifier.weight(1f)
+            )
         } else {
             Spacer(modifier = Modifier.weight(1f))
         }
@@ -184,7 +216,13 @@ private fun PodiumSection(podium: List<RankingPlayer>) {
 }
 
 @Composable
-private fun PodiumSlot(player: RankingPlayer, position: Int, modifier: Modifier = Modifier) {
+private fun PodiumSlot(
+    player: RankingPlayer,
+    position: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val avatarSize = if (position == 1) 72.dp else 56.dp
     val borderColor = when (position) {
         1 -> DominoYellow
@@ -208,7 +246,14 @@ private fun PodiumSlot(player: RankingPlayer, position: Int, modifier: Modifier 
     }
 
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .then(
+                if (isSelected) Modifier.border(2.dp, DominoYellow, RoundedCornerShape(12.dp))
+                else Modifier
+            )
+            .padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (position == 1) {
@@ -253,6 +298,9 @@ private fun PodiumSlot(player: RankingPlayer, position: Int, modifier: Modifier 
 
 @Composable
 private fun LeaderHighlightCard(leader: RankingPlayer) {
+    val totalDecided = leader.yearlyWins + leader.yearlyLosses
+    val winRatePct = if (totalDecided > 0) (leader.yearlyWins * 100 / totalDecided) else 0
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -260,17 +308,91 @@ private fun LeaderHighlightCard(leader: RankingPlayer) {
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = DominoGreen)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 18.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+                .padding(vertical = 18.dp)
         ) {
-            LeaderMetric(label = "PONTOS NO MÊS", value = "${leader.monthlyPoints}")
-            VerticalDivider()
-            LeaderMetric(label = "PARTIDAS", value = "${leader.monthlyMatches}")
-            VerticalDivider()
-            LeaderMetric(label = "RESULTADO", value = "${leader.yearlyWins}V–${leader.yearlyLosses}D")
+            Text(
+                text = leader.playerName,
+                color = DominoOnDark,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                LeaderMetric(label = "PONTOS NO MÊS", value = "${leader.monthlyPoints}")
+                VerticalDivider()
+                LeaderMetric(label = "PARTIDAS", value = "${leader.monthlyMatches}")
+                VerticalDivider()
+                LeaderMetric(label = "APROVEITAMENTO ANUAL", value = "$winRatePct%")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .fillMaxWidth()
+                    .background(DominoOnDark.copy(alpha = 0.08f), RoundedCornerShape(14.dp))
+                    .padding(vertical = 12.dp, horizontal = 14.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "BUCHOS APLICADOS / SOFRIDOS",
+                        color = DominoOnDarkMuted,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 9.5.sp,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        BuchoKpi(label = "HOJE", applied = leader.dailyBuchosApplied, received = leader.dailyBuchosReceived)
+                        BuchoKpi(label = "MÊS", applied = leader.monthlyBuchosApplied, received = leader.monthlyBuchosReceived)
+                        BuchoKpi(label = "ANO", applied = leader.yearlyBuchosApplied, received = leader.yearlyBuchosReceived)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BuchoKpi(label: String, applied: Int, received: Int) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            color = DominoOnDarkMuted,
+            fontWeight = FontWeight.Bold,
+            fontSize = 9.sp,
+            letterSpacing = 0.4.sp
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "$applied",
+                color = DominoYellow,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp
+            )
+            Text(
+                text = " / ",
+                color = DominoOnDarkMuted,
+                fontSize = 12.sp
+            )
+            Text(
+                text = "$received",
+                color = DominoOrange,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp
+            )
         }
     }
 }

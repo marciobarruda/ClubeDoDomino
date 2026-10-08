@@ -312,88 +312,96 @@ const getLastBusinessDayOfMonth = (year, month) => {
   return `${y}-${m}-${d}`;
 };
 
-// Gera a "Taxa Extra" de buchos do mês anterior (que acabou de fechar) para jogadores ativos que
+// Gera a "Taxa Extra" de buchos de um mês específico (já fechado) para jogadores ativos que
 // jogaram menos partidas que a média do grupo naquele mês. Para cada jogador abaixo da média de
 // partidas, lança um débito de buchos igual ao déficit entre a média de buchos sofridos pelo grupo
 // e o que ele próprio já sofreu — complementando o valor até a média, não substituindo-o.
 // Idempotente — verifica se já existe um débito do tipo "Taxa extra" para aquele jogador/mês antes de inserir.
+// Retorna um resumo { mes, mediaPartidas, mediaBuchos, gerados: [{jogador, valor}] } para uso em logs/relatórios.
+const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
+  const mesInicio = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`;
+  const proxMesAno = targetMonth === 12 ? targetYear + 1 : targetYear;
+  const proxMes = targetMonth === 12 ? 1 : targetMonth + 1;
+  const mesFim = `${proxMesAno}-${String(proxMes).padStart(2, '0')}-01`;
+
+  const [jogadoresRows] = await pool.query(
+    "SELECT jogador FROM jogadores WHERE (ativo IS NULL OR ativo = 1) AND (ferias IS NULL OR ferias = 0) AND jogador NOT LIKE '%NÃO MEMBRO%'"
+  );
+  const jogadoresAtivos = jogadoresRows.map(r => (r.jogador || '').trim()).filter(Boolean);
+  if (jogadoresAtivos.length === 0) return { mes: mesInicio, gerados: [] };
+
+  const [partidasRows] = await pool.query(
+    'SELECT jogador1, jogador2, jogador3, jogador4 FROM partidas WHERE data >= ? AND data < ?',
+    [mesInicio, mesFim]
+  );
+
+  const partidasPorJogador = {};
+  for (const nome of jogadoresAtivos) partidasPorJogador[nome.toUpperCase()] = 0;
+  for (const r of partidasRows) {
+    for (const jogador of [r.jogador1, r.jogador2, r.jogador3, r.jogador4]) {
+      const nome = (jogador || '').trim().toUpperCase();
+      if (nome in partidasPorJogador) partidasPorJogador[nome]++;
+    }
+  }
+
+  const [buchosRows] = await pool.query(
+    'SELECT jogador, valor FROM buchos WHERE data >= ? AND data < ?',
+    [mesInicio, mesFim]
+  );
+  const buchosPorJogador = {};
+  for (const nome of jogadoresAtivos) buchosPorJogador[nome.toUpperCase()] = 0;
+  for (const r of buchosRows) {
+    const nome = (r.jogador || '').trim().toUpperCase();
+    if (nome in buchosPorJogador) buchosPorJogador[nome] += parseFloat(r.valor) || 0;
+  }
+
+  const activeCount = jogadoresAtivos.length;
+  const totalPartidas = Object.values(partidasPorJogador).reduce((a, b) => a + b, 0);
+  const totalBuchos = Object.values(buchosPorJogador).reduce((a, b) => a + b, 0);
+  const avgMatches = totalPartidas / activeCount;
+  const avgBuchos = totalBuchos / activeCount;
+
+  const [existentesRows] = await pool.query(
+    "SELECT jogador FROM buchos WHERE obs = 'Taxa extra' AND data >= ? AND data < ?",
+    [mesInicio, mesFim]
+  );
+  const jaGerados = new Set(existentesRows.map(r => (r.jogador || '').trim().toUpperCase()));
+
+  const lastBusinessDay = getLastBusinessDayOfMonth(targetYear, targetMonth);
+  const gerados = [];
+
+  for (const nome of jogadoresAtivos) {
+    const key = nome.toUpperCase();
+    if (jaGerados.has(key)) continue;
+
+    const playerMatches = partidasPorJogador[key] || 0;
+    if (playerMatches >= avgMatches) continue;
+
+    const playerBuchosValue = buchosPorJogador[key] || 0;
+    const deficit = avgBuchos - playerBuchosValue;
+    if (deficit <= 0.01) continue;
+
+    await pool.query(
+      'INSERT INTO buchos (data, jogador, valor, pago, obs, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+      [lastBusinessDay, nome, String(deficit.toFixed(2)), 'false', 'Taxa extra']
+    );
+    gerados.push({ jogador: nome, valor: Number(deficit.toFixed(2)) });
+  }
+
+  console.log(`✅ Taxa extra de buchos de ${mesInicio} gerada para ${gerados.length} jogador(es) (média de ${avgMatches.toFixed(1)} partidas / ${avgBuchos.toFixed(2)} de bucho).`);
+  return { mes: mesInicio, mediaPartidas: avgMatches, mediaBuchos: avgBuchos, gerados };
+};
+
+// Wrapper usado pelo cron mensal e pelo boot do servidor: sempre calcula sobre o mês anterior
+// ao atual (o mês que acabou de fechar).
 const gerarTaxaExtraBuchosMesAnterior = async () => {
   const { year, month } = getSaoPauloDateParts();
   let targetYear = year;
   let targetMonth = month - 1;
   if (targetMonth === 0) { targetMonth = 12; targetYear -= 1; }
 
-  const mesInicio = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`;
-  const proxMesAno = targetMonth === 12 ? targetYear + 1 : targetYear;
-  const proxMes = targetMonth === 12 ? 1 : targetMonth + 1;
-  const mesFim = `${proxMesAno}-${String(proxMes).padStart(2, '0')}-01`;
-
   try {
-    const [jogadoresRows] = await pool.query(
-      "SELECT jogador FROM jogadores WHERE (ativo IS NULL OR ativo = 1) AND (ferias IS NULL OR ferias = 0) AND jogador NOT LIKE '%NÃO MEMBRO%'"
-    );
-    const jogadoresAtivos = jogadoresRows.map(r => (r.jogador || '').trim()).filter(Boolean);
-    if (jogadoresAtivos.length === 0) return;
-
-    const [partidasRows] = await pool.query(
-      'SELECT jogador1, jogador2, jogador3, jogador4 FROM partidas WHERE data >= ? AND data < ?',
-      [mesInicio, mesFim]
-    );
-
-    const partidasPorJogador = {};
-    for (const nome of jogadoresAtivos) partidasPorJogador[nome.toUpperCase()] = 0;
-    for (const r of partidasRows) {
-      for (const jogador of [r.jogador1, r.jogador2, r.jogador3, r.jogador4]) {
-        const nome = (jogador || '').trim().toUpperCase();
-        if (nome in partidasPorJogador) partidasPorJogador[nome]++;
-      }
-    }
-
-    const [buchosRows] = await pool.query(
-      'SELECT jogador, valor FROM buchos WHERE data >= ? AND data < ?',
-      [mesInicio, mesFim]
-    );
-    const buchosPorJogador = {};
-    for (const nome of jogadoresAtivos) buchosPorJogador[nome.toUpperCase()] = 0;
-    for (const r of buchosRows) {
-      const nome = (r.jogador || '').trim().toUpperCase();
-      if (nome in buchosPorJogador) buchosPorJogador[nome] += parseFloat(r.valor) || 0;
-    }
-
-    const activeCount = jogadoresAtivos.length;
-    const totalPartidas = Object.values(partidasPorJogador).reduce((a, b) => a + b, 0);
-    const totalBuchos = Object.values(buchosPorJogador).reduce((a, b) => a + b, 0);
-    const avgMatches = totalPartidas / activeCount;
-    const avgBuchos = totalBuchos / activeCount;
-
-    const [existentesRows] = await pool.query(
-      "SELECT jogador FROM buchos WHERE obs = 'Taxa extra' AND data >= ? AND data < ?",
-      [mesInicio, mesFim]
-    );
-    const jaGerados = new Set(existentesRows.map(r => (r.jogador || '').trim().toUpperCase()));
-
-    const lastBusinessDay = getLastBusinessDayOfMonth(targetYear, targetMonth);
-    let geradosCount = 0;
-
-    for (const nome of jogadoresAtivos) {
-      const key = nome.toUpperCase();
-      if (jaGerados.has(key)) continue;
-
-      const playerMatches = partidasPorJogador[key] || 0;
-      if (playerMatches >= avgMatches) continue;
-
-      const playerBuchosValue = buchosPorJogador[key] || 0;
-      const deficit = avgBuchos - playerBuchosValue;
-      if (deficit <= 0.01) continue;
-
-      await pool.query(
-        'INSERT INTO buchos (data, jogador, valor, pago, obs, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
-        [lastBusinessDay, nome, String(deficit.toFixed(2)), 'false', 'Taxa extra']
-      );
-      geradosCount++;
-    }
-
-    console.log(`✅ Taxa extra de buchos de ${mesInicio} gerada para ${geradosCount} jogador(es) (média de ${avgMatches.toFixed(1)} partidas / ${avgBuchos.toFixed(2)} de bucho).`);
+    await gerarTaxaExtraBuchosParaMes(targetYear, targetMonth);
   } catch (error) {
     console.error('❌ Erro ao gerar taxa extra de buchos do mês anterior:', error.message);
   }
@@ -861,6 +869,37 @@ app.post('/webhook/estatisticas-globais', async (req, res) => {
   } catch (error) {
     console.error('Erro ao acionar geração de taxa extra de buchos:', error.message);
     res.status(500).json({ status: 'error', message: 'Erro ao gerar taxa extra de buchos.' });
+  }
+});
+
+// 11b. POST /webhook/taxa-extra-retroativa — roda o cálculo de taxa extra de buchos para um
+// intervalo de meses já fechados (uso administrativo, para corrigir meses em que a geração
+// automática ficou parada). Idempotente — meses já processados não geram cobrança duplicada.
+// Body: { anoInicio, mesInicio, anoFim, mesFim } (inclusive nas duas pontas).
+app.post('/webhook/taxa-extra-retroativa', async (req, res) => {
+  const { anoInicio, mesInicio, anoFim, mesFim } = req.body;
+  if (!anoInicio || !mesInicio || !anoFim || !mesFim) {
+    return res.status(400).json({ status: 'error', message: 'anoInicio, mesInicio, anoFim e mesFim são obrigatórios.' });
+  }
+
+  try {
+    const resultados = [];
+    let ano = parseInt(anoInicio);
+    let mes = parseInt(mesInicio);
+    const anoLimite = parseInt(anoFim);
+    const mesLimite = parseInt(mesFim);
+
+    while (ano < anoLimite || (ano === anoLimite && mes <= mesLimite)) {
+      const resultado = await gerarTaxaExtraBuchosParaMes(ano, mes);
+      resultados.push(resultado);
+      mes++;
+      if (mes > 12) { mes = 1; ano += 1; }
+    }
+
+    res.json({ status: 'success', meses: resultados });
+  } catch (error) {
+    console.error('Erro ao gerar taxa extra retroativa:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao gerar taxa extra retroativa.' });
   }
 });
 
