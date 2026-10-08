@@ -839,23 +839,69 @@ app.get('/webhook/listar-ranking', async (req, res) => {
   }
 });
 
-// 10. POST /webhook/receber-comprovante (Proxy para n8n original)
-app.post('/webhook/receber-comprovante', async (req, res) => {
-  const n8nUrl = `${process.env.N8N_BASE_URL}webhook/receber-comprovante`;
+// Envia uma notificação ao Telegram do responsável financeiro (Amilton) quando um comprovante
+// é submetido pelo app. Usa a API HTTP do Telegram Bot diretamente — requer as variáveis de
+// ambiente TELEGRAM_BOT_TOKEN (token do bot, gerado pelo @BotFather) e TELEGRAM_CHAT_ID (chat_id
+// obtido após o destinatário iniciar uma conversa com o bot). Se não configuradas, a notificação
+// é pulada silenciosamente (não bloqueia o recebimento do comprovante).
+const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, imagemBase64 }) => {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) {
+    console.warn('⚠️ TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID não configurados — notificação de comprovante pulada.');
+    return;
+  }
+
+  const valorFormatado = (valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const caption = `💰 Novo comprovante recebido!\n\n👤 Jogador: ${jogadorNome}\n💵 Valor: R$ ${valorFormatado}`;
+
   try {
-    const response = await axios.post(n8nUrl, req.body, {
-      headers: {
-        'Content-Type': 'application/json'
+    if (imagemBase64) {
+      // Remove o prefixo data URI (ex: "data:image/png;base64,") caso venha incluído.
+      const base64Data = imagemBase64.includes(',') ? imagemBase64.split(',')[1] : imagemBase64;
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // FormData/Blob/fetch nativos do Node (18+) — evita depender do pacote "form-data".
+      const form = new FormData();
+      form.append('chat_id', chatId);
+      form.append('caption', caption);
+      form.append('photo', new Blob([buffer], { type: 'image/jpeg' }), 'comprovante.jpg');
+
+      const response = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        method: 'POST',
+        body: form
+      });
+      if (!response.ok) {
+        console.error('❌ Erro ao notificar comprovante no Telegram:', await response.text());
       }
-    });
-    res.status(response.status).send(response.data);
-  } catch (error) {
-    console.error('Erro ao repassar comprovante para n8n:', error.message);
-    if (error.response) {
-      res.status(error.response.status).send(error.response.data);
     } else {
-      res.status(500).json({ error: 'Erro ao enviar comprovante para o serviço de notificação.' });
+      const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: caption })
+      });
+      if (!response.ok) {
+        console.error('❌ Erro ao notificar comprovante no Telegram:', await response.text());
+      }
     }
+  } catch (error) {
+    console.error('❌ Erro ao notificar comprovante no Telegram:', error.message);
+  }
+};
+
+// 10. POST /webhook/receber-comprovante
+app.post('/webhook/receber-comprovante', async (req, res) => {
+  const { jogador_nome, valor_total, imagem_base64 } = req.body;
+  try {
+    await notificarComprovanteNoTelegram({
+      jogadorNome: jogador_nome,
+      valorTotal: valor_total,
+      imagemBase64: imagem_base64
+    });
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao processar comprovante:', error.message);
+    res.status(500).json({ error: 'Erro ao processar comprovante.' });
   }
 });
 
