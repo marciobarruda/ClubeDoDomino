@@ -1,7 +1,7 @@
 {
-  "version_code": 90,
-  "version_name": "1.55",
-  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v90/clube_v_90.apk",
-  "release_notes": "* v90: Repaginada visual completa do app (novo tema \"Mesa de Dominó\", novo ícone). Novo critério de Craque/Piorzinho do dia (saldo médio de pontos por partida, mínimo de 3 partidas). Ranking interativo: clique em um jogador do pódio para ver métricas e buchos aplicados/sofridos. Corrigida a taxa extra de buchos, que deixou de ser calculada automaticamente (e recalculada retroativamente). Corrigida a duplicidade de cobrança de mensalidade. Corrigido o sorteio de duplas para nunca repetir a mesma formação ao repetir uma partida.",
+  "version_code": 91,
+  "version_name": "1.56",
+  "apk_url": "https://github.com/marciobarruda/ClubeDoDomino/releases/download/v91/clube_v_91.apk",
+  "release_notes": "* v91: Notificação automática no Telegram do Amilton sempre que um comprovante for enviado pelo app. * v90: Repaginada visual completa do app (novo tema \"Mesa de Dominó\", novo ícone). Novo critério de Craque/Piorzinho do dia (saldo médio de pontos por partida, mínimo de 3 partidas). Ranking interativo: clique em um jogador do pódio para ver métricas e buchos aplicados/sofridos. Corrigida a taxa extra de buchos, que deixou de ser calculada automaticamente (e recalculada retroativamente). Corrigida a duplicidade de cobrança de mensalidade. Corrigido o sorteio de duplas para nunca repetir a mesma formação ao repetir uma partida.",
   "min_version": 82
 }
