@@ -853,7 +853,14 @@ const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, imagemB
   }
 
   const valorFormatado = (valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const caption = `💰 Novo comprovante recebido!\n\n👤 Jogador: ${jogadorNome}\n💵 Valor: R$ ${valorFormatado}`;
+  const agora = new Date().toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  const caption = `🧾 Comprovante recebido!\n\n👤 ${jogadorNome}\n💵 R$ ${valorFormatado}\n🕒 ${agora}\n\nConfira e dê baixa no app quando confirmar o pagamento.`;
 
   try {
     if (imagemBase64) {
