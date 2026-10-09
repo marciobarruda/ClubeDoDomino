@@ -355,6 +355,15 @@ fun PlayerDetailsCard(player: RankingPlayer, onClose: (() -> Unit)? = null) {
                 VerticalDivider()
                 LeaderMetric(label = "APROVEITAMENTO ANUAL", value = "$winRatePct%")
             }
+            Spacer(modifier = Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                LeaderMetric(label = "PONTOS NO ANO", value = "${leader.yearlyPoints}")
+                VerticalDivider()
+                LeaderMetric(label = "POSIÇÃO NO ANO", value = "${leader.yearlyRankPosition}º")
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Box(
                 modifier = Modifier
@@ -493,6 +502,11 @@ fun RankingRow(player: RankingPlayer, position: Int, onClick: (() -> Unit)? = nu
                 )
                 Text(
                     text = "${player.monthlyMatches} partidas · ${player.yearlyWins} vitórias",
+                    color = DominoMuted,
+                    fontSize = 11.sp
+                )
+                Text(
+                    text = "${player.yearlyPoints} pts no ano · ${player.yearlyRankPosition}º no ano",
                     color = DominoMuted,
                     fontSize = 11.sp
                 )

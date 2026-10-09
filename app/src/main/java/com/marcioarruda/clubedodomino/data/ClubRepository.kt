@@ -68,9 +68,13 @@ class ClubRepository {
         allUsers = allUsers.map { if (it.id == email) it.copy(isActive = isActive) else it }
     }
 
-    suspend fun setPlayerVacation(email: String, isOnVacation: Boolean): Unit = withContext(Dispatchers.IO) {
-        api.setPlayerVacation(SetPlayerVacationRequest(email, isOnVacation))
-        allUsers = allUsers.map { if (it.id == email) it.copy(isOnVacation = isOnVacation) else it }
+    private val ymdFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    suspend fun setPlayerVacation(email: String, start: Date?, end: Date?): Unit = withContext(Dispatchers.IO) {
+        val startStr = start?.let { ymdFormat.format(it) }
+        val endStr = end?.let { ymdFormat.format(it) }
+        api.setPlayerVacation(SetPlayerVacationRequest(email, startStr, endStr))
+        allUsers = allUsers.map { if (it.id == email) it.copy(vacationStart = start, vacationEnd = end) else it }
     }
 
     suspend fun login(email: String, pass: String): LoginResponse = withContext(Dispatchers.IO) {
@@ -545,7 +549,8 @@ class ClubRepository {
             isMember = true,
             password = this.senha?.trim(),
             isActive = (this.ativo ?: 1) == 1,
-            isOnVacation = (this.ferias ?: 0) == 1
+            vacationStart = parseAnyDate(this.feriasInicio),
+            vacationEnd = parseAnyDate(this.feriasFim)
         )
     }
 
@@ -671,4 +676,26 @@ class ClubRepository {
         cadastrador = this.cadastrador,
         dataCriacao = null
     )
+}
+
+private val brDateParseFormats = listOf(
+    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+    "yyyy-MM-dd'T'HH:mm:ss",
+    "yyyy-MM-dd",
+    "dd/MM/yyyy"
+)
+
+// Converte uma data String crua do backend (ISO ou yyyy-MM-dd) para exibição em pt-BR.
+// Usada nas telas que hoje mostram o valor cru vindo da API (ex.: "2026-10-06T00:00:00").
+fun String?.toBrDate(pattern: String = "dd/MM/yyyy"): String {
+    if (this.isNullOrBlank()) return "N/A"
+    var date: Date? = null
+    for (fmt in brDateParseFormats) {
+        try {
+            date = SimpleDateFormat(fmt, Locale.getDefault()).apply { isLenient = false }.parse(this)
+            break
+        } catch (_: Exception) {}
+    }
+    date ?: return this
+    return SimpleDateFormat(pattern, Locale("pt", "BR")).format(date)
 }

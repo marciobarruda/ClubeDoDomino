@@ -317,7 +317,7 @@ class MatchViewModel(
                     .filter { user ->
                         val isNonMember = user.name.contains("NÃO MEMBRO", ignoreCase = true) || user.name.contains("NAO MEMBRO", ignoreCase = true) || user.id == "7"
                         if (isNonMember) true
-                        else user.isActive && (user.id !in blockedUserIds)
+                        else user.isActive && !user.isOnVacationNow && (user.id !in blockedUserIds)
                     }
                     .sortedBy { it.displayName }
 

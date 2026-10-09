@@ -92,6 +92,16 @@ let pool = mysql.createPool({
         if (!/Duplicate column/i.test(e.message)) throw e;
       }
     }
+
+    // Colunas de período de férias — substituem o booleano "ferias" solto por um intervalo de
+    // datas. ALTER idempotente pelo mesmo motivo do bloco acima (instalações já existentes).
+    for (const coluna of ['ferias_inicio DATE NULL', 'ferias_fim DATE NULL']) {
+      try {
+        await pool.query(`ALTER TABLE jogadores ADD COLUMN ${coluna}`);
+      } catch (e) {
+        if (!/Duplicate column/i.test(e.message)) throw e;
+      }
+    }
   } catch (error) {
     console.error('❌ Falha ao conectar ao banco de dados MySQL:', error.message);
   }
@@ -133,16 +143,69 @@ const getMatchDateParts = (dataStr) => {
   return getSaoPauloDateParts(date);
 };
 
+// Normaliza uma coluna DATE do MySQL (retornada pelo mysql2 como objeto Date, ou já como string
+// 'yyyy-MM-dd' dependendo da config do driver) para sempre 'yyyy-MM-dd', sem reinterpretar fuso
+// (usa os componentes UTC do Date, pois uma coluna DATE pura não carrega horário/fuso).
+const dbDateToYMD = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) {
+    const y = value.getUTCFullYear();
+    const m = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(value.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const str = String(value);
+  return str.includes('T') ? str.split('T')[0] : str.slice(0, 10);
+};
+
+// Primeiro e último dia (yyyy-MM-dd) do mês informado — usados para checar sobreposição do
+// período de férias de um jogador com o mês de referência de uma cobrança.
+const getMonthBounds = (year, month) => {
+  const proxMesAno = month === 12 ? year + 1 : year;
+  const proxMes = month === 12 ? 1 : month + 1;
+  return {
+    inicio: `${year}-${String(month).padStart(2, '0')}-01`,
+    fim: `${proxMesAno}-${String(proxMes).padStart(2, '0')}-01` // exclusivo
+  };
+};
+
+// Quantos dias do intervalo [mesInicio, mesFim) (mesFim exclusivo) NÃO estão cobertos pelo
+// período de férias do jogador. Sem férias (datas nulas) ou sem sobreposição → mês inteiro.
+const diasDisponiveisNoMes = (mesInicio, mesFim, feriasInicio, feriasFim) => {
+  const inicioMes = new Date(mesInicio);
+  const fimMes = new Date(mesFim);
+  const totalDias = Math.round((fimMes - inicioMes) / 86400000);
+  if (!feriasInicio) return totalDias;
+
+  const inicioFerias = new Date(feriasInicio);
+  const fimFerias = feriasFim ? new Date(feriasFim) : fimMes; // férias em aberto cobre até o fim do mês
+
+  const overlapInicio = inicioFerias > inicioMes ? inicioFerias : inicioMes;
+  // +1 dia: fimFerias é inclusivo (último dia de férias), enquanto fimMes é exclusivo
+  const fimFeriasExclusivo = new Date(fimFerias.getTime() + 86400000);
+  const overlapFim = fimFeriasExclusivo < fimMes ? fimFeriasExclusivo : fimMes;
+
+  const diasDeFerias = Math.max(0, Math.round((overlapFim - overlapInicio) / 86400000));
+  return Math.max(0, totalDias - diasDeFerias);
+};
+
 // Gera a mensalidade do mês corrente para todos os jogadores ativos (exceto os de férias e o "não membro"),
 // caso ainda não exista. Idempotente — pode ser chamada no cron mensal e também no boot do servidor
 // para cobrir o caso do processo estar fora do ar exatamente na virada do mês.
+// Isenção de férias é tudo-ou-nada no mês: se o período tocar qualquer parte do mês de referência,
+// o jogador fica isento da mensalidade inteira (mensalidade não tem valor variável para proratear).
 const gerarMensalidadesDoMesAtual = async () => {
   const { year, month } = getSaoPauloDateParts();
   const mesReferencia = `${year}-${String(month).padStart(2, '0')}-01`;
+  const { inicio: mesInicio, fim: mesFim } = getMonthBounds(year, month);
 
   try {
     const [jogadores] = await pool.query(
-      "SELECT jogador FROM jogadores WHERE (ativo IS NULL OR ativo = 1) AND (ferias IS NULL OR ferias = 0) AND jogador NOT LIKE '%NÃO MEMBRO%'"
+      `SELECT jogador FROM jogadores
+       WHERE (ativo IS NULL OR ativo = 1)
+         AND (ferias_inicio IS NULL OR ferias_fim IS NULL OR ferias_fim < ? OR ferias_inicio >= ?)
+         AND jogador NOT LIKE '%NÃO MEMBRO%'`,
+      [mesInicio, mesFim]
     );
 
     if (jogadores.length === 0) return;
@@ -246,21 +309,31 @@ app.post('/webhook/reset-password', async (req, res) => {
 // 2. GET /webhook/buscar-jogadores
 app.get('/webhook/buscar-jogadores', async (req, res) => {
   try {
-    let rows;
-    try {
-      [rows] = await pool.query('SELECT jogador, avatar, email, senha, ativo, ferias FROM jogadores');
-    } catch (e) {
-      [rows] = await pool.query('SELECT jogador, avatar, email, senha FROM jogadores');
-    }
+    const [rows] = await pool.query(
+      'SELECT jogador, avatar, email, senha, ativo, ferias_inicio, ferias_fim FROM jogadores'
+    );
+    const { year, month, day } = getSaoPauloDateParts();
+    const hoje = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
     // Normalizar retorno para o formato esperado pelo app/PWA
-    const players = rows.map(r => ({
-      jogador: r.jogador ? r.jogador.trim() : '',
-      avatar: r.avatar || '',
-      email: r.email ? r.email.trim() : '',
-      senha: '', // nunca expor hash
-      ativo: r.ativo === undefined || r.ativo === null ? 1 : Number(r.ativo),
-      ferias: r.ferias === undefined || r.ferias === null ? 0 : Number(r.ferias)
-    }));
+    const players = rows.map(r => {
+      const feriasInicioStr = dbDateToYMD(r.ferias_inicio);
+      const feriasFimStr = dbDateToYMD(r.ferias_fim);
+
+      // "ferias" (boolean legado) derivado do período: true se hoje cai dentro do intervalo.
+      const emFeriasHoje = !!feriasInicioStr && hoje >= feriasInicioStr && (!feriasFimStr || hoje <= feriasFimStr);
+
+      return {
+        jogador: r.jogador ? r.jogador.trim() : '',
+        avatar: r.avatar || '',
+        email: r.email ? r.email.trim() : '',
+        senha: '', // nunca expor hash
+        ativo: r.ativo === undefined || r.ativo === null ? 1 : Number(r.ativo),
+        ferias: emFeriasHoje ? 1 : 0,
+        feriasInicio: feriasInicioStr,
+        feriasFim: feriasFimStr
+      };
+    });
     res.json(players);
   } catch (error) {
     console.error('Erro ao buscar jogadores:', error.message);
@@ -283,14 +356,35 @@ app.post('/webhook/jogador/ativo', async (req, res) => {
   }
 });
 
-// 2c. POST /webhook/jogador/ferias — marca/desmarca jogador como de férias
+// 2c. POST /webhook/jogador/ferias — marca/desmarca o período de férias de um jogador.
+// Body: { email, feriasInicio: 'yyyy-MM-dd'|null, feriasFim: 'yyyy-MM-dd'|null }.
+// Compatibilidade: { email, ferias: false } limpa o período; { email, ferias: true } sem datas é rejeitado.
 app.post('/webhook/jogador/ferias', async (req, res) => {
-  const { email, ferias } = req.body;
-  if (!email || typeof ferias === 'undefined') {
-    return res.status(400).json({ status: 'error', message: 'email e ferias são obrigatórios.' });
+  const { email, ferias, feriasInicio, feriasFim } = req.body;
+  if (!email) {
+    return res.status(400).json({ status: 'error', message: 'email é obrigatório.' });
   }
+
+  let inicio = feriasInicio || null;
+  let fim = feriasFim || null;
+
+  if (!inicio && !fim && typeof ferias !== 'undefined') {
+    if (ferias) {
+      return res.status(400).json({ status: 'error', message: 'Informe feriasInicio (e opcionalmente feriasFim) para marcar férias.' });
+    }
+    inicio = null;
+    fim = null;
+  }
+
+  if (!inicio && typeof ferias === 'undefined' && typeof feriasInicio === 'undefined' && typeof feriasFim === 'undefined') {
+    return res.status(400).json({ status: 'error', message: 'Informe feriasInicio/feriasFim ou ferias.' });
+  }
+
   try {
-    await pool.query('UPDATE jogadores SET ferias = ? WHERE email = ?', [ferias ? 1 : 0, email.trim()]);
+    await pool.query(
+      'UPDATE jogadores SET ferias_inicio = ?, ferias_fim = ? WHERE email = ?',
+      [inicio, fim, email.trim()]
+    );
     res.json({ status: 'success' });
   } catch (error) {
     console.error('Erro ao atualizar férias do jogador:', error.message);
@@ -329,19 +423,40 @@ const getLastBusinessDayOfMonth = (year, month) => {
 // jogaram menos partidas que a média do grupo naquele mês. Para cada jogador abaixo da média de
 // partidas, lança um débito de buchos igual ao déficit entre a média de buchos sofridos pelo grupo
 // e o que ele próprio já sofreu — complementando o valor até a média, não substituindo-o.
+// Jogador com férias parciais no mês: continua contando normalmente na média do grupo, mas sua
+// própria meta de comparação (partidas/buchos esperados) é reduzida proporcionalmente aos dias
+// fora de férias no mês — quem só esteve disponível metade do mês só precisa ter jogado metade
+// da média para não ser cobrado. Férias cobrindo o mês inteiro excluem o jogador por completo
+// (mesma condição usada na isenção de mensalidade).
 // Idempotente — verifica se já existe um débito do tipo "Taxa extra" para aquele jogador/mês antes de inserir.
 // Retorna um resumo { mes, mediaPartidas, mediaBuchos, gerados: [{jogador, valor}] } para uso em logs/relatórios.
 const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
-  const mesInicio = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`;
-  const proxMesAno = targetMonth === 12 ? targetYear + 1 : targetYear;
-  const proxMes = targetMonth === 12 ? 1 : targetMonth + 1;
-  const mesFim = `${proxMesAno}-${String(proxMes).padStart(2, '0')}-01`;
+  const { inicio: mesInicio, fim: mesFim } = getMonthBounds(targetYear, targetMonth);
 
+  // Diferente da isenção de mensalidade (tudo-ou-nada): aqui só exclui quem tem férias cobrindo
+  // o mês INTEIRO (inicio <= mesInicio E fim em aberto ou >= último dia do mês). Férias parciais
+  // mantêm o jogador na lista, com a meta reduzida via fatorDisponibilidade mais abaixo.
   const [jogadoresRows] = await pool.query(
-    "SELECT jogador FROM jogadores WHERE (ativo IS NULL OR ativo = 1) AND (ferias IS NULL OR ferias = 0) AND jogador NOT LIKE '%NÃO MEMBRO%'"
+    `SELECT jogador, ferias_inicio, ferias_fim FROM jogadores
+     WHERE (ativo IS NULL OR ativo = 1)
+       AND NOT (ferias_inicio IS NOT NULL AND ferias_inicio <= ? AND (ferias_fim IS NULL OR ferias_fim >= DATE_SUB(?, INTERVAL 1 DAY)))
+       AND jogador NOT LIKE '%NÃO MEMBRO%'`,
+    [mesInicio, mesFim]
   );
   const jogadoresAtivos = jogadoresRows.map(r => (r.jogador || '').trim()).filter(Boolean);
   if (jogadoresAtivos.length === 0) return { mes: mesInicio, gerados: [] };
+
+  // Fator [0, 1] de dias disponíveis no mês por jogador, para reduzir a meta de quem teve férias parciais.
+  const fatorDisponibilidade = {};
+  const diasDoMes = Math.round((new Date(mesFim) - new Date(mesInicio)) / 86400000);
+  for (const r of jogadoresRows) {
+    const nome = (r.jogador || '').trim();
+    if (!nome) continue;
+    const feriasInicio = dbDateToYMD(r.ferias_inicio);
+    const feriasFim = dbDateToYMD(r.ferias_fim);
+    const disponiveis = diasDisponiveisNoMes(mesInicio, mesFim, feriasInicio, feriasFim);
+    fatorDisponibilidade[nome.toUpperCase()] = diasDoMes > 0 ? disponiveis / diasDoMes : 1;
+  }
 
   const [partidasRows] = await pool.query(
     'SELECT jogador1, jogador2, jogador3, jogador4 FROM partidas WHERE data >= ? AND data < ?',
@@ -390,11 +505,15 @@ const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
     const key = nome.toUpperCase();
     if (jaGerados.has(key)) continue;
 
+    const fator = fatorDisponibilidade[key] ?? 1;
+    const metaMatches = avgMatches * fator;
+    const metaBuchos = avgBuchos * fator;
+
     const playerMatches = partidasPorJogador[key] || 0;
-    if (playerMatches >= avgMatches) continue;
+    if (playerMatches >= metaMatches) continue;
 
     const playerBuchosValue = buchosPorJogador[key] || 0;
-    const deficit = avgBuchos - playerBuchosValue;
+    const deficit = metaBuchos - playerBuchosValue;
     if (deficit <= 0.01) continue;
 
     await pool.query(
@@ -463,7 +582,7 @@ app.post('/webhook/criar-jogador', async (req, res) => {
   try {
     const hash = await bcrypt.hash(password.trim(), BCRYPT_ROUNDS);
     await pool.query(
-      'INSERT INTO jogadores (jogador, avatar, email, senha, ativo, ferias, createdAt, updatedAt) VALUES (?, ?, ?, ?, 1, 0, NOW(), NOW())',
+      'INSERT INTO jogadores (jogador, avatar, email, senha, ativo, ferias, ferias_inicio, ferias_fim, createdAt, updatedAt) VALUES (?, ?, ?, ?, 1, 0, NULL, NULL, NOW(), NOW())',
       [name.trim(), avatarId || '', email.trim().toLowerCase(), hash]
     );
 

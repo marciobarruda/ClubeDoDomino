@@ -48,8 +48,9 @@ class RankingViewModel(private val repository: ClubRepository) : ViewModel() {
                     val statsMap = rawRanking.mapNotNull { dto ->
                         if (dto.jogador.contains("NÃO MEMBRO", ignoreCase = true)) return@mapNotNull null
                         val user = users.find { it.name.equals(dto.jogador.trim(), ignoreCase = true) || it.displayName.equals(dto.jogador.trim(), ignoreCase = true) }
+                        if (user?.isActive == false) return@mapNotNull null
                         val photoUrl = user?.photoUrl ?: ""
-                        
+
                         RankingPlayer(
                             playerName = dto.jogador,
                             photoUrl = photoUrl,
@@ -70,7 +71,13 @@ class RankingViewModel(private val repository: ClubRepository) : ViewModel() {
                         )
                     }
 
+                    val yearlyRankPositions = statsMap
+                        .sortedByDescending { it.yearlyPoints }
+                        .mapIndexed { index, player -> player.playerName to (index + 1) }
+                        .toMap()
+
                     val rankingList = statsMap
+                        .map { it.copy(yearlyRankPosition = yearlyRankPositions[it.playerName] ?: 0) }
                         .sortedWith(compareByDescending<RankingPlayer> { it.monthlyPoints }.thenByDescending { it.yearlyPoints })
 
                     _uiState.update {

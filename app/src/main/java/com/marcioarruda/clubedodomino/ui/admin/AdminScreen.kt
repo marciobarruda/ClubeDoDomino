@@ -54,6 +54,8 @@ import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.marcioarruda.clubedodomino.data.network.ComprovanteHistoricoDto
+import com.marcioarruda.clubedodomino.data.toBrDate
+import java.util.Date
 
 // Borda sutil para itens de alerta/pendência (mensalidade vencida, bucho não pago)
 private val AlertBorderColor = Color(0xFFD1573F).copy(alpha = 0.27f) // DominoOrange ~ #D1573F44
@@ -424,7 +426,7 @@ fun AdminScreen(
                         3 -> PlayersList(
                             players = uiState.players,
                             onToggleActive = { u, a -> viewModel.togglePlayerActive(u, a) },
-                            onToggleVacation = { u, v -> viewModel.togglePlayerVacation(u, v) },
+                            onSetVacation = { u, start, end -> viewModel.setPlayerVacation(u, start, end) },
                             canEdit = canEdit
                         )
                         4 -> DebtorsList(debtors = uiState.debtors)
@@ -558,7 +560,7 @@ fun BuchosList(
                     AdminAvatarBadge(backgroundColor = DominoMuted, alert = isPending)
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(bucho.data ?: "", color = DominoMuted, style = MaterialTheme.typography.bodySmall)
+                        Text(bucho.data.toBrDate(), color = DominoMuted, style = MaterialTheme.typography.bodySmall)
                         Text(bucho.jogador ?: "", color = DominoLight, fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Valor: R$ ${bucho.valor}", color = DominoGreen, fontWeight = FontWeight.SemiBold)
@@ -1013,9 +1015,11 @@ fun AddPlayerDialog(
 fun PlayersList(
     players: List<AdminPlayerItem>,
     onToggleActive: (com.marcioarruda.clubedodomino.data.User, Boolean) -> Unit,
-    onToggleVacation: (com.marcioarruda.clubedodomino.data.User, Boolean) -> Unit,
+    onSetVacation: (com.marcioarruda.clubedodomino.data.User, Date?, Date?) -> Unit,
     canEdit: Boolean
 ) {
+    var playerEditingVacation by remember { mutableStateOf<AdminPlayerItem?>(null) }
+
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
         items(players, key = { it.user.id }) { item ->
             Card(
@@ -1056,14 +1060,33 @@ fun PlayersList(
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = canEdit) { playerEditingVacation = item }
+                            .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Modo Férias", color = DominoMuted)
+                        Column {
+                            Text("Modo Férias", color = DominoMuted)
+                            if (item.isOnVacationNow) {
+                                val start = item.vacationStart
+                                val end = item.vacationEnd
+                                val startStr = start?.let { SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")).format(it) } ?: "?"
+                                val endStr = end?.let { SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")).format(it) } ?: "indefinido"
+                                Text("$startStr – $endStr", color = DominoGold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
                         Switch(
-                            checked = item.isOnVacation,
-                            onCheckedChange = { if(canEdit) onToggleVacation(item.user, it) },
+                            checked = item.isOnVacationNow,
+                            onCheckedChange = { checked ->
+                                if (!canEdit) return@Switch
+                                if (checked) {
+                                    playerEditingVacation = item
+                                } else {
+                                    onSetVacation(item.user, null, null)
+                                }
+                            },
                             enabled = canEdit,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = DominoGold,
@@ -1073,6 +1096,92 @@ fun PlayersList(
                     }
                 }
             }
+        }
+    }
+
+    playerEditingVacation?.let { item ->
+        VacationPeriodDialog(
+            initialStart = item.vacationStart,
+            initialEnd = item.vacationEnd,
+            onDismiss = { playerEditingVacation = null },
+            onConfirm = { start, end ->
+                onSetVacation(item.user, start, end)
+                playerEditingVacation = null
+            }
+        )
+    }
+}
+
+// Diálogo que coleta início (obrigatório) e fim (opcional — férias em aberto) do período de férias.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VacationPeriodDialog(
+    initialStart: Date?,
+    initialEnd: Date?,
+    onDismiss: () -> Unit,
+    onConfirm: (Date?, Date?) -> Unit
+) {
+    var start by remember { mutableStateOf(initialStart) }
+    var end by remember { mutableStateOf(initialEnd) }
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+    val fmt = remember { SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Período de férias") },
+        text = {
+            Column {
+                Text("Enquanto dentro do período, o jogador não aparece para compor partidas nem recebe taxa extra.", color = DominoMuted, fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(onClick = { showStartPicker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Início: ${start?.let { fmt.format(it) } ?: "selecionar"}")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = { showEndPicker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Fim: ${end?.let { fmt.format(it) } ?: "indefinido (opcional)"}")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(start, end) }, enabled = start != null) {
+                Text("Salvar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+
+    if (showStartPicker) {
+        val state = rememberDatePickerState(initialSelectedDateMillis = start?.time)
+        DatePickerDialog(
+            onDismissRequest = { showStartPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { start = Date(it) }
+                    showStartPicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showStartPicker = false }) { Text("Cancelar") } }
+        ) {
+            DatePicker(state = state)
+        }
+    }
+
+    if (showEndPicker) {
+        val state = rememberDatePickerState(initialSelectedDateMillis = end?.time)
+        DatePickerDialog(
+            onDismissRequest = { showEndPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { end = Date(it) }
+                    showEndPicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showEndPicker = false }) { Text("Cancelar") } }
+        ) {
+            DatePicker(state = state)
         }
     }
 }
@@ -1299,9 +1408,9 @@ private fun ComprovanteHistoricoCard(c: ComprovanteHistoricoDto) {
                 Text("Tipo: ${c.tipoTransacao}", color = DominoMuted, fontSize = 13.sp)
             }
             if (c.dataHoraDetectada != null) {
-                Text("Data/hora: ${c.dataHoraDetectada}", color = DominoMuted, fontSize = 13.sp)
+                Text("Data/hora: ${c.dataHoraDetectada.toBrDate("dd/MM/yyyy HH:mm")}", color = DominoMuted, fontSize = 13.sp)
             } else if (c.dataDetectada != null) {
-                Text("Data detectada: ${c.dataDetectada}", color = DominoMuted, fontSize = 13.sp)
+                Text("Data detectada: ${c.dataDetectada.toBrDate()}", color = DominoMuted, fontSize = 13.sp)
             }
             if (c.idTransacaoDetectado != null) {
                 Text("ID da transação: ${c.idTransacaoDetectado}", color = DominoMuted, fontSize = 13.sp)
@@ -1326,7 +1435,7 @@ private fun ComprovanteHistoricoCard(c: ComprovanteHistoricoDto) {
                 Text(c.motivo, color = if (aprovado) DominoGreen else DominoOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
             if (c.createdAt != null) {
-                Text(c.createdAt, color = DominoMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(c.createdAt.toBrDate("dd/MM/yyyy HH:mm"), color = DominoMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
     }
@@ -1418,7 +1527,7 @@ private fun TestarComprovanteDialog(
                         Text("Possui autenticação: ${if (a.possuiAutenticacao == true) "Sim" else "Não"}", color = DominoLight, fontSize = 13.sp)
                         a.bancoOrigem?.let { Text("Banco de origem: $it", color = DominoLight, fontSize = 13.sp) }
                         a.tipoTransacao?.let { Text("Tipo: $it", color = DominoLight, fontSize = 13.sp) }
-                        (a.dataHoraPagamento ?: a.dataPagamento)?.let { Text("Data/hora: $it", color = DominoLight, fontSize = 13.sp) }
+                        (a.dataHoraPagamento ?: a.dataPagamento)?.let { Text("Data/hora: ${it.toBrDate("dd/MM/yyyy HH:mm")}", color = DominoLight, fontSize = 13.sp) }
                         a.valorPago?.let { Text("Valor: R$ %.2f".format(it), color = DominoLight, fontSize = 13.sp) }
                         a.idTransacao?.let { Text("ID da transação: $it", color = DominoLight, fontSize = 13.sp) }
                         if (a.credor != null || a.credorDocumento != null || a.credorInstituicao != null || a.credorChavePix != null) {

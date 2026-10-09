@@ -24,11 +24,13 @@ data class PlayerDTO(
     val email: String?,
     val senha: String? = null,
     val ativo: Int? = 1,
-    val ferias: Int? = 0
+    val ferias: Int? = 0,
+    val feriasInicio: String? = null,
+    val feriasFim: String? = null
 )
 
 data class SetPlayerActiveRequest(val email: String, val ativo: Boolean)
-data class SetPlayerVacationRequest(val email: String, val ferias: Boolean)
+data class SetPlayerVacationRequest(val email: String, val feriasInicio: String?, val feriasFim: String?)
 data class UpdateAvatarRequest(val email: String, val avatar: String)
 
 data class CreatePlayerRequest(

@@ -19,8 +19,18 @@ data class User(
     val pixarAvatarUrl: String? = null,
     val password: String? = null,
     val isActive: Boolean = true,
-    val isOnVacation: Boolean = false
-)
+    val vacationStart: Date? = null,
+    val vacationEnd: Date? = null
+) {
+    // true se hoje cai dentro do período de férias (fim em aberto = férias sem data de volta definida)
+    val isOnVacationNow: Boolean
+        get() {
+            val start = vacationStart ?: return false
+            val now = Date()
+            if (now.before(start)) return false
+            return vacationEnd == null || !now.after(vacationEnd)
+        }
+}
 
 // 3. Match
 data class Match(
@@ -64,6 +74,7 @@ data class RankingPlayer(
     val monthlyMatches: Int = 0,
     val yearlyPoints: Int = 0,
     val yearlyMatches: Int = 0,
+    val yearlyRankPosition: Int = 0,
     val dailyBuchosApplied: Int = 0,
     val dailyBuchosReceived: Int = 0,
     val monthlyBuchosApplied: Int = 0,

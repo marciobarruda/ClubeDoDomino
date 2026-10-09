@@ -49,8 +49,11 @@ data class AdminUiState(
 data class AdminPlayerItem(
     val user: User,
     val isActive: Boolean,
-    val isOnVacation: Boolean
-)
+    val vacationStart: java.util.Date?,
+    val vacationEnd: java.util.Date?
+) {
+    val isOnVacationNow: Boolean get() = user.isOnVacationNow
+}
 
 class AdminViewModel(
     private val repository: ClubRepository,
@@ -85,7 +88,8 @@ class AdminViewModel(
                         AdminPlayerItem(
                             user = user,
                             isActive = user.isActive,
-                            isOnVacation = user.isOnVacation
+                            vacationStart = user.vacationStart,
+                            vacationEnd = user.vacationEnd
                         )
                     }
                     .sortedBy { it.user.displayName }
@@ -224,15 +228,21 @@ class AdminViewModel(
         }
     }
 
-    fun togglePlayerVacation(user: User, isOnVacation: Boolean) {
-        updateLocalPlayerState(user.id) { it.copy(isOnVacation = isOnVacation) }
+    fun setPlayerVacation(user: User, start: java.util.Date?, end: java.util.Date?) {
+        val previousStart = user.vacationStart
+        val previousEnd = user.vacationEnd
+        updateLocalPlayerState(user.id) {
+            it.copy(vacationStart = start, vacationEnd = end, user = it.user.copy(vacationStart = start, vacationEnd = end))
+        }
         viewModelScope.launch {
             try {
-                repository.setPlayerVacation(user.id, isOnVacation)
-                val status = if (isOnVacation) "em férias" else "fora do modo férias"
+                repository.setPlayerVacation(user.id, start, end)
+                val status = if (start != null) "em férias" else "fora do modo férias"
                 _uiState.update { it.copy(message = "${user.displayName} marcado como $status.") }
             } catch (e: Exception) {
-                updateLocalPlayerState(user.id) { it.copy(isOnVacation = !isOnVacation) }
+                updateLocalPlayerState(user.id) {
+                    it.copy(vacationStart = previousStart, vacationEnd = previousEnd, user = it.user.copy(vacationStart = previousStart, vacationEnd = previousEnd))
+                }
                 _uiState.update { it.copy(error = "Erro ao salvar: ${e.message}") }
             }
         }
