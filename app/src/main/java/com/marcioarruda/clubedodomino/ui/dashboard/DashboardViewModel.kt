@@ -76,57 +76,9 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 val allPlayers = repository.getPlayers()
 
                 rankingResult.onSuccess { ranking ->
-                    // Só concorre ao destaque do dia quem jogou pelo menos 3 partidas — evita que
-                    // uma amostra pequena (ex.: 1 vitória em 1 partida = 100%) vença quem jogou bem
-                    // mais partidas no dia com um saldo de pontos sólido, porém taxa menor.
-                    val eligibleToday = ranking.filter { it.partidas_dia >= 3 && !it.jogador.contains("NÃO MEMBRO", ignoreCase = true) }
-
-                    // Critério: saldo médio de pontos por partida (pontos ganhos nas vitórias menos
-                    // pontos perdidos nas derrotas, dividido pelo número de partidas). Ao contrário da
-                    // taxa de aproveitamento, não trata 2 partidas e 10 partidas como equivalentes, e
-                    // ao contrário do saldo bruto, não dá vantagem a quem só jogou mais partidas no dia.
-                    fun avgBalance(r: com.marcioarruda.clubedodomino.data.network.RankingDto) =
-                        r.saldo_dia.toDouble() / r.partidas_dia
-
-                    if (eligibleToday.isNotEmpty()) {
-                        // Craque do dia: maior saldo médio por partida; empate desempatado por mais partidas jogadas.
-                        val bestRanked = eligibleToday.sortedWith(
-                            compareByDescending<com.marcioarruda.clubedodomino.data.network.RankingDto> { avgBalance(it) }
-                                .thenByDescending { it.partidas_dia }
-                        )
-                        val bestTop = bestRanked.first()
-                        val bestTied = bestRanked.filter {
-                            avgBalance(it) == avgBalance(bestTop) && it.partidas_dia == bestTop.partidas_dia
-                        }
-
-                        topPlayers = bestTied.mapNotNull { r ->
-                            val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
-                            playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia, r.saldo_dia) }
-                        }
-
-                        // Piorzinho do dia: menor saldo médio por partida entre quem NÃO foi eleito
-                        // craque — evita que a mesma pessoa apareça nos dois cards (possível quando só
-                        // há 1 jogador elegível, ou quando todos empatam no mesmo saldo médio). Se depois
-                        // de excluir o(s) craque(s) não sobrar ninguém, simplesmente não há piorzinho hoje.
-                        val worstCandidates = eligibleToday.filterNot { candidate ->
-                            bestTied.any { it.jogador == candidate.jogador }
-                        }
-                        if (worstCandidates.isNotEmpty()) {
-                            val worstRanked = worstCandidates.sortedWith(
-                                compareBy<com.marcioarruda.clubedodomino.data.network.RankingDto> { avgBalance(it) }
-                                    .thenByDescending { it.partidas_dia }
-                            )
-                            val worstTop = worstRanked.first()
-                            val worstTied = worstRanked.filter {
-                                avgBalance(it) == avgBalance(worstTop) && it.partidas_dia == worstTop.partidas_dia
-                            }
-
-                            bottomPlayers = worstTied.mapNotNull { r ->
-                                val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
-                                playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia, r.saldo_dia) }
-                            }
-                        }
-                    }
+                    val awards = com.marcioarruda.clubedodomino.domain.calculateDailyAwards(ranking, allPlayers)
+                    topPlayers = awards.best
+                    bottomPlayers = awards.worst
                 }
 
                 // Lógica de celebração do campeão do mês

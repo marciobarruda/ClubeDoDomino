@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.marcioarruda.clubedodomino.data.ClubRepository
@@ -115,9 +117,9 @@ fun RankingScreen(
                     val podium = uiState.rankingList.take(3)
                     val rest = uiState.rankingList.drop(3)
 
-                    // Jogador do pódio em destaque no card de métricas — começa no líder (1º lugar)
-                    // e muda para quem for clicado no pódio.
-                    var selectedPlayer by remember(podium) { mutableStateOf(podium.getOrNull(0)) }
+                    // Jogador exibido no dialog de detalhes ao clicar em qualquer card da lista
+                    // (pódio ou "classificação geral") — null quando o dialog está fechado.
+                    var detailsPlayer by remember { mutableStateOf<RankingPlayer?>(null) }
 
                     LazyColumn(
                         contentPadding = PaddingValues(bottom = 24.dp),
@@ -127,14 +129,9 @@ fun RankingScreen(
                             item {
                                 PodiumSection(
                                     podium = podium,
-                                    selectedPlayerName = selectedPlayer?.playerName,
-                                    onPlayerClick = { selectedPlayer = it }
+                                    selectedPlayerName = detailsPlayer?.playerName,
+                                    onPlayerClick = { detailsPlayer = it }
                                 )
-                            }
-                        }
-                        selectedPlayer?.let { highlighted ->
-                            item {
-                                LeaderHighlightCard(highlighted)
                             }
                         }
                         if (rest.isNotEmpty()) {
@@ -150,11 +147,15 @@ fun RankingScreen(
                             }
                             itemsIndexed(items = rest, key = { _, item -> item.playerName }) { index, player ->
                                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                                    RankingRow(player = player, position = index + 4)
+                                    RankingRow(player = player, position = index + 4, onClick = { detailsPlayer = player })
                                 }
                             }
                         }
                         item { Spacer(modifier = Modifier.height(8.dp)) }
+                    }
+
+                    detailsPlayer?.let { player ->
+                        PlayerDetailsDialog(player = player, onDismiss = { detailsPlayer = null })
                     }
                 }
             }
@@ -296,15 +297,25 @@ private fun PodiumSlot(
     }
 }
 
+// Dialog de detalhes de um jogador — acionado ao clicar em qualquer card do ranking (pódio ou
+// lista geral). Fecha tocando no X ou fora do card (comportamento padrão de Dialog do Compose).
 @Composable
-private fun LeaderHighlightCard(leader: RankingPlayer) {
+fun PlayerDetailsDialog(player: RankingPlayer, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        PlayerDetailsCard(player = player, onClose = onDismiss)
+    }
+}
+
+@Composable
+fun PlayerDetailsCard(player: RankingPlayer, onClose: (() -> Unit)? = null) {
+    val leader = player
     val totalDecided = leader.yearlyWins + leader.yearlyLosses
     val winRatePct = if (totalDecided > 0) (leader.yearlyWins * 100 / totalDecided) else 0
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = if (onClose != null) 0.dp else 16.dp, vertical = if (onClose != null) 0.dp else 8.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = DominoGreen)
     ) {
@@ -313,18 +324,29 @@ private fun LeaderHighlightCard(leader: RankingPlayer) {
                 .fillMaxWidth()
                 .padding(vertical = 18.dp)
         ) {
-            Text(
-                text = leader.playerName,
-                color = DominoOnDark,
-                fontWeight = FontWeight.Black,
-                fontSize = 15.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = leader.playerName,
+                    color = DominoOnDark,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                if (onClose != null) {
+                    IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Fechar", tint = DominoOnDarkMuted)
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(14.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 LeaderMetric(label = "PONTOS NO MÊS", value = "${leader.monthlyPoints}")
@@ -429,7 +451,7 @@ private fun LeaderMetric(label: String, value: String) {
 }
 
 @Composable
-fun RankingRow(player: RankingPlayer, position: Int) {
+fun RankingRow(player: RankingPlayer, position: Int, onClick: (() -> Unit)? = null) {
     val balance = player.monthlyPoints
     val isNegative = balance < 0
     val borderColor = if (isNegative && kotlin.math.abs(balance) >= 10) {
@@ -441,7 +463,8 @@ fun RankingRow(player: RankingPlayer, position: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(16.dp)),
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
+            .let { if (onClick != null) it.clickable(onClick = onClick) else it },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)

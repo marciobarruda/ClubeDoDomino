@@ -461,7 +461,7 @@ private fun StatMiniCard(
 }
 
 @Composable
-private fun DailyAwardsRow(bestPlayers: List<BestPlayer>, worstPlayers: List<BestPlayer>) {
+fun DailyAwardsRow(bestPlayers: List<BestPlayer>, worstPlayers: List<BestPlayer>) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -488,12 +488,16 @@ private fun DailyAwardsRow(bestPlayers: List<BestPlayer>, worstPlayers: List<Bes
 }
 
 @Composable
-private fun AwardCard(modifier: Modifier = Modifier, backgroundColor: Color, label: String, labelColor: Color, player: BestPlayer) {
-    val balanceText = if (player.balance >= 0) "+${player.balance}" else "${player.balance}"
-    val avgText = String.format(Locale("pt", "BR"), "%.1f", player.avgBalance)
-
+private fun AwardCard(
+    modifier: Modifier = Modifier,
+    backgroundColor: Color,
+    label: String,
+    labelColor: Color,
+    player: BestPlayer,
+    onClick: (() -> Unit)? = null
+) {
     Card(
-        modifier = modifier,
+        modifier = modifier.let { if (onClick != null) it.clickable(onClick = onClick) else it },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
@@ -511,21 +515,20 @@ private fun AwardCard(modifier: Modifier = Modifier, backgroundColor: Color, lab
             Spacer(Modifier.height(10.dp))
             HorizontalDivider(color = DominoOnDark.copy(alpha = 0.15f))
             Spacer(Modifier.height(8.dp))
-            // Saldo médio por partida é a métrica que de fato decide o craque/piorzinho do dia —
-            // fica em destaque para não repetir a confusão de mostrar "pontos" e "V-D" brutos sem
-            // relação aparente com o título (um jogador pode ter menos vitórias e ainda assim
-            // saldo melhor, se perdeu por margens pequenas em vez de goleadas).
+            // Pontos ganhos no dia é a métrica que de fato decide o craque/piorzinho — vitórias e
+            // partidas aparecem como contexto dos critérios de desempate (vitórias, depois buchos
+            // aplicados, depois partidas jogadas), não como a métrica principal.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("SALDO MÉDIO/PARTIDA", color = DominoOnDarkMuted, fontSize = 9.sp, letterSpacing = 0.3.sp)
-                    Text(avgText, color = labelColor, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                    Text("PONTOS NO DIA", color = DominoOnDarkMuted, fontSize = 9.sp, letterSpacing = 0.3.sp)
+                    Text("${player.points}", color = labelColor, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("SALDO NO DIA", color = DominoOnDarkMuted, fontSize = 9.sp, letterSpacing = 0.3.sp)
-                    Text(balanceText, color = DominoOnDark, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                    Text("VITÓRIAS", color = DominoOnDarkMuted, fontSize = 9.sp, letterSpacing = 0.3.sp)
+                    Text("${player.wins}", color = DominoOnDark, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
                 }
             }
             Spacer(Modifier.height(8.dp))

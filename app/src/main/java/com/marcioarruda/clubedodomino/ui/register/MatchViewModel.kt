@@ -51,7 +51,9 @@ data class MatchRegistrationState(
     val isModuleAvailable: Boolean = true,
     val remainingSecondsToClose: Long? = null,
     val isActiveMatchStarted: Boolean = false,
-    val activeMatchId: String? = null
+    val activeMatchId: String? = null,
+    val dailyAwards: com.marcioarruda.clubedodomino.domain.DailyAwards? = null,
+    val isLoadingDailyAwards: Boolean = false
 )
 
 class MatchViewModel(
@@ -133,6 +135,24 @@ class MatchViewModel(
                     )
                 }
             } catch (_: Exception) {}
+        }
+    }
+
+    // Carrega o Craque/Piorzinho do dia sob demanda, para o popup acionado pelo botão flutuante
+    // na tela de partida em andamento — não roda automaticamente no init para não gastar uma
+    // chamada de rede extra em toda abertura da tela antes do usuário pedir para ver.
+    fun loadDailyAwards() {
+        if (_uiState.value.isLoadingDailyAwards) return
+        _uiState.update { it.copy(isLoadingDailyAwards = true) }
+        viewModelScope.launch {
+            try {
+                val ranking = repository.getRankingResult().getOrNull() ?: emptyList()
+                val players = _uiState.value.availablePlayers.ifEmpty { repository.getPlayers() }
+                val awards = com.marcioarruda.clubedodomino.domain.calculateDailyAwards(ranking, players)
+                _uiState.update { it.copy(dailyAwards = awards, isLoadingDailyAwards = false) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoadingDailyAwards = false) }
+            }
         }
     }
 

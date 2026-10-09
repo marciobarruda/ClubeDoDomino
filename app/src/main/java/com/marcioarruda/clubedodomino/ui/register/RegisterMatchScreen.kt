@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -46,6 +47,7 @@ fun RegisterMatchScreen(
     session: com.marcioarruda.clubedodomino.data.UserSession? = null
 ) {
     val state by viewModel.uiState.collectAsState()
+    var showDailyAwardsPopup by remember { mutableStateOf(false) }
 
     LaunchedEffect(matchId) { if (matchId != null) viewModel.loadMatch(matchId) }
     LaunchedEffect(session) { viewModel.setCurrentUser(session?.userName) }
@@ -106,8 +108,68 @@ fun RegisterMatchScreen(
         )
     }
 
+    if (showDailyAwardsPopup) {
+        LaunchedEffect(Unit) { viewModel.loadDailyAwards() }
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showDailyAwardsPopup = false }) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = DominoBg)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Destaques do dia",
+                            color = DominoGreen,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 16.sp,
+                            fontFamily = FontFamily.Serif
+                        )
+                        IconButton(onClick = { showDailyAwardsPopup = false }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "Fechar", tint = DominoMuted)
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    val awards = state.dailyAwards
+                    when {
+                        state.isLoadingDailyAwards && awards == null -> {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = DominoGreen)
+                            }
+                        }
+                        awards == null || (awards.best.isEmpty() && awards.worst.isEmpty()) -> {
+                            Text(
+                                "Ninguém atingiu o mínimo de 5 partidas hoje ainda.",
+                                color = DominoMuted,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        }
+                        else -> {
+                            com.marcioarruda.clubedodomino.ui.dashboard.DailyAwardsRow(awards.best, awards.worst)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
         containerColor = DominoBg,
+        floatingActionButton = {
+            if (state.isActiveMatchStarted) {
+                FloatingActionButton(
+                    onClick = { showDailyAwardsPopup = true },
+                    containerColor = DominoYellow,
+                    contentColor = DominoGreen
+                ) {
+                    Text("🏆", fontSize = 20.sp)
+                }
+            }
+        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
