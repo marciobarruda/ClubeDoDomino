@@ -49,6 +49,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import android.net.Uri
+import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.marcioarruda.clubedodomino.data.network.ComprovanteHistoricoDto
 
 // Borda sutil para itens de alerta/pendência (mensalidade vencida, bucho não pago)
 private val AlertBorderColor = Color(0xFFD1573F).copy(alpha = 0.27f) // DominoOrange ~ #D1573F44
@@ -64,11 +69,17 @@ fun AdminScreen(
     val viewModel: AdminViewModel = viewModel(factory = factory)
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes")
 
     // Determine permissions
     val userName = session?.userName?.trim() ?: ""
     val canEdit = userName.equals("MÁRCIO", ignoreCase = true) || userName.equals("CALÁBRIA", ignoreCase = true)
+    val isMarcioTab = userName.equals("MÁRCIO", ignoreCase = true)
+
+    val tabs = if (isMarcioTab) {
+        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes", "Comprovantes")
+    } else {
+        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes")
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadData()
@@ -417,6 +428,12 @@ fun AdminScreen(
                             canEdit = canEdit
                         )
                         4 -> DebtorsList(debtors = uiState.debtors)
+                        5 -> ComprovantesTab(
+                            uiState = uiState,
+                            onLoadHistorico = { viewModel.loadComprovantesHistorico() },
+                            onTestarAnalise = { valor, imagemBase64 -> viewModel.testarAnaliseComprovante(valor, imagemBase64) },
+                            onDismissTeste = { viewModel.dismissTesteComprovante() }
+                        )
                     }
                 }
             }
@@ -1155,6 +1172,244 @@ private fun UpdateDbPasswordDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar", color = DominoMuted) }
+        }
+    )
+}
+
+// ─── Aba "Comprovantes" (visível só para o Márcio) ────────────────────────────
+// Duas seções: histórico de comprovantes já submetidos (auditoria da baixa
+// automática por IA) e um testador manual, que roda a mesma análise de IA sobre
+// uma imagem qualquer sem dar baixa em nenhum débito — serve para conferir a
+// eficiência da IA antes de confiar nela em comprovantes reais.
+@Composable
+fun ComprovantesTab(
+    uiState: AdminUiState,
+    onLoadHistorico: () -> Unit,
+    onTestarAnalise: (valorEsperado: Double, imagemBase64: String) -> Unit,
+    onDismissTeste: () -> Unit
+) {
+    LaunchedEffect(Unit) {
+        onLoadHistorico()
+    }
+
+    var showTesteDialog by remember { mutableStateOf(false) }
+
+    if (showTesteDialog) {
+        TestarComprovanteDialog(
+            uiState = uiState,
+            onDismiss = {
+                showTesteDialog = false
+                onDismissTeste()
+            },
+            onTestarAnalise = onTestarAnalise
+        )
+    }
+
+    LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .shadow(1.dp, RoundedCornerShape(16.dp))
+                    .clickable { showTesteDialog = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("🧪 Testar Análise de IA", color = DominoLight, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(
+                            "Envie uma imagem de teste e veja o que a IA detectaria, sem afetar nenhum débito real.",
+                            color = DominoMuted,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            Text(
+                "Histórico de Comprovantes",
+                color = DominoLight,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+        if (uiState.isLoadingComprovantes) {
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = DominoGreen)
+                }
+            }
+        } else if (uiState.comprovantesHistorico.isEmpty()) {
+            item {
+                Text("Nenhum comprovante submetido ainda.", color = DominoMuted, fontSize = 14.sp)
+            }
+        } else {
+            items(uiState.comprovantesHistorico) { c ->
+                ComprovanteHistoricoCard(c)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComprovanteHistoricoCard(c: ComprovanteHistoricoDto) {
+    val aprovado = c.decisao == "BAIXA_AUTOMATICA"
+    val borderColor = if (aprovado) DominoGreen.copy(alpha = 0.3f) else AlertBorderColor
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DominoSurface),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, borderColor),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .shadow(1.dp, RoundedCornerShape(16.dp))
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(c.jogadorNome ?: "—", color = DominoLight, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(
+                    if (aprovado) "✅ Baixa automática" else "⚠️ Enviado ao Telegram",
+                    color = if (aprovado) DominoGreen else DominoOrange,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Valor esperado: R$ ${"%.2f".format(c.valorEsperado ?: 0.0)}", color = DominoMuted, fontSize = 13.sp)
+            if (c.valorDetectado != null) {
+                Text("Valor detectado pela IA: R$ ${"%.2f".format(c.valorDetectado)}", color = DominoMuted, fontSize = 13.sp)
+            }
+            if (c.credorDetectado != null) {
+                Text("Credor detectado: ${c.credorDetectado}", color = DominoMuted, fontSize = 13.sp)
+            }
+            if (c.dataDetectada != null) {
+                Text("Data detectada: ${c.dataDetectada}", color = DominoMuted, fontSize = 13.sp)
+            }
+            if (!c.motivo.isNullOrBlank()) {
+                Text(c.motivo, color = if (aprovado) DominoGreen else DominoOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
+            if (c.createdAt != null) {
+                Text(c.createdAt, color = DominoMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TestarComprovanteDialog(
+    uiState: AdminUiState,
+    onDismiss: () -> Unit,
+    onTestarAnalise: (valorEsperado: Double, imagemBase64: String) -> Unit
+) {
+    val context = LocalContext.current
+    var valorEsperadoTexto by remember { mutableStateOf("") }
+    var imagemBase64 by remember { mutableStateOf<String?>(null) }
+    var imagemNome by remember { mutableStateOf<String?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            if (bytes != null) {
+                imagemBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                imagemNome = uri.lastPathSegment ?: "imagem selecionada"
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DominoSurface,
+        title = { Text("Testar Análise de IA", color = DominoLight, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    "Essa imagem NÃO vai dar baixa em nenhum débito — serve só para conferir o que a IA detectaria.",
+                    color = DominoMuted,
+                    fontSize = 12.sp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = valorEsperadoTexto,
+                    onValueChange = { valorEsperadoTexto = it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' } },
+                    label = { Text("Valor esperado (R$)", color = DominoMuted) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8)
+                    )
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { launcher.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(imagemNome ?: "Selecionar imagem de teste", color = DominoGreen)
+                }
+
+                val resultado = uiState.testeComprovanteResultado
+                val erro = uiState.testeComprovanteError
+
+                if (uiState.isTestingComprovante) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = DominoGreen)
+                    }
+                }
+
+                if (erro != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(erro, color = DominoOrange, fontSize = 13.sp)
+                }
+
+                if (resultado != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = Color(0xFFE6DAB8))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        if (resultado.aprovado) "✅ Aprovaria baixa automática" else "⚠️ Não aprovaria — iria para o Telegram",
+                        color = if (resultado.aprovado) DominoGreen else DominoOrange,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (!resultado.motivo.isNullOrBlank()) {
+                        Text(resultado.motivo, color = DominoMuted, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                    }
+                    resultado.analise?.let { a ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Parece comprovante bancário: ${if (a.pareceComprovanteBancario == true) "Sim" else "Não"}", color = DominoLight, fontSize = 13.sp)
+                        Text("Possui autenticação: ${if (a.possuiAutenticacao == true) "Sim" else "Não"}", color = DominoLight, fontSize = 13.sp)
+                        Text("Credor detectado: ${a.credor ?: "—"}", color = DominoLight, fontSize = 13.sp)
+                        Text("Data detectada: ${a.dataPagamento ?: "—"}", color = DominoLight, fontSize = 13.sp)
+                        Text("Valor detectado: ${a.valorPago?.let { "R$ %.2f".format(it) } ?: "—"}", color = DominoLight, fontSize = 13.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            val valor = valorEsperadoTexto.replace(",", ".").toDoubleOrNull()
+            Button(
+                onClick = { if (valor != null && imagemBase64 != null) onTestarAnalise(valor, imagemBase64!!) },
+                enabled = valor != null && imagemBase64 != null && !uiState.isTestingComprovante,
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DominoGold, disabledContainerColor = DominoGold.copy(alpha = 0.5f))
+            ) {
+                Text("Testar", color = DominoGreen, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Fechar", color = DominoMuted) }
         }
     )
 }

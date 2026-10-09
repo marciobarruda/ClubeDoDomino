@@ -431,8 +431,25 @@ class ClubRepository {
         return total
     }
 
-    suspend fun uploadComprovante(request: ComprovanteRequest): Unit = withContext(Dispatchers.IO) {
-        RetrofitClient.instance.uploadComprovante(request)
+    suspend fun uploadComprovante(request: ComprovanteRequest): com.marcioarruda.clubedodomino.data.network.UploadComprovanteResponse =
+        withContext(Dispatchers.IO) {
+            RetrofitClient.instance.uploadComprovante(request)
+        }
+
+    suspend fun getComprovantesHistoricoResult(): Result<List<com.marcioarruda.clubedodomino.data.network.ComprovanteHistoricoDto>> = safeDbCall {
+        withContext(Dispatchers.IO) { api.getComprovantesHistorico() }
+    }
+
+    suspend fun testarAnaliseComprovante(
+        valorEsperado: Double,
+        imagemBase64: String
+    ): com.marcioarruda.clubedodomino.data.network.TestarAnaliseComprovanteResponse = withContext(Dispatchers.IO) {
+        api.testarAnaliseComprovante(
+            com.marcioarruda.clubedodomino.data.network.TestarAnaliseComprovanteRequest(
+                valorEsperado = valorEsperado,
+                imagemBase64 = imagemBase64
+            )
+        )
     }
 
     suspend fun triggerTaxasExtras() { /* migrado para banco direto — sem operação pendente */ }

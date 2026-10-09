@@ -12,6 +12,8 @@ import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.data.User
 import com.marcioarruda.clubedodomino.data.network.BuchoDto
 import com.marcioarruda.clubedodomino.data.network.MensalidadeDto
+import com.marcioarruda.clubedodomino.data.network.ComprovanteHistoricoDto
+import com.marcioarruda.clubedodomino.data.network.TestarAnaliseComprovanteResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,7 +38,12 @@ data class AdminUiState(
     val error: String? = null,
     val message: String? = null,
     val isCreatingPlayer: Boolean = false,
-    val isUpdatingDbPassword: Boolean = false
+    val isUpdatingDbPassword: Boolean = false,
+    val comprovantesHistorico: List<ComprovanteHistoricoDto> = emptyList(),
+    val isLoadingComprovantes: Boolean = false,
+    val isTestingComprovante: Boolean = false,
+    val testeComprovanteResultado: TestarAnaliseComprovanteResponse? = null,
+    val testeComprovanteError: String? = null
 )
 
 data class AdminPlayerItem(
@@ -261,6 +268,36 @@ class AdminViewModel(
 
     fun dismissMessage() {
          _uiState.update { it.copy(message = null, error = null) }
+    }
+
+    fun loadComprovantesHistorico() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingComprovantes = true) }
+            val result = repository.getComprovantesHistoricoResult()
+            _uiState.update {
+                it.copy(
+                    isLoadingComprovantes = false,
+                    comprovantesHistorico = result.getOrNull() ?: it.comprovantesHistorico,
+                    error = result.exceptionOrNull()?.let { e -> "Erro ao carregar histórico de comprovantes: ${e.message}" } ?: it.error
+                )
+            }
+        }
+    }
+
+    fun testarAnaliseComprovante(valorEsperado: Double, imagemBase64: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isTestingComprovante = true, testeComprovanteResultado = null, testeComprovanteError = null) }
+            try {
+                val resultado = repository.testarAnaliseComprovante(valorEsperado, imagemBase64)
+                _uiState.update { it.copy(isTestingComprovante = false, testeComprovanteResultado = resultado) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isTestingComprovante = false, testeComprovanteError = "Erro ao testar análise: ${e.message}") }
+            }
+        }
+    }
+
+    fun dismissTesteComprovante() {
+        _uiState.update { it.copy(testeComprovanteResultado = null, testeComprovanteError = null) }
     }
 
     fun updateDbPassword(requesterEmail: String, senhaLogin: String, novaSenha: String) {

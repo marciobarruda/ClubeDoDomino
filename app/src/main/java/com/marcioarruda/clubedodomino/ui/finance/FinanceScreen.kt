@@ -86,10 +86,19 @@ fun FinanceScreen(
     }
 
     if (uiState.uploadStatus == UploadStatus.SUCCESS) {
+        val baixaAutomatica = uiState.uploadBaixaAutomatica == true
         AlertDialog(
             onDismissRequest = { /* Prevent dismiss without clicking OK */ },
-            title = { Text("Enviado!") },
-            text = { Text("Recebemos o seu comprovante. Aguarde que em breve AMILTON dará baixa em suas pendências!") },
+            title = { Text(if (baixaAutomatica) "Pagamento confirmado! ✅" else "Enviado!") },
+            text = {
+                Text(
+                    if (baixaAutomatica) {
+                        "Seu comprovante foi analisado e aprovado automaticamente. Suas pendências já foram baixadas!"
+                    } else {
+                        "Recebemos o seu comprovante. Ele será analisado manualmente e em breve AMILTON dará baixa em suas pendências!"
+                    }
+                )
+            },
             confirmButton = {
                 Button(onClick = { viewModel.dismissUploadStatus() }) {
                     Text("OK")
@@ -218,7 +227,14 @@ fun FinanceScreen(
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
                             item {
-                                TotalDueCard(uiState.totalDue, uiState.totalUpcoming, pendingCount)
+                                TotalDueCard(
+                                    totalVencido = uiState.totalDue,
+                                    totalAVencer = uiState.totalUpcoming,
+                                    pendingCount = pendingCount,
+                                    onVencidoClick = {
+                                        copiarValorEAbrirApps(context, uiState.totalDue)
+                                    }
+                                )
                             }
 
                             item {
@@ -556,7 +572,12 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-fun TotalDueCard(totalVencido: Double, totalAVencer: Double, pendingCount: Int) {
+fun TotalDueCard(
+    totalVencido: Double,
+    totalAVencer: Double,
+    pendingCount: Int,
+    onVencidoClick: () -> Unit = {}
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -583,7 +604,12 @@ fun TotalDueCard(totalVencido: Double, totalAVencer: Double, pendingCount: Int) 
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                SaldoColumn(label = "VENCIDO", value = totalVencido, color = DominoError)
+                SaldoColumn(
+                    label = "VENCIDO",
+                    value = totalVencido,
+                    color = DominoError,
+                    onClick = if (totalVencido > 0.0) onVencidoClick else null
+                )
                 Box(
                     modifier = Modifier
                         .width(1.dp)
@@ -603,8 +629,11 @@ fun TotalDueCard(totalVencido: Double, totalAVencer: Double, pendingCount: Int) 
 }
 
 @Composable
-private fun SaldoColumn(label: String, value: Double, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun SaldoColumn(label: String, value: Double, color: Color, onClick: (() -> Unit)? = null) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    ) {
         Text(
             text = "R$ ${String.format("%.2f", value)}",
             color = color,
@@ -619,5 +648,31 @@ private fun SaldoColumn(label: String, value: Double, color: Color) {
             fontSize = 10.sp,
             letterSpacing = 0.5.sp
         )
+    }
+}
+
+// Copia o valor vencido para a área de transferência (facilita colar no app do banco ao fazer
+// o Pix) e abre o seletor de apps do Android para compartilhar o valor, que lista os apps
+// instalados que aceitam texto — normalmente inclui os principais bancos/carteiras com Pix,
+// sem precisar manter uma lista fixa de pacotes conhecidos.
+private fun copiarValorEAbrirApps(context: android.content.Context, valor: Double) {
+    val valorFormatado = String.format(java.util.Locale.US, "%.2f", valor)
+    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Valor do Pix", valorFormatado))
+
+    android.widget.Toast.makeText(context, "Valor copiado para a área de transferência", android.widget.Toast.LENGTH_SHORT).show()
+
+    val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_TEXT, valorFormatado)
+    }
+    val chooser = android.content.Intent.createChooser(sendIntent, "Pagar com...").apply {
+        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    try {
+        context.startActivity(chooser)
+    } catch (_: android.content.ActivityNotFoundException) {
+        // Nenhum app disponível para abrir — o valor já foi copiado, então o usuário ainda
+        // consegue colar manualmente no app do banco que preferir.
     }
 }

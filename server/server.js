@@ -1158,6 +1158,37 @@ const darBaixaPorIds = async (buchoIds, mensalidadeIds) => {
   }
 };
 
+// 9c. POST /webhook/testar-analise-comprovante — rota de teste para o Admin do app:
+// roda a mesma análise de IA usada em produção sobre uma imagem qualquer, mas NUNCA
+// dá baixa em débito nenhum (nem exige bucho_ids/mensalidade_ids). Serve só para
+// conferir a eficiência da IA (o que ela detecta, se aprovaria ou não) antes de
+// confiar a baixa automática a comprovantes reais. Não grava em comprovantes_submetidos
+// (não é um comprovante real) — fica fora da auditoria de produção.
+app.post('/webhook/testar-analise-comprovante', async (req, res) => {
+  const { valor_esperado, imagem_base64 } = req.body;
+  if (!imagem_base64) {
+    return res.status(400).json({ error: 'imagem_base64 é obrigatório.' });
+  }
+  try {
+    const analise = await analisarComprovanteComIA(imagem_base64);
+    const { aprovado, motivo } = avaliarComprovante(analise, valor_esperado || 0);
+    res.json({
+      aprovado,
+      motivo,
+      analise: analise ? {
+        parece_comprovante_bancario: analise.parece_comprovante_bancario,
+        possui_autenticacao: analise.possui_autenticacao,
+        credor: analise.credor,
+        data_pagamento: analise.data_pagamento,
+        valor_pago: analise.valor_pago
+      } : null
+    });
+  } catch (error) {
+    console.error('Erro ao testar análise de comprovante:', error.message);
+    res.status(500).json({ error: 'Erro ao testar análise de comprovante.' });
+  }
+});
+
 // 10. POST /webhook/receber-comprovante
 app.post('/webhook/receber-comprovante', async (req, res) => {
   const { jogador_nome, valor_total, bucho_ids, mensalidade_ids, imagem_base64 } = req.body;
@@ -1216,6 +1247,28 @@ app.post('/webhook/receber-comprovante', async (req, res) => {
   } catch (error) {
     console.error('Erro ao processar comprovante:', error.message);
     res.status(500).json({ error: 'Erro ao processar comprovante.' });
+  }
+});
+
+// 10a. GET /webhook/comprovantes — histórico de comprovantes submetidos, para a tela
+// de auditoria no Admin do app. Mais recentes primeiro; aceita ?limit= (padrão 50, máx 200).
+app.get('/webhook/comprovantes', async (req, res) => {
+  try {
+    await garantirTabelaComprovantes();
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const [rows] = await pool.query(
+      `SELECT id_tabela, jogador_nome, valor_esperado, parece_comprovante_bancario,
+              possui_autenticacao, credor_detectado, data_detectada, valor_detectado,
+              decisao, motivo, createdAt
+       FROM comprovantes_submetidos
+       ORDER BY id_tabela DESC
+       LIMIT ?`,
+      [limit]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Erro ao listar comprovantes:', error.message);
+    res.status(500).json({ error: 'Erro ao listar comprovantes.' });
   }
 });
 

@@ -200,8 +200,48 @@ data class ComprovanteRequest(
     val imagemBase64: String
 )
 
+data class UploadComprovanteResponse(
+    val status: String?,
+    @SerializedName("baixa_automatica") val baixaAutomatica: Boolean? = false
+)
+
 data class WorldTimeResponse(
     val datetime: String
+)
+
+// DTO para o histórico de comprovantes submetidos (auditoria da análise de IA)
+data class ComprovanteHistoricoDto(
+    @SerializedName("id_tabela") val idTabela: Long?,
+    @SerializedName("jogador_nome") val jogadorNome: String?,
+    @SerializedName("valor_esperado") val valorEsperado: Double?,
+    @SerializedName("parece_comprovante_bancario") val pareceComprovanteBancario: Boolean?,
+    @SerializedName("possui_autenticacao") val possuiAutenticacao: Boolean?,
+    @SerializedName("credor_detectado") val credorDetectado: String?,
+    @SerializedName("data_detectada") val dataDetectada: String?,
+    @SerializedName("valor_detectado") val valorDetectado: Double?,
+    val decisao: String?, // "BAIXA_AUTOMATICA" | "ENVIADO_PARA_TELEGRAM"
+    val motivo: String?,
+    val createdAt: String?
+)
+
+// Requisição/resposta da rota de teste da análise de IA (não dá baixa em nada)
+data class TestarAnaliseComprovanteRequest(
+    @SerializedName("valor_esperado") val valorEsperado: Double,
+    @SerializedName("imagem_base64") val imagemBase64: String
+)
+
+data class AnaliseIaResultado(
+    @SerializedName("parece_comprovante_bancario") val pareceComprovanteBancario: Boolean?,
+    @SerializedName("possui_autenticacao") val possuiAutenticacao: Boolean?,
+    val credor: String?,
+    @SerializedName("data_pagamento") val dataPagamento: String?,
+    @SerializedName("valor_pago") val valorPago: Double?
+)
+
+data class TestarAnaliseComprovanteResponse(
+    val aprovado: Boolean,
+    val motivo: String?,
+    val analise: AnaliseIaResultado?
 )
 
 
@@ -247,7 +287,16 @@ interface ApiService {
     suspend fun updateProfile(@Body request: UpdateAvatarRequest): SimpleStatusResponse
 
     @POST("webhook/receber-comprovante")
-    suspend fun uploadComprovante(@Body request: ComprovanteRequest)
+    suspend fun uploadComprovante(@Body request: ComprovanteRequest): UploadComprovanteResponse
+
+    // Histórico de comprovantes submetidos, para auditoria no Admin (só Márcio).
+    @GET("webhook/comprovantes")
+    suspend fun getComprovantesHistorico(@Query("limit") limit: Int = 50): List<ComprovanteHistoricoDto>
+
+    // Roda a mesma análise de IA de produção sobre uma imagem de teste, sem dar baixa
+    // em nada — usado para conferir a eficiência da IA antes de confiar comprovantes reais.
+    @POST("webhook/testar-analise-comprovante")
+    suspend fun testarAnaliseComprovante(@Body request: TestarAnaliseComprovanteRequest): TestarAnaliseComprovanteResponse
 
     @PUT("webhook/partidas/{id}")
     suspend fun updateMatch(@Path("id") id: String, @Body match: MatchDTO): SimpleStatusResponse

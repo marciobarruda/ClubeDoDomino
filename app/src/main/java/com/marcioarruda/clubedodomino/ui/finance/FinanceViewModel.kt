@@ -45,6 +45,7 @@ data class FinanceUiState(
     val error: String? = null,
     val uploadStatus: UploadStatus = UploadStatus.IDLE,
     val uploadError: String? = null,
+    val uploadBaixaAutomatica: Boolean? = null,
     val navigateToHome: Boolean = false,
     val globalStats: GlobalStats? = null,
     val isRefreshing: Boolean = false
@@ -110,8 +111,8 @@ class FinanceViewModel(
                     imagemBase64 = base64
                 )
 
-                repository.uploadComprovante(request)
-                _uiState.update { it.copy(uploadStatus = UploadStatus.SUCCESS) }
+                val response = repository.uploadComprovante(request)
+                _uiState.update { it.copy(uploadStatus = UploadStatus.SUCCESS, uploadBaixaAutomatica = response.baixaAutomatica == true) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(uploadStatus = UploadStatus.ERROR, uploadError = e.message ?: "Erro desconhecido ao enviar.") }
             }
@@ -119,7 +120,7 @@ class FinanceViewModel(
     }
 
     fun dismissUploadStatus() {
-        _uiState.update { it.copy(uploadStatus = UploadStatus.IDLE, uploadError = null) }
+        _uiState.update { it.copy(uploadStatus = UploadStatus.IDLE, uploadError = null, uploadBaixaAutomatica = null) }
     }
 
     fun onNavigateToHomeComplete() {
