@@ -189,23 +189,18 @@ const diasDisponiveisNoMes = (mesInicio, mesFim, feriasInicio, feriasFim) => {
   return Math.max(0, totalDias - diasDeFerias);
 };
 
-// Gera a mensalidade do mês corrente para todos os jogadores ativos (exceto os de férias e o "não membro"),
+// Gera a mensalidade do mês corrente para todos os jogadores ativos (exceto o "não membro"),
 // caso ainda não exista. Idempotente — pode ser chamada no cron mensal e também no boot do servidor
 // para cobrir o caso do processo estar fora do ar exatamente na virada do mês.
-// Isenção de férias é tudo-ou-nada no mês: se o período tocar qualquer parte do mês de referência,
-// o jogador fica isento da mensalidade inteira (mensalidade não tem valor variável para proratear).
+// Férias NÃO isentam a mensalidade — ela é cobrada normalmente independente do período de férias.
+// Só o status "inativo" isenta.
 const gerarMensalidadesDoMesAtual = async () => {
   const { year, month } = getSaoPauloDateParts();
   const mesReferencia = `${year}-${String(month).padStart(2, '0')}-01`;
-  const { inicio: mesInicio, fim: mesFim } = getMonthBounds(year, month);
 
   try {
     const [jogadores] = await pool.query(
-      `SELECT jogador FROM jogadores
-       WHERE (ativo IS NULL OR ativo = 1)
-         AND (ferias_inicio IS NULL OR ferias_fim IS NULL OR ferias_fim < ? OR ferias_inicio >= ?)
-         AND jogador NOT LIKE '%NÃO MEMBRO%'`,
-      [mesInicio, mesFim]
+      "SELECT jogador FROM jogadores WHERE (ativo IS NULL OR ativo = 1) AND jogador NOT LIKE '%NÃO MEMBRO%'"
     );
 
     if (jogadores.length === 0) return;
