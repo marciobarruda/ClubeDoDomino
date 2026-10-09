@@ -1107,12 +1107,17 @@ const normalizarTexto = (txt) =>
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().trim();
 
+// Compara só o PRIMEIRO NOME do credor detectado contra os nomes esperados — não o
+// texto inteiro. Assim "Amilton Silva", "AMILTON S." ou "José Amilton" (primeiro
+// nome "José") são tratados corretamente, e nomes parecidos tipo "Amiltonia" não
+// passam por engano (o que aconteceria com uma simples busca por substring).
 const credorEhValido = (credorDetectado) => {
   const nome = normalizarTexto(credorDetectado);
   if (!nome) return false;
+  const primeiroNome = nome.split(/\s+/)[0];
   const nomesEsperados = (process.env.CREDOR_ESPERADO_NOMES || 'amilton')
     .split(',').map(n => normalizarTexto(n)).filter(Boolean);
-  return nomesEsperados.some(esperado => nome.includes(esperado));
+  return nomesEsperados.includes(primeiroNome);
 };
 
 const dataEhRecente = (dataStr) => {
