@@ -858,12 +858,15 @@ app.get('/webhook/listar-ranking', async (req, res) => {
 // ─── Notificação de comprovante no Telegram, com confirmação de baixa ────────
 //
 // Substitui o fluxo antigo do n8n (webhooks "receber-comprovante" e
-// "baixar-pagamentos"): quando um comprovante chega do app, manda a imagem pro
-// Telegram do responsável financeiro com botões "Confirmo"/"Não Confirmo". Os
-// IDs de bucho/mensalidade daquele comprovante viajam dentro do callback_data
-// do botão; ao clicar, o Telegram chama de volta /webhook/telegram-callback,
-// que dá baixa no banco (reaproveitando as mesmas rotas de "marcar como
-// pago" já usadas pelo app) e edita a mensagem removendo os botões.
+// "baixar-pagamentos"). Quando um comprovante chega do app, primeiro é analisado
+// automaticamente por IA (ver analisarComprovanteComIA mais abaixo); se aprovado
+// em todos os critérios, a baixa é dada direto e o Telegram só recebe um aviso.
+// Caso contrário, a imagem vai pro Telegram do responsável financeiro com botões
+// "Confirmo"/"Não Confirmo". Os IDs de bucho/mensalidade daquele comprovante
+// viajam dentro do callback_data do botão; ao clicar, o Telegram chama de volta
+// /webhook/telegram-callback, que dá baixa no banco (reaproveitando as mesmas
+// rotas de "marcar como pago" já usadas pelo app) e edita a mensagem removendo
+// os botões.
 //
 // Requer as variáveis de ambiente TELEGRAM_BOT_TOKEN (gerado pelo @BotFather)
 // e TELEGRAM_CHAT_ID (chat_id obtido após o destinatário iniciar uma conversa
@@ -890,20 +893,13 @@ const garantirTabelaPagamentosPendentes = async () => {
   `);
 };
 
-const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, buchoIds, mensalidadeIds, imagemBase64 }) => {
+const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, buchoIds, mensalidadeIds, imagemBase64, statusJaResolvido, avisoValidacao }) => {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) {
     console.warn('⚠️ TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID não configurados — notificação de comprovante pulada.');
     return;
   }
-
-  await garantirTabelaPagamentosPendentes();
-  const [result] = await pool.query(
-    'INSERT INTO pagamentos_pendentes_telegram (jogador_nome, bucho_ids, mensalidade_ids, createdAt, updatedAt) VALUES (?, ?, ?, NOW(), NOW())',
-    [jogadorNome, JSON.stringify(buchoIds || []), JSON.stringify(mensalidadeIds || [])]
-  );
-  const pagamentoId = result.insertId;
 
   const valorFormatado = (valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const agora = new Date().toLocaleString('pt-BR', {
@@ -913,7 +909,47 @@ const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, buchoId
     hour: '2-digit',
     minute: '2-digit'
   });
-  const caption = `🧾 *Comprovante recebido!*\n\n👤 *Jogador:* ${jogadorNome}\n💵 *Valor:* R$ ${valorFormatado}\n🕒 ${agora}`;
+  let caption = `🧾 *Comprovante recebido!*\n\n👤 *Jogador:* ${jogadorNome}\n💵 *Valor:* R$ ${valorFormatado}\n🕒 ${agora}`;
+
+  // Já resolvido pela baixa automática por IA — só avisa, sem pedir decisão.
+  if (statusJaResolvido) {
+    caption += `\n\n${statusJaResolvido}`;
+    try {
+      if (imagemBase64) {
+        const base64Data = imagemBase64.includes(',') ? imagemBase64.split(',')[1] : imagemBase64;
+        const buffer = Buffer.from(base64Data, 'base64');
+        const form = new FormData();
+        form.append('chat_id', chatId);
+        form.append('caption', caption);
+        form.append('parse_mode', 'Markdown');
+        form.append('photo', new Blob([buffer], { type: 'image/jpeg' }), 'comprovante.jpg');
+        const response = await fetch(telegramApi('sendPhoto'), { method: 'POST', body: form });
+        if (!response.ok) console.error('❌ Erro ao notificar comprovante no Telegram:', await response.text());
+      } else {
+        const response = await fetch(telegramApi('sendMessage'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown' })
+        });
+        if (!response.ok) console.error('❌ Erro ao notificar comprovante no Telegram:', await response.text());
+      }
+    } catch (error) {
+      console.error('❌ Erro ao notificar comprovante no Telegram:', error.message);
+    }
+    return;
+  }
+
+  if (avisoValidacao) {
+    caption += `\n\n⚠️ *Verificação automática não aprovou a baixa:*\n${avisoValidacao}\n\n_Revise o comprovante e decida manualmente:_`;
+  }
+
+  await garantirTabelaPagamentosPendentes();
+  const [result] = await pool.query(
+    'INSERT INTO pagamentos_pendentes_telegram (jogador_nome, bucho_ids, mensalidade_ids, createdAt, updatedAt) VALUES (?, ?, ?, NOW(), NOW())',
+    [jogadorNome, JSON.stringify(buchoIds || []), JSON.stringify(mensalidadeIds || [])]
+  );
+  const pagamentoId = result.insertId;
+
   const replyMarkup = JSON.stringify({
     inline_keyboard: [[
       { text: '❌ Não Confirmo', callback_data: `NAO|${pagamentoId}` },
@@ -954,18 +990,224 @@ const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, buchoId
   }
 };
 
+// ─── Análise automática de comprovante via IA (Groq Vision) ──────────────────
+//
+// Antes de decidir entre dar baixa automática ou cair no fluxo manual do Telegram,
+// o comprovante é submetido a um modelo de visão (Llama 4 Scout, via Groq) que avalia:
+// 1) se a imagem é de fato um comprovante bancário/Pix (não uma foto qualquer);
+// 2) se há algum código/selo de autenticação visível nele;
+// 3) quem é o credor/destinatário do pagamento;
+// 4) a data do pagamento;
+// 5) o valor pago.
+//
+// A baixa automática só acontece se TODOS os critérios abaixo forem satisfeitos:
+// documento parece um comprovante bancário genuíno, tem autenticação, credor é o
+// Amilton, data é de hoje (ou ontem, por tolerância de fuso/horário de processamento),
+// e valor pago >= valor total devido. Qualquer dúvida cai no fluxo manual existente
+// (notificação no Telegram com botões Confirmo/Não Confirmo).
+//
+// Requer a env var GROQ_API_KEY (gratuita em https://console.groq.com). Se não
+// configurada, ou se a análise falhar por qualquer motivo, o sistema cai com
+// segurança no fluxo manual — nunca trava o recebimento do comprovante.
+
+const garantirTabelaComprovantes = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS comprovantes_submetidos (
+      id_tabela INT AUTO_INCREMENT PRIMARY KEY,
+      jogador_nome VARCHAR(255) NOT NULL,
+      valor_esperado DECIMAL(10,2) NOT NULL,
+      bucho_ids TEXT,
+      mensalidade_ids TEXT,
+      parece_comprovante_bancario TINYINT(1) DEFAULT NULL,
+      possui_autenticacao TINYINT(1) DEFAULT NULL,
+      credor_detectado VARCHAR(255) DEFAULT NULL,
+      data_detectada VARCHAR(50) DEFAULT NULL,
+      valor_detectado DECIMAL(10,2) DEFAULT NULL,
+      analise_bruta TEXT,
+      decisao VARCHAR(30) NOT NULL,
+      motivo VARCHAR(255) DEFAULT NULL,
+      createdAt DATETIME NOT NULL
+    )
+  `);
+};
+
+// Chama o Groq Vision e devolve um objeto com os campos extraídos, ou null se a
+// análise não puder ser concluída (API não configurada, erro de rede, resposta
+// inválida) — nesse caso o chamador deve tratar como "não deu pra confirmar".
+const analisarComprovanteComIA = async (imagemBase64) => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || !imagemBase64) return null;
+
+  const base64Data = imagemBase64.includes(',') ? imagemBase64.split(',')[1] : imagemBase64;
+  const dataUrl = `data:image/jpeg;base64,${base64Data}`;
+
+  const prompt = `Você é um analista financeiro que verifica comprovantes de pagamento (Pix, TED, boleto, transferência bancária) antes de uma baixa automática de débito. Analise a imagem anexa e responda SOMENTE com um JSON válido, sem nenhum texto antes ou depois, no formato exato:
+{
+  "parece_comprovante_bancario": true ou false,
+  "possui_autenticacao": true ou false,
+  "credor": "nome do destinatário/favorecido do pagamento, como aparece no comprovante, ou null",
+  "data_pagamento": "data do pagamento no formato YYYY-MM-DD, ou null se ilegível",
+  "valor_pago": valor numérico pago (apenas número, sem símbolo de moeda), ou null se ilegível
+}
+
+Critérios:
+- "parece_comprovante_bancario": true somente se a imagem claramente é a tela/impressão de um comprovante de transação bancária ou Pix real (tem elementos como nome do banco, valor, data, identificador da transação). Uma foto aleatória, print de conversa, ou documento não-financeiro deve ser false.
+- "possui_autenticacao": true somente se houver algum código de autenticação, ID de transação, hash, ou "autenticação" visível no documento (comprovantes bancários legítimos quase sempre têm isso).
+- Seja criterioso: na dúvida sobre qualquer campo, prefira valores conservadores (false/null) a arriscar um falso positivo.`;
+
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: dataUrl } }
+          ]
+        }],
+        temperature: 0,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      console.error('❌ Groq Vision retornou erro:', await response.text());
+      return null;
+    }
+
+    const json = await response.json();
+    const content = json?.choices?.[0]?.message?.content;
+    if (!content) return null;
+
+    const parsed = JSON.parse(content);
+    return {
+      parece_comprovante_bancario: parsed.parece_comprovante_bancario === true,
+      possui_autenticacao: parsed.possui_autenticacao === true,
+      credor: typeof parsed.credor === 'string' ? parsed.credor.trim() : null,
+      data_pagamento: typeof parsed.data_pagamento === 'string' ? parsed.data_pagamento.trim() : null,
+      valor_pago: typeof parsed.valor_pago === 'number' ? parsed.valor_pago : null,
+      bruto: content
+    };
+  } catch (error) {
+    console.error('❌ Erro ao analisar comprovante com IA:', error.message);
+    return null;
+  }
+};
+
+// Nome(s) aceitos como credor — comparação tolerante a acento/maiúsculas e a
+// variações comuns (ex.: "Amilton Silva", "AMILTON").
+const normalizarTexto = (txt) =>
+  (txt || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().trim();
+
+const credorEhValido = (credorDetectado) => {
+  const nome = normalizarTexto(credorDetectado);
+  if (!nome) return false;
+  const nomesEsperados = (process.env.CREDOR_ESPERADO_NOMES || 'amilton')
+    .split(',').map(n => normalizarTexto(n)).filter(Boolean);
+  return nomesEsperados.some(esperado => nome.includes(esperado));
+};
+
+const dataEhRecente = (dataStr) => {
+  if (!dataStr || !/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) return false;
+  const detectada = new Date(`${dataStr}T00:00:00-03:00`);
+  if (isNaN(detectada.getTime())) return false;
+  const hoje = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  hoje.setHours(0, 0, 0, 0);
+  const diffDias = Math.round((hoje - detectada) / (1000 * 60 * 60 * 24));
+  // Tolera o comprovante ter sido gerado ontem (processamento perto da meia-noite),
+  // mas rejeita qualquer coisa mais velha que isso ou datada no futuro.
+  return diffDias >= 0 && diffDias <= 1;
+};
+
+// Avalia o resultado da IA contra os critérios de baixa automática. Retorna
+// { aprovado: boolean, motivo: string } — motivo é sempre preenchido, para
+// registro no histórico e, se reprovado, para contexto na notificação manual.
+const avaliarComprovante = (analise, valorEsperado) => {
+  if (!analise) return { aprovado: false, motivo: 'Não foi possível analisar o comprovante automaticamente.' };
+  if (!analise.parece_comprovante_bancario) return { aprovado: false, motivo: 'A imagem não parece ser um comprovante bancário.' };
+  if (!analise.possui_autenticacao) return { aprovado: false, motivo: 'Não foi encontrado código de autenticação no comprovante.' };
+  if (!credorEhValido(analise.credor)) return { aprovado: false, motivo: `Credor não confere (detectado: "${analise.credor || 'não identificado'}").` };
+  if (!dataEhRecente(analise.data_pagamento)) return { aprovado: false, motivo: `Data do comprovante não é de hoje (detectada: "${analise.data_pagamento || 'não identificada'}").` };
+  if (typeof analise.valor_pago !== 'number' || analise.valor_pago < valorEsperado - 0.01) {
+    return { aprovado: false, motivo: `Valor pago (${analise.valor_pago ?? 'não identificado'}) é menor que o devido (${valorEsperado}).` };
+  }
+  return { aprovado: true, motivo: 'Comprovante validado automaticamente.' };
+};
+
+// Dá baixa nos débitos pelos IDs informados — mesma operação usada no fluxo manual
+// (callback do Telegram), reaproveitada aqui para a baixa automática via IA.
+const darBaixaPorIds = async (buchoIds, mensalidadeIds) => {
+  for (const buchoId of buchoIds || []) {
+    await pool.query("UPDATE buchos SET pago = 'true' WHERE id_tabela = ?", [buchoId]);
+  }
+  for (const mensalidadeId of mensalidadeIds || []) {
+    await pool.query("UPDATE mensalidades SET pago = 'true' WHERE id_tabela = ?", [mensalidadeId]);
+  }
+};
+
 // 10. POST /webhook/receber-comprovante
 app.post('/webhook/receber-comprovante', async (req, res) => {
   const { jogador_nome, valor_total, bucho_ids, mensalidade_ids, imagem_base64 } = req.body;
   try {
-    await notificarComprovanteNoTelegram({
-      jogadorNome: jogador_nome,
-      valorTotal: valor_total,
-      buchoIds: bucho_ids,
-      mensalidadeIds: mensalidade_ids,
-      imagemBase64: imagem_base64
-    });
-    res.json({ status: 'success' });
+    await garantirTabelaComprovantes();
+
+    const analise = await analisarComprovanteComIA(imagem_base64);
+    const { aprovado, motivo } = avaliarComprovante(analise, valor_total || 0);
+
+    await pool.query(
+      `INSERT INTO comprovantes_submetidos
+        (jogador_nome, valor_esperado, bucho_ids, mensalidade_ids, parece_comprovante_bancario,
+         possui_autenticacao, credor_detectado, data_detectada, valor_detectado, analise_bruta,
+         decisao, motivo, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        jogador_nome,
+        valor_total || 0,
+        JSON.stringify(bucho_ids || []),
+        JSON.stringify(mensalidade_ids || []),
+        analise ? (analise.parece_comprovante_bancario ? 1 : 0) : null,
+        analise ? (analise.possui_autenticacao ? 1 : 0) : null,
+        analise?.credor || null,
+        analise?.data_pagamento || null,
+        analise?.valor_pago ?? null,
+        analise?.bruto || null,
+        aprovado ? 'BAIXA_AUTOMATICA' : 'ENVIADO_PARA_TELEGRAM',
+        motivo
+      ]
+    );
+
+    if (aprovado) {
+      await darBaixaPorIds(bucho_ids, mensalidade_ids);
+      // Notifica o Amilton por ciência — sem botões, pois a baixa já foi efetuada.
+      await notificarComprovanteNoTelegram({
+        jogadorNome: jogador_nome,
+        valorTotal: valor_total,
+        buchoIds: [],
+        mensalidadeIds: [],
+        imagemBase64: imagem_base64,
+        statusJaResolvido: '✅ Baixa automática aprovada pela análise do comprovante.'
+      });
+    } else {
+      console.warn(`⚠️ Comprovante de ${jogador_nome} não passou na validação automática: ${motivo}`);
+      await notificarComprovanteNoTelegram({
+        jogadorNome: jogador_nome,
+        valorTotal: valor_total,
+        buchoIds: bucho_ids,
+        mensalidadeIds: mensalidade_ids,
+        imagemBase64: imagem_base64,
+        avisoValidacao: motivo
+      });
+    }
+
+    res.json({ status: 'success', baixa_automatica: aprovado });
   } catch (error) {
     console.error('Erro ao processar comprovante:', error.message);
     res.status(500).json({ error: 'Erro ao processar comprovante.' });
