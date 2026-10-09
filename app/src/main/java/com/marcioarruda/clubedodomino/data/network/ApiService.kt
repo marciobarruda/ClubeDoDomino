@@ -221,7 +221,16 @@ data class ComprovanteHistoricoDto(
     @SerializedName("valor_detectado") val valorDetectado: Double?,
     val decisao: String?, // "BAIXA_AUTOMATICA" | "ENVIADO_PARA_TELEGRAM"
     val motivo: String?,
-    val createdAt: String?
+    val createdAt: String?,
+    @SerializedName("banco_origem") val bancoOrigem: String? = null,
+    @SerializedName("tipo_transacao") val tipoTransacao: String? = null,
+    @SerializedName("data_hora_detectada") val dataHoraDetectada: String? = null,
+    @SerializedName("id_transacao_detectado") val idTransacaoDetectado: String? = null,
+    @SerializedName("credor_documento") val credorDocumento: String? = null,
+    @SerializedName("credor_instituicao") val credorInstituicao: String? = null,
+    @SerializedName("credor_chave_pix") val credorChavePix: String? = null,
+    @SerializedName("pagador_detectado") val pagadorDetectado: String? = null,
+    @SerializedName("pagador_documento") val pagadorDocumento: String? = null
 )
 
 // Requisição/resposta da rota de teste da análise de IA (não dá baixa em nada)
@@ -235,7 +244,16 @@ data class AnaliseIaResultado(
     @SerializedName("possui_autenticacao") val possuiAutenticacao: Boolean?,
     val credor: String?,
     @SerializedName("data_pagamento") val dataPagamento: String?,
-    @SerializedName("valor_pago") val valorPago: Double?
+    @SerializedName("valor_pago") val valorPago: Double?,
+    @SerializedName("banco_origem") val bancoOrigem: String? = null,
+    @SerializedName("tipo_transacao") val tipoTransacao: String? = null,
+    @SerializedName("data_hora_pagamento") val dataHoraPagamento: String? = null,
+    @SerializedName("id_transacao") val idTransacao: String? = null,
+    @SerializedName("credor_documento") val credorDocumento: String? = null,
+    @SerializedName("credor_instituicao") val credorInstituicao: String? = null,
+    @SerializedName("credor_chave_pix") val credorChavePix: String? = null,
+    val pagador: String? = null,
+    @SerializedName("pagador_documento") val pagadorDocumento: String? = null
 )
 
 data class TestarAnaliseComprovanteResponse(

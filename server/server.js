@@ -1010,6 +1010,21 @@ const notificarComprovanteNoTelegram = async ({ jogadorNome, valorTotal, buchoId
 // configurada, ou se a análise falhar por qualquer motivo, o sistema cai com
 // segurança no fluxo manual — nunca trava o recebimento do comprovante.
 
+// Colunas adicionadas depois da criação original da tabela — ALTER TABLE idempotente
+// (ignora erro "Duplicate column", que é o MySQL avisando que já existe) para não quebrar
+// em servidores que já tinham a tabela no formato antigo.
+const COLUNAS_EXTRAS_COMPROVANTES = [
+  'banco_origem VARCHAR(255) DEFAULT NULL',
+  'tipo_transacao VARCHAR(100) DEFAULT NULL',
+  'data_hora_detectada VARCHAR(100) DEFAULT NULL',
+  'id_transacao_detectado VARCHAR(255) DEFAULT NULL',
+  'credor_documento VARCHAR(50) DEFAULT NULL',
+  'credor_instituicao VARCHAR(255) DEFAULT NULL',
+  'credor_chave_pix VARCHAR(255) DEFAULT NULL',
+  'pagador_detectado VARCHAR(255) DEFAULT NULL',
+  'pagador_documento VARCHAR(50) DEFAULT NULL'
+];
+
 const garantirTabelaComprovantes = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS comprovantes_submetidos (
@@ -1029,71 +1044,186 @@ const garantirTabelaComprovantes = async () => {
       createdAt DATETIME NOT NULL
     )
   `);
+
+  for (const coluna of COLUNAS_EXTRAS_COMPROVANTES) {
+    const nomeColuna = coluna.split(' ')[0];
+    try {
+      await pool.query(`ALTER TABLE comprovantes_submetidos ADD COLUMN ${coluna}`);
+    } catch (error) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.error(`❌ Erro ao adicionar coluna ${nomeColuna} em comprovantes_submetidos:`, error.message);
+      }
+    }
+  }
 };
 
-// Chama o Groq Vision e devolve um objeto com os campos extraídos, ou null se a
-// análise não puder ser concluída (API não configurada, erro de rede, resposta
+// Detecta se o base64 recebido é um PDF pela assinatura do arquivo ("%PDF" em ASCII,
+// que em base64 sempre começa com "JVBERi0" — mais confiável que confiar num eventual
+// prefixo "data:" que o app pode ou não mandar).
+const ehPdf = (base64Data) => base64Data.startsWith('JVBERi0');
+
+// Extrai todo o texto de um PDF (todas as páginas) usando pdfjs-dist — sem renderização
+// gráfica/canvas, só a camada de texto. A maioria dos comprovantes bancários em PDF é
+// gerada digitalmente (não escaneada), então o texto já vem limpo e estruturado, sem
+// precisar de OCR nem de um modelo de visão.
+const extrairTextoDoPdf = async (base64Data) => {
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const data = Buffer.from(base64Data, 'base64');
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(data) }).promise;
+  let fullText = '';
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const textContent = await page.getTextContent();
+    fullText += textContent.items.map((item) => item.str).join(' ') + '\n';
+  }
+  return fullText.trim();
+};
+
+const PROMPT_ANALISE_COMPROVANTE = `Você é um analista financeiro que verifica comprovantes de pagamento (Pix, TED, boleto, transferência bancária) antes de uma baixa automática de débito. Analise o comprovante anexo com atenção a cada detalhe visível e responda SOMENTE com um JSON válido, sem nenhum texto antes ou depois, no formato exato:
+{
+  "parece_comprovante_bancario": true ou false,
+  "possui_autenticacao": true ou false,
+  "banco_origem": "nome do banco/instituição que processou a transação, como aparece no comprovante, ou null",
+  "tipo_transacao": "tipo da transação (Pix, TED, DOC, boleto, transferência...), ou null",
+  "data_hora_pagamento": "data e hora completas exatamente como aparecem no comprovante (texto livre), ou null",
+  "data_pagamento": "data do pagamento OBRIGATORIAMENTE no formato YYYY-MM-DD (ex: 2026-10-09), convertendo se o comprovante mostrar em outro formato como DD/MM/YYYY, ou null se ilegível",
+  "valor_pago": valor numérico pago (apenas número, sem símbolo de moeda), ou null se ilegível,
+  "id_transacao": "identificador/autenticação/hash da transação, como aparece no comprovante, ou null",
+  "credor": "nome do destinatário/favorecido do pagamento, como aparece no comprovante, ou null",
+  "credor_documento": "CPF ou CNPJ do destinatário, como aparece no comprovante (pode estar parcialmente oculto), ou null",
+  "credor_instituicao": "banco/instituição do destinatário, ou null",
+  "credor_chave_pix": "chave Pix do destinatário, se exibida, ou null",
+  "pagador": "nome de quem pagou (origem), como aparece no comprovante, ou null",
+  "pagador_documento": "CPF ou CNPJ do pagador, como aparece no comprovante, ou null"
+}
+
+Critérios:
+- "parece_comprovante_bancario": true somente se o conteúdo claramente é de um comprovante de transação bancária ou Pix real (tem elementos como nome do banco, valor, data, identificador da transação). Uma foto aleatória, print de conversa, ou documento não-financeiro deve ser false.
+- "possui_autenticacao": true somente se houver algum código de autenticação, ID de transação, hash, ou "autenticação" visível no documento (comprovantes bancários legítimos quase sempre têm isso).
+- Extraia TODOS os campos que estiverem visíveis, mesmo que não sejam usados na decisão final — eles serão exibidos para conferência manual.
+- Seja criterioso na decisão (parece_comprovante_bancario/possui_autenticacao): na dúvida, prefira valores conservadores (false) a arriscar um falso positivo. Mas na extração dos demais campos, reporte o que conseguir ler, mesmo com incerteza.`;
+
+const texto = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+const numero = (v) => (typeof v === 'number' ? v : null);
+
+const normalizarRespostaIa = (content) => {
+  // Modelos "reasoning" sem response_format forçado às vezes envolvem o JSON em texto
+  // explicativo ou um bloco ```json — extrai só o trecho entre a primeira "{" e a última "}".
+  const inicioJson = content.indexOf('{');
+  const fimJson = content.lastIndexOf('}');
+  const jsonCandidato = inicioJson >= 0 && fimJson > inicioJson ? content.slice(inicioJson, fimJson + 1) : content;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonCandidato);
+  } catch (parseError) {
+    console.error('❌ Resposta da IA não é um JSON válido:', content);
+    return null;
+  }
+
+  return {
+    parece_comprovante_bancario: parsed.parece_comprovante_bancario === true,
+    possui_autenticacao: parsed.possui_autenticacao === true,
+    credor: texto(parsed.credor),
+    data_pagamento: texto(parsed.data_pagamento),
+    valor_pago: numero(parsed.valor_pago),
+    // Campos extras, só para exibição/conferência — não entram na decisão de aprovação.
+    banco_origem: texto(parsed.banco_origem),
+    tipo_transacao: texto(parsed.tipo_transacao),
+    data_hora_pagamento: texto(parsed.data_hora_pagamento),
+    id_transacao: texto(parsed.id_transacao),
+    credor_documento: texto(parsed.credor_documento),
+    credor_instituicao: texto(parsed.credor_instituicao),
+    credor_chave_pix: texto(parsed.credor_chave_pix),
+    pagador: texto(parsed.pagador),
+    pagador_documento: texto(parsed.pagador_documento),
+    bruto: content
+  };
+};
+
+const chamarGroq = async (apiKey, model, content, { maxTokens, forcarJson } = {}) => {
+  const body = {
+    model,
+    messages: [{ role: 'user', content }],
+    temperature: 0,
+    // O tier gratuito da Groq tem um limite de output por minuto bem apertado (1000
+    // tokens/min nesta conta); sem max_tokens o modelo pode exceder esse teto numa única
+    // chamada e a API rejeita o request inteiro.
+    max_tokens: maxTokens
+  };
+  // response_format: json_object trava a validação em modelos "reasoning" (ex.: gpt-oss-120b),
+  // que precisam de espaço para um bloco de raciocínio antes da resposta final — a API rejeita
+  // com "json_validate_failed" se forçado. Só habilitar para modelos que lidam bem com isso.
+  if (forcarJson) {
+    body.response_format = { type: 'json_object' };
+  }
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    console.error('❌ Groq retornou erro HTTP', response.status, ':', await response.text());
+    return null;
+  }
+
+  const json = await response.json();
+  const content_ = json?.choices?.[0]?.message?.content;
+  if (!content_) {
+    console.error('❌ Groq não retornou conteúdo. Resposta completa:', JSON.stringify(json));
+    return null;
+  }
+  return content_;
+};
+
+// Analisa o comprovante (imagem OU PDF) e devolve um objeto com os campos extraídos, ou
+// null se a análise não puder ser concluída (API não configurada, erro de rede, resposta
 // inválida) — nesse caso o chamador deve tratar como "não deu pra confirmar".
+//
+// PDF: extrai o texto com pdfjs-dist (comprovantes bancários em PDF são gerados
+// digitalmente, não escaneados — o texto já vem limpo, sem precisar de OCR/visão) e manda
+// pra um modelo de TEXTO. Imagem (JPG/PNG): manda direto pra um modelo de VISÃO.
 const analisarComprovanteComIA = async (imagemBase64) => {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !imagemBase64) return null;
 
   const base64Data = imagemBase64.includes(',') ? imagemBase64.split(',')[1] : imagemBase64;
-  const dataUrl = `data:image/jpeg;base64,${base64Data}`;
-
-  const prompt = `Você é um analista financeiro que verifica comprovantes de pagamento (Pix, TED, boleto, transferência bancária) antes de uma baixa automática de débito. Analise a imagem anexa e responda SOMENTE com um JSON válido, sem nenhum texto antes ou depois, no formato exato:
-{
-  "parece_comprovante_bancario": true ou false,
-  "possui_autenticacao": true ou false,
-  "credor": "nome do destinatário/favorecido do pagamento, como aparece no comprovante, ou null",
-  "data_pagamento": "data do pagamento no formato YYYY-MM-DD, ou null se ilegível",
-  "valor_pago": valor numérico pago (apenas número, sem símbolo de moeda), ou null se ilegível
-}
-
-Critérios:
-- "parece_comprovante_bancario": true somente se a imagem claramente é a tela/impressão de um comprovante de transação bancária ou Pix real (tem elementos como nome do banco, valor, data, identificador da transação). Uma foto aleatória, print de conversa, ou documento não-financeiro deve ser false.
-- "possui_autenticacao": true somente se houver algum código de autenticação, ID de transação, hash, ou "autenticação" visível no documento (comprovantes bancários legítimos quase sempre têm isso).
-- Seja criterioso: na dúvida sobre qualquer campo, prefira valores conservadores (false/null) a arriscar um falso positivo.`;
 
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: dataUrl } }
-          ]
-        }],
-        temperature: 0,
-        response_format: { type: 'json_object' }
-      })
-    });
-
-    if (!response.ok) {
-      console.error('❌ Groq Vision retornou erro:', await response.text());
-      return null;
+    let content;
+    if (ehPdf(base64Data)) {
+      const textoPdf = await extrairTextoDoPdf(base64Data);
+      if (!textoPdf) {
+        console.error('❌ Não foi possível extrair texto do PDF do comprovante (PDF vazio ou escaneado sem camada de texto).');
+        return null;
+      }
+      content = `${PROMPT_ANALISE_COMPROVANTE}\n\nTexto extraído do PDF do comprovante:\n"""\n${textoPdf}\n"""`;
+      // gpt-oss-120b é um modelo "reasoning": gasta tokens de output num bloco de raciocínio
+      // antes da resposta final, então precisa de bem mais margem que o modelo de visão.
+      const resultContent = await chamarGroq(apiKey, 'openai/gpt-oss-120b', content, { maxTokens: 900, forcarJson: false });
+      if (!resultContent) return null;
+      return normalizarRespostaIa(resultContent);
     }
 
-    const json = await response.json();
-    const content = json?.choices?.[0]?.message?.content;
-    if (!content) return null;
-
-    const parsed = JSON.parse(content);
-    return {
-      parece_comprovante_bancario: parsed.parece_comprovante_bancario === true,
-      possui_autenticacao: parsed.possui_autenticacao === true,
-      credor: typeof parsed.credor === 'string' ? parsed.credor.trim() : null,
-      data_pagamento: typeof parsed.data_pagamento === 'string' ? parsed.data_pagamento.trim() : null,
-      valor_pago: typeof parsed.valor_pago === 'number' ? parsed.valor_pago : null,
-      bruto: content
-    };
+    // Imagem: a Groq descontinuou os modelos Llama 4 Scout/Maverick (visão) do tier
+    // gratuito em 2026. qwen/qwen3.8-27b é, no momento, o único modelo disponível nessa
+    // conta que aceita imagem como input — não é oficialmente documentado como modelo de
+    // visão pela Groq, então pode mudar sem aviso. Se voltar a falhar com
+    // "model_not_found", conferir modelos disponíveis em
+    // GET https://api.groq.com/openai/v1/models e atualizar este valor.
+    const dataUrl = `data:image/jpeg;base64,${base64Data}`;
+    content = [
+      { type: 'text', text: PROMPT_ANALISE_COMPROVANTE },
+      { type: 'image_url', image_url: { url: dataUrl } }
+    ];
+    const resultContent = await chamarGroq(apiKey, 'qwen/qwen3.8-27b', content, { maxTokens: 600, forcarJson: true });
+    if (!resultContent) return null;
+    return normalizarRespostaIa(resultContent);
   } catch (error) {
     console.error('❌ Erro ao analisar comprovante com IA:', error.message);
     return null;
@@ -1180,7 +1310,16 @@ app.post('/webhook/testar-analise-comprovante', async (req, res) => {
         possui_autenticacao: analise.possui_autenticacao,
         credor: analise.credor,
         data_pagamento: analise.data_pagamento,
-        valor_pago: analise.valor_pago
+        valor_pago: analise.valor_pago,
+        banco_origem: analise.banco_origem,
+        tipo_transacao: analise.tipo_transacao,
+        data_hora_pagamento: analise.data_hora_pagamento,
+        id_transacao: analise.id_transacao,
+        credor_documento: analise.credor_documento,
+        credor_instituicao: analise.credor_instituicao,
+        credor_chave_pix: analise.credor_chave_pix,
+        pagador: analise.pagador,
+        pagador_documento: analise.pagador_documento
       } : null
     });
   } catch (error) {
@@ -1202,8 +1341,10 @@ app.post('/webhook/receber-comprovante', async (req, res) => {
       `INSERT INTO comprovantes_submetidos
         (jogador_nome, valor_esperado, bucho_ids, mensalidade_ids, parece_comprovante_bancario,
          possui_autenticacao, credor_detectado, data_detectada, valor_detectado, analise_bruta,
-         decisao, motivo, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+         decisao, motivo, createdAt, banco_origem, tipo_transacao, data_hora_detectada,
+         id_transacao_detectado, credor_documento, credor_instituicao, credor_chave_pix,
+         pagador_detectado, pagador_documento)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         jogador_nome,
         valor_total || 0,
@@ -1216,7 +1357,16 @@ app.post('/webhook/receber-comprovante', async (req, res) => {
         analise?.valor_pago ?? null,
         analise?.bruto || null,
         aprovado ? 'BAIXA_AUTOMATICA' : 'ENVIADO_PARA_TELEGRAM',
-        motivo
+        motivo,
+        analise?.banco_origem || null,
+        analise?.tipo_transacao || null,
+        analise?.data_hora_pagamento || null,
+        analise?.id_transacao || null,
+        analise?.credor_documento || null,
+        analise?.credor_instituicao || null,
+        analise?.credor_chave_pix || null,
+        analise?.pagador || null,
+        analise?.pagador_documento || null
       ]
     );
 
@@ -1259,7 +1409,9 @@ app.get('/webhook/comprovantes', async (req, res) => {
     const [rows] = await pool.query(
       `SELECT id_tabela, jogador_nome, valor_esperado, parece_comprovante_bancario,
               possui_autenticacao, credor_detectado, data_detectada, valor_detectado,
-              decisao, motivo, createdAt
+              decisao, motivo, createdAt, banco_origem, tipo_transacao, data_hora_detectada,
+              id_transacao_detectado, credor_documento, credor_instituicao, credor_chave_pix,
+              pagador_detectado, pagador_documento
        FROM comprovantes_submetidos
        ORDER BY id_tabela DESC
        LIMIT ?`,

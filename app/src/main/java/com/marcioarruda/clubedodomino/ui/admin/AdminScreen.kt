@@ -1292,11 +1292,35 @@ private fun ComprovanteHistoricoCard(c: ComprovanteHistoricoDto) {
             if (c.valorDetectado != null) {
                 Text("Valor detectado pela IA: R$ ${"%.2f".format(c.valorDetectado)}", color = DominoMuted, fontSize = 13.sp)
             }
-            if (c.credorDetectado != null) {
-                Text("Credor detectado: ${c.credorDetectado}", color = DominoMuted, fontSize = 13.sp)
+            if (c.bancoOrigem != null) {
+                Text("Banco de origem: ${c.bancoOrigem}", color = DominoMuted, fontSize = 13.sp)
             }
-            if (c.dataDetectada != null) {
+            if (c.tipoTransacao != null) {
+                Text("Tipo: ${c.tipoTransacao}", color = DominoMuted, fontSize = 13.sp)
+            }
+            if (c.dataHoraDetectada != null) {
+                Text("Data/hora: ${c.dataHoraDetectada}", color = DominoMuted, fontSize = 13.sp)
+            } else if (c.dataDetectada != null) {
                 Text("Data detectada: ${c.dataDetectada}", color = DominoMuted, fontSize = 13.sp)
+            }
+            if (c.idTransacaoDetectado != null) {
+                Text("ID da transação: ${c.idTransacaoDetectado}", color = DominoMuted, fontSize = 13.sp)
+            }
+            if (c.credorDetectado != null) {
+                val credorInfo = buildString {
+                    append(c.credorDetectado)
+                    if (c.credorDocumento != null) append(", CPF/CNPJ ${c.credorDocumento}")
+                    if (c.credorInstituicao != null) append(", ${c.credorInstituicao}")
+                    if (c.credorChavePix != null) append(", chave ${c.credorChavePix}")
+                }
+                Text("Destino (credor): $credorInfo", color = DominoMuted, fontSize = 13.sp)
+            }
+            if (c.pagadorDetectado != null) {
+                val pagadorInfo = buildString {
+                    append(c.pagadorDetectado)
+                    if (c.pagadorDocumento != null) append(", CPF/CNPJ ${c.pagadorDocumento}")
+                }
+                Text("Origem (pagador): $pagadorInfo", color = DominoMuted, fontSize = 13.sp)
             }
             if (!c.motivo.isNullOrBlank()) {
                 Text(c.motivo, color = if (aprovado) DominoGreen else DominoOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
@@ -1388,11 +1412,31 @@ private fun TestarComprovanteDialog(
                     }
                     resultado.analise?.let { a ->
                         Spacer(modifier = Modifier.height(8.dp))
+                        Text("Dados visíveis na imagem:", color = DominoLight, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text("Parece comprovante bancário: ${if (a.pareceComprovanteBancario == true) "Sim" else "Não"}", color = DominoLight, fontSize = 13.sp)
                         Text("Possui autenticação: ${if (a.possuiAutenticacao == true) "Sim" else "Não"}", color = DominoLight, fontSize = 13.sp)
-                        Text("Credor detectado: ${a.credor ?: "—"}", color = DominoLight, fontSize = 13.sp)
-                        Text("Data detectada: ${a.dataPagamento ?: "—"}", color = DominoLight, fontSize = 13.sp)
-                        Text("Valor detectado: ${a.valorPago?.let { "R$ %.2f".format(it) } ?: "—"}", color = DominoLight, fontSize = 13.sp)
+                        a.bancoOrigem?.let { Text("Banco de origem: $it", color = DominoLight, fontSize = 13.sp) }
+                        a.tipoTransacao?.let { Text("Tipo: $it", color = DominoLight, fontSize = 13.sp) }
+                        (a.dataHoraPagamento ?: a.dataPagamento)?.let { Text("Data/hora: $it", color = DominoLight, fontSize = 13.sp) }
+                        a.valorPago?.let { Text("Valor: R$ %.2f".format(it), color = DominoLight, fontSize = 13.sp) }
+                        a.idTransacao?.let { Text("ID da transação: $it", color = DominoLight, fontSize = 13.sp) }
+                        if (a.credor != null || a.credorDocumento != null || a.credorInstituicao != null || a.credorChavePix != null) {
+                            val credorInfo = buildString {
+                                append(a.credor ?: "—")
+                                a.credorDocumento?.let { append(", CPF/CNPJ $it") }
+                                a.credorInstituicao?.let { append(", $it") }
+                                a.credorChavePix?.let { append(", chave $it") }
+                            }
+                            Text("Destino (credor): $credorInfo", color = DominoLight, fontSize = 13.sp)
+                        }
+                        if (a.pagador != null || a.pagadorDocumento != null) {
+                            val pagadorInfo = buildString {
+                                append(a.pagador ?: "—")
+                                a.pagadorDocumento?.let { append(", CPF/CNPJ $it") }
+                            }
+                            Text("Origem (pagador): $pagadorInfo", color = DominoLight, fontSize = 13.sp)
+                        }
                     }
                 }
             }
