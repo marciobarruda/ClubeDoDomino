@@ -101,7 +101,7 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
 
                         topPlayers = bestTied.mapNotNull { r ->
                             val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
-                            playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia) }
+                            playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia, r.saldo_dia) }
                         }
 
                         // Piorzinho do dia: menor saldo médio por partida entre quem NÃO foi eleito
@@ -123,7 +123,7 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
 
                             bottomPlayers = worstTied.mapNotNull { r ->
                                 val playerUser = allPlayers.find { u -> u.name.equals(r.jogador.trim(), ignoreCase = true) || u.displayName.equals(r.jogador.trim(), ignoreCase = true) }
-                                playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia) }
+                                playerUser?.let { BestPlayer(it, r.pontos_dia, r.vitorias_dia, r.partidas_dia, r.saldo_dia) }
                             }
                         }
                     }
