@@ -103,6 +103,16 @@ let pool = mysql.createPool({
       }
     }
 
+    // Versão do app que o jogador está usando, registrada a cada login — exibida no Admin para
+    // identificar quem ainda está numa versão desatualizada.
+    for (const coluna of ['app_version VARCHAR(20) NULL', 'app_version_updated_at DATETIME NULL']) {
+      try {
+        await pool.query(`ALTER TABLE jogadores ADD COLUMN ${coluna}`);
+      } catch (e) {
+        if (!/Duplicate column/i.test(e.message)) throw e;
+      }
+    }
+
     // Lista de apps de banco usada no seletor de "Pagar com..." ao clicar no saldo vencido em
     // Finanças. Gerenciável pelo Admin (sem precisar de nova versão do app) — abrir um banco é
     // feito tentando iniciar a Activity dele direto pelo package name (Intent.setPackage), o que
@@ -285,7 +295,7 @@ const gerarMensalidadesDoMesAtual = async () => {
 
 // 1. POST /webhook/login
 app.post('/webhook/login', async (req, res) => {
-  const { email, senha } = req.body;
+  const { email, senha, appVersion } = req.body;
   if (!email || !senha) {
     return res.status(400).json({ status: 'error', message: 'E-mail e senha são obrigatórios.' });
   }
@@ -315,6 +325,14 @@ app.post('/webhook/login', async (req, res) => {
     }
 
     if (valid) {
+      // Registra a versão do app usada neste login, para o Admin identificar quem está
+      // desatualizado — não bloqueia o login se o campo não vier (versões antigas do app).
+      if (appVersion) {
+        pool.query(
+          'UPDATE jogadores SET app_version = ?, app_version_updated_at = NOW() WHERE email = ?',
+          [String(appVersion).slice(0, 20), email.trim()]
+        ).catch(e => console.error('Erro ao registrar versão do app:', e.message));
+      }
       return res.json({ status: 'success' });
     } else {
       return res.status(401).json({ status: 'error', message: 'Não foi possível entrar. Confira o e-mail e a senha, ou procure um administrador do clube.' });
@@ -355,7 +373,7 @@ app.post('/webhook/reset-password', async (req, res) => {
 app.get('/webhook/buscar-jogadores', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT jogador, avatar, email, senha, ativo, ferias_inicio, ferias_fim FROM jogadores'
+      'SELECT jogador, avatar, email, senha, ativo, ferias_inicio, ferias_fim, app_version FROM jogadores'
     );
     const { year, month, day } = getSaoPauloDateParts();
     const hoje = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -376,7 +394,8 @@ app.get('/webhook/buscar-jogadores', async (req, res) => {
         ativo: r.ativo === undefined || r.ativo === null ? 1 : Number(r.ativo),
         ferias: emFeriasHoje ? 1 : 0,
         feriasInicio: feriasInicioStr,
-        feriasFim: feriasFimStr
+        feriasFim: feriasFimStr,
+        appVersion: r.app_version || null
       };
     });
     res.json(players);
@@ -1589,15 +1608,18 @@ app.get('/webhook/comprovantes', async (req, res) => {
        LIMIT ?`,
       [limit]
     );
-    // O driver mysql2 retorna colunas DECIMAL como string (preserva precisão exata), mas o app
-    // Android desserializa esses campos como Double via Gson, que é estrito quanto a tipo e falha
-    // (silenciosamente, via exceção capturada) ao receber uma string onde espera um número JSON.
-    const rowsComNumeros = rows.map(r => ({
+    // O driver mysql2 retorna DECIMAL como string e TINYINT(1) como number (0/1), mas o app
+    // Android desserializa esses campos como Double/Boolean via Gson, que é estrito quanto a tipo
+    // e falha (silenciosamente, via exceção capturada) ao receber um tipo diferente do esperado
+    // no JSON — isso fazia a lista de comprovantes aparecer sempre vazia no app.
+    const rowsNormalizadas = rows.map(r => ({
       ...r,
       valor_esperado: r.valor_esperado !== null ? Number(r.valor_esperado) : null,
-      valor_detectado: r.valor_detectado !== null ? Number(r.valor_detectado) : null
+      valor_detectado: r.valor_detectado !== null ? Number(r.valor_detectado) : null,
+      parece_comprovante_bancario: r.parece_comprovante_bancario === null ? null : Boolean(Number(r.parece_comprovante_bancario)),
+      possui_autenticacao: r.possui_autenticacao === null ? null : Boolean(Number(r.possui_autenticacao))
     }));
-    res.json(rowsComNumeros);
+    res.json(rowsNormalizadas);
   } catch (error) {
     console.error('Erro ao listar comprovantes:', error.message);
     res.status(500).json({ error: 'Erro ao listar comprovantes.' });
