@@ -423,11 +423,11 @@ private fun StatsRow(state: DashboardUiState, navController: NavController, user
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        StatMiniCard("Jogadores", state.totalPlayers.toString(), Modifier.weight(1f))
         PartidasNoMesCard(
             minhasPartidas = state.minhasPartidasNoMes,
             meta = state.metaPartidasNoMes,
-            modifier = Modifier.weight(1f)
+            partidasHoje = state.totalMatchesToday,
+            modifier = Modifier.weight(2f)
         )
         StatMiniCard(
             "Meu débito",
@@ -464,11 +464,11 @@ private fun StatMiniCard(
     }
 }
 
-// Card de participação mensal: mostra "minhas partidas / meta" (ex: "33/16"), colorido conforme
-// o quanto o jogador está perto da média do mês — vermelho (0-50% da média), âmbar (50-99%) ou
-// verde (meta atingida) — e o mesmo label "Partidas no mês" dos demais KPIs da Dashboard.
+// Card de participação: duas colunas lado a lado — "minhas partidas / meta" no mês (colorido
+// conforme a proximidade da média: vermelho 0-50%, âmbar 50-99%, verde 100%+) e o total de
+// partidas do dia, separadas por um divisor fino.
 @Composable
-private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, modifier: Modifier = Modifier) {
+private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, partidasHoje: Int, modifier: Modifier = Modifier) {
     val percentualDaMeta = if (meta > 0) minhasPartidas.toFloat() / meta else 1f
     val valueColor = when {
         percentualDaMeta >= 1f -> DominoGreen
@@ -481,14 +481,28 @@ private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, modifier: Modifier
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("VOCÊ/CLUBE", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
-            Text("$minhasPartidas/$meta", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = valueColor, maxLines = 1)
-            Spacer(Modifier.height(2.dp))
-            Text("Partidas no mês", fontSize = 10.sp, color = DominoMuted, textAlign = TextAlign.Center, maxLines = 1)
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("VOCÊ/CLUBE", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
+                Text("$minhasPartidas/$meta", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = valueColor, maxLines = 1)
+                Spacer(Modifier.height(1.dp))
+                Text("Partidas no mês", fontSize = 9.sp, color = DominoMuted, textAlign = TextAlign.Center, maxLines = 1)
+            }
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(36.dp)
+                    .background(DominoMuted.copy(alpha = 0.15f))
+            )
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("HOJE", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
+                Text(partidasHoje.toString(), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = DominoLight, maxLines = 1)
+                Spacer(Modifier.height(1.dp))
+                Text("Partidas", fontSize = 9.sp, color = DominoMuted, textAlign = TextAlign.Center, maxLines = 1)
+            }
         }
     }
 }
