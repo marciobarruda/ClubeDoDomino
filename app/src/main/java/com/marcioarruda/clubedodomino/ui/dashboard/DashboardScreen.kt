@@ -464,13 +464,17 @@ private fun StatMiniCard(
     }
 }
 
-// Card de participação mensal: mostra "minhas partidas / meta" (ex: "33/16") em destaque, e uma
-// legenda explicando o que cada número significa — a meta é a média de partidas de quem jogou no
-// mês, então sem essa legenda "33/16" por si só não deixa claro qual número é qual.
+// Card de participação mensal: mostra "minhas partidas / meta" (ex: "33/16"), colorido conforme
+// o quanto o jogador está perto da média do mês — vermelho (0-50% da média), âmbar (50-99%) ou
+// verde (meta atingida) — e o mesmo label "Partidas no mês" dos demais KPIs da Dashboard.
 @Composable
 private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, modifier: Modifier = Modifier) {
-    val atingiuMeta = minhasPartidas >= meta
-    val valueColor = if (atingiuMeta) DominoGreen else DominoOrange
+    val percentualDaMeta = if (meta > 0) minhasPartidas.toFloat() / meta else 1f
+    val valueColor = when {
+        percentualDaMeta >= 1f -> DominoGreen
+        percentualDaMeta >= 0.5f -> DominoAmber
+        else -> DominoError
+    }
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
@@ -478,12 +482,13 @@ private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, modifier: Modifier
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text("VOCÊ/CLUBE", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
             Text("$minhasPartidas/$meta", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = valueColor, maxLines = 1)
             Spacer(Modifier.height(2.dp))
-            Text("Você / Média do mês", fontSize = 10.sp, color = DominoMuted, textAlign = TextAlign.Center, maxLines = 1)
+            Text("Partidas no mês", fontSize = 10.sp, color = DominoMuted, textAlign = TextAlign.Center, maxLines = 1)
         }
     }
 }
