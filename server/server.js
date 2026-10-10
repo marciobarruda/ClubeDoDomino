@@ -557,7 +557,9 @@ const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
     if (jaGerados.has(key)) continue;
 
     const fator = fatorDisponibilidade[key] ?? 1;
-    const metaMatches = avgMatches * fator;
+    // Meta de partidas arredondada pra cima — mesma regra exibida no KPI "Partidas no mês" do
+    // app (Dashboard), para a meta que decide a cobrança ser idêntica à que o jogador vê na tela.
+    const metaMatches = Math.ceil(avgMatches * fator);
     const metaBuchos = avgBuchos * fator;
 
     const playerMatches = partidasPorJogador[key] || 0;
