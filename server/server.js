@@ -1587,7 +1587,15 @@ app.get('/webhook/comprovantes', async (req, res) => {
        LIMIT ?`,
       [limit]
     );
-    res.json(rows);
+    // O driver mysql2 retorna colunas DECIMAL como string (preserva precisão exata), mas o app
+    // Android desserializa esses campos como Double via Gson, que é estrito quanto a tipo e falha
+    // (silenciosamente, via exceção capturada) ao receber uma string onde espera um número JSON.
+    const rowsComNumeros = rows.map(r => ({
+      ...r,
+      valor_esperado: r.valor_esperado !== null ? Number(r.valor_esperado) : null,
+      valor_detectado: r.valor_detectado !== null ? Number(r.valor_detectado) : null
+    }));
+    res.json(rowsComNumeros);
   } catch (error) {
     console.error('Erro ao listar comprovantes:', error.message);
     res.status(500).json({ error: 'Erro ao listar comprovantes.' });
