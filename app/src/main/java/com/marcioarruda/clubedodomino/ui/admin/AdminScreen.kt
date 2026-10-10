@@ -1054,10 +1054,10 @@ fun PlayersList(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        AdminAvatarBadge(
+                        com.marcioarruda.clubedodomino.ui.util.AvatarImage(
+                            url = item.user.photoUrl,
                             size = 36.dp,
-                            backgroundColor = DominoGreen,
-                            alert = !item.isActive
+                            grayscale = !item.isActive
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(item.user.displayName, color = DominoLight, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

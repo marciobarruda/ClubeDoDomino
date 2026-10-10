@@ -424,7 +424,12 @@ private fun StatsRow(state: DashboardUiState, navController: NavController, user
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         StatMiniCard("Jogadores", state.totalPlayers.toString(), Modifier.weight(1f))
-        StatMiniCard("Partidas hoje", state.totalMatchesToday.toString(), Modifier.weight(1f))
+        StatMiniCard(
+            "Partidas no mês",
+            "${state.minhasPartidasNoMes}/${state.metaPartidasNoMes}",
+            Modifier.weight(1f),
+            valueColor = if (state.minhasPartidasNoMes >= state.metaPartidasNoMes) DominoGreen else DominoOrange
+        )
         StatMiniCard(
             "Meu débito",
             "R$ ${String.format(Locale("pt", "BR"), "%.2f", state.totalDebt)}",

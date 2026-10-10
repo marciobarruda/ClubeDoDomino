@@ -29,7 +29,11 @@ data class DashboardUiState(
     val bestPlayers: List<BestPlayer> = emptyList(),
     val worstPlayers: List<BestPlayer> = emptyList(),
     val isRefreshing: Boolean = false,
-    val championCelebration: ChampionCelebration? = null
+    val championCelebration: ChampionCelebration? = null,
+    // KPI de participação no mês: partidas jogadas pelo usuário logado vs. meta mínima (média
+    // parcial do grupo elegível no mês, arredondada pra cima) para não pegar taxa extra.
+    val minhasPartidasNoMes: Int = 0,
+    val metaPartidasNoMes: Int = 0
 )
 
 class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
@@ -64,9 +68,9 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 val totalDebt = repository.getTotalDebt(userId)
 
                 // Carrega e processa as partidas recentes
-                val matches = repository.getMatches().distinctBy { it.id }.sortedByDescending { it.date }.take(20)
+                val allMatches = repository.getMatches().distinctBy { it.id }.sortedByDescending { it.date }
+                val matches = allMatches.take(20)
                 val groupedMatches = matches.groupBy { dateFormatter.format(it.date) }
-
 
                 // Calculate Best and Worst Players of the Day using Ranking API
                 var topPlayers = emptyList<BestPlayer>()
@@ -74,6 +78,8 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
 
                 val rankingResult = repository.getRankingResult()
                 val allPlayers = repository.getPlayers()
+
+                val (minhasPartidasNoMes, metaPartidasNoMes) = calcularParticipacaoNoMes(userId, allMatches, allPlayers)
 
                 rankingResult.onSuccess { ranking ->
                     val awards = com.marcioarruda.clubedodomino.domain.calculateDailyAwards(ranking, allPlayers)
@@ -124,7 +130,9 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                         groupedMatches = groupedMatches,
                         bestPlayers = topPlayers,
                         worstPlayers = bottomPlayers,
-                        championCelebration = championCelebration
+                        championCelebration = championCelebration,
+                        minhasPartidasNoMes = minhasPartidasNoMes,
+                        metaPartidasNoMes = metaPartidasNoMes
                     )
                 }
             } catch (e: Exception) {
@@ -137,6 +145,78 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 }
             }
         }
+    }
+
+    // Calcula "quantas partidas o usuário logado já jogou no mês corrente" vs. a meta mínima para
+    // não pegar taxa extra de buchos. Replica a mesma regra de elegibilidade e pró-rata de férias
+    // usada no backend (gerarTaxaExtraBuchosParaMes em server.js), mas sobre o mês EM ANDAMENTO —
+    // é uma projeção parcial que muda conforme mais partidas são registradas no mês.
+    private fun calcularParticipacaoNoMes(userId: String, allMatches: List<Match>, allPlayers: List<User>): Pair<Int, Int> {
+        val cal = java.util.Calendar.getInstance()
+        val anoAtual = cal.get(java.util.Calendar.YEAR)
+        val mesAtual = cal.get(java.util.Calendar.MONTH) // 0-based
+
+        cal.set(anoAtual, mesAtual, 1, 0, 0, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        val inicioMes = cal.time
+        cal.add(java.util.Calendar.MONTH, 1)
+        val fimMes = cal.time // exclusivo
+        val diasDoMes = ((fimMes.time - inicioMes.time) / 86400000L).toInt()
+
+        // Elegibilidade: ativo, não "NÃO MEMBRO", e sem férias cobrindo o mês inteiro — mesma
+        // regra SQL do backend (WHERE ativo=1 AND NOT (ferias cobre o mês inteiro) AND nome NOT LIKE '%NÃO MEMBRO%').
+        fun ferasCobremMesInteiro(user: User): Boolean {
+            val inicio = user.vacationStart ?: return false
+            if (inicio.after(inicioMes)) return false // férias começam depois do 1º dia do mês
+            val fim = user.vacationEnd
+            return fim == null || !fim.before(cal.apply { time = fimMes; add(java.util.Calendar.DAY_OF_MONTH, -1) }.time)
+        }
+
+        val elegiveis = allPlayers.filter { user ->
+            user.isActive &&
+                !user.name.uppercase(java.util.Locale.ROOT).contains("NÃO MEMBRO") &&
+                !ferasCobremMesInteiro(user)
+        }
+        if (elegiveis.isEmpty()) return 0 to 0
+
+        val nomesElegiveis = elegiveis.map { it.name.trim().uppercase(java.util.Locale.ROOT) }.toSet()
+
+        // Partidas do mês corrente
+        val matchesDoMes = allMatches.filter { !it.date.before(inicioMes) && it.date.before(fimMes) }
+
+        // Conta participações por jogador elegível (cada partida conta até 4 vezes, uma por jogador)
+        val partidasPorJogador = nomesElegiveis.associateWith { 0 }.toMutableMap()
+        for (match in matchesDoMes) {
+            for (jogador in listOf(match.team1Player1, match.team1Player2, match.team2Player1, match.team2Player2)) {
+                val nome = jogador.name.trim().uppercase(java.util.Locale.ROOT)
+                if (nome in partidasPorJogador) partidasPorJogador[nome] = partidasPorJogador.getValue(nome) + 1
+            }
+        }
+
+        val totalPartidas = partidasPorJogador.values.sum()
+        val avgMatches = totalPartidas.toDouble() / elegiveis.size
+
+        // Fator de disponibilidade do jogador logado (dias fora de férias no mês / dias do mês) —
+        // mesma lógica de diasDisponiveisNoMes no backend.
+        val usuarioLogado = allPlayers.find { it.id == userId }
+        val fator = usuarioLogado?.let { user ->
+            val inicio = user.vacationStart
+            if (inicio == null) 1.0
+            else {
+                val fimFerias = user.vacationEnd ?: fimMes
+                val overlapInicio = if (inicio.after(inicioMes)) inicio else inicioMes
+                val fimFeriasExclusivo = java.util.Date(fimFerias.time + 86400000L)
+                val overlapFim = if (fimFeriasExclusivo.before(fimMes)) fimFeriasExclusivo else fimMes
+                val diasDeFerias = maxOf(0L, (overlapFim.time - overlapInicio.time) / 86400000L)
+                if (diasDoMes > 0) maxOf(0.0, (diasDoMes - diasDeFerias).toDouble() / diasDoMes) else 1.0
+            }
+        } ?: 1.0
+
+        val metaMatches = kotlin.math.ceil(avgMatches * fator).toInt()
+        val nomeLogadoKey = usuarioLogado?.name?.trim()?.uppercase(java.util.Locale.ROOT)
+        val minhasPartidas = partidasPorJogador[nomeLogadoKey] ?: 0
+
+        return minhasPartidas to metaMatches
     }
 
     fun updateProfileImage(email: String, base64Image: String, onSuccess: () -> Unit) {

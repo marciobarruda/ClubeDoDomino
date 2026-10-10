@@ -29,13 +29,19 @@ fun AvatarImage(
     size: Dp,
     modifier: Modifier = Modifier,
     borderColor: Color = RoyalGold,
-    borderWidth: Dp = 1.dp
+    borderWidth: Dp = 1.dp,
+    grayscale: Boolean = false
 ) {
     val finalModifier = modifier
         .size(size)
         .clip(CircleShape)
         .border(borderWidth, borderColor, CircleShape)
         .background(Color.Gray)
+
+    // Dessatura o avatar (ex.: jogador inativo) sem precisar de uma versão em P&B de cada imagem.
+    val colorFilter = if (grayscale) {
+        androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) })
+    } else null
 
     val resId = when (url) {
         "avatar_1" -> com.marcioarruda.clubedodomino.R.drawable.avatar_1
@@ -75,7 +81,8 @@ fun AvatarImage(
             painter = androidx.compose.ui.res.painterResource(id = resId),
             contentDescription = "Avatar",
             modifier = finalModifier,
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            colorFilter = colorFilter
         )
         return
     }
@@ -107,7 +114,8 @@ fun AvatarImage(
                 painter = BitmapPainter(bitmap),
                 contentDescription = "Avatar",
                 modifier = finalModifier,
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                colorFilter = colorFilter
             )
         } else {
              // Fallback to AsyncImage or Placeholder if decoding fails
@@ -115,7 +123,8 @@ fun AvatarImage(
                 model = url,
                 contentDescription = "Avatar",
                 modifier = finalModifier,
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                colorFilter = colorFilter
             )
         }
     } else {
@@ -123,7 +132,8 @@ fun AvatarImage(
             model = url,
             contentDescription = "Avatar",
             modifier = finalModifier,
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            colorFilter = colorFilter
         )
     }
 }
