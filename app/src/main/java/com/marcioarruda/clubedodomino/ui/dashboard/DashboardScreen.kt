@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -66,7 +67,11 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
         // Mesma tela do Splash (fundo verde, peça grande, textos) — evita a "piscada" de trocar
         // para o fundo creme da Dashboard só para mostrar um indicador de carregamento genérico,
         // já que o Splash e este primeiro carregamento acontecem em sequência imediata.
-        com.marcioarruda.clubedodomino.ui.ClubeDominoLoadingScreen()
+        // skipEntranceAnimation=true: esta tela é a CONTINUAÇÃO visual do Splash (outra instância
+        // do mesmo composable), então já entra com opacidade total em vez de reiniciar o fade-in
+        // do zero — é esse replay da animação, não a cor de fundo, que fazia parecer duas telas
+        // piscando uma depois da outra.
+        com.marcioarruda.clubedodomino.ui.ClubeDominoLoadingScreen(skipEntranceAnimation = true)
         return
     }
 
@@ -479,13 +484,13 @@ private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, partidasHoje: Int,
         else -> DominoError
     }
     Card(
-        modifier = modifier,
+        modifier = modifier.height(StatsCardHeight),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 6.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -510,19 +515,25 @@ private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, partidasHoje: Int,
     }
 }
 
+// Altura fixa compartilhada pelos dois KPIs da StatsRow (Partidas e Débito), para garantir que
+// fiquem com a mesma altura independente de quantas linhas de texto cada um tiver internamente —
+// confiar que o conteúdo interno "coincidiria" por acaso não funcionou (Débito tem 4 linhas de
+// texto, Partidas tem 3).
+private val StatsCardHeight = 72.dp
+
 // Card "Meu débito": mesma altura do card de Partidas, com o valor vencido e a vencer em duas
 // linhas (em vez de um único total somado), para dar a mesma informação que já existe em
 // Finanças sem precisar abrir a tela.
 @Composable
 private fun MeuDebitoCard(totalVencido: Double, totalAVencer: Double, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     Card(
-        modifier = modifier.let { if (onClick != null) it.clickable(onClick = onClick) else it },
+        modifier = modifier.height(StatsCardHeight).let { if (onClick != null) it.clickable(onClick = onClick) else it },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -638,7 +649,8 @@ private fun MatchItem(match: Match, currentUserId: String, onMatchClick: (String
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onMatchClick(match.id) },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = if (isCurrentUserInMatch) DominoGreen.copy(alpha = 0.08f) else DominoSurface)
+        colors = CardDefaults.cardColors(containerColor = if (isCurrentUserInMatch) DominoYellow.copy(alpha = 0.14f) else DominoSurface),
+        border = if (isCurrentUserInMatch) BorderStroke(1.dp, DominoYellow.copy(alpha = 0.4f)) else null
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

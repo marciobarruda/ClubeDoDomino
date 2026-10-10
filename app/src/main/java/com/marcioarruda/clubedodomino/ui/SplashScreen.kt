@@ -122,15 +122,22 @@ fun DominoLoadingAnimation(
 // dominó animada, nome do clube e "Carregando..."). Usada tanto no Splash inicial do app quanto
 // no primeiro carregamento da Dashboard, para que a transição entre as duas pareça uma única tela
 // contínua em vez de piscar entre o verde do Splash e o creme da Dashboard.
+//
+// skipEntranceAnimation=true faz a tela já aparecer com tudo em opacidade total (sem o fade-in/
+// scale de entrada) — usado quando esta tela é a CONTINUAÇÃO de outra instância idêntica dela
+// mesma (Splash -> loading da Dashboard), para não reiniciar a animação do zero e dar a impressão
+// de duas telas piscando uma após a outra.
 @Composable
-fun ClubeDominoLoadingScreen() {
-    val alphaAnim = remember { Animatable(0f) }
-    val textAlpha = remember { Animatable(0f) }
+fun ClubeDominoLoadingScreen(skipEntranceAnimation: Boolean = false) {
+    val alphaAnim = remember { Animatable(if (skipEntranceAnimation) 1f else 0f) }
+    val textAlpha = remember { Animatable(if (skipEntranceAnimation) 1f else 0f) }
 
     LaunchedEffect(Unit) {
-        alphaAnim.animateTo(1f, tween(500))
-        delay(400)
-        textAlpha.animateTo(1f, tween(600, easing = EaseOutCubic))
+        if (!skipEntranceAnimation) {
+            alphaAnim.animateTo(1f, tween(500))
+            delay(400)
+            textAlpha.animateTo(1f, tween(600, easing = EaseOutCubic))
+        }
     }
 
     val pulse = rememberInfiniteTransition(label = "glowPulse")

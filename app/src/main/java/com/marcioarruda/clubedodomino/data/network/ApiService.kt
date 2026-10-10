@@ -247,7 +247,8 @@ data class ComprovanteHistoricoDto(
     @SerializedName("credor_instituicao") val credorInstituicao: String? = null,
     @SerializedName("credor_chave_pix") val credorChavePix: String? = null,
     @SerializedName("pagador_detectado") val pagadorDetectado: String? = null,
-    @SerializedName("pagador_documento") val pagadorDocumento: String? = null
+    @SerializedName("pagador_documento") val pagadorDocumento: String? = null,
+    @SerializedName("periodo_referencia") val periodoReferencia: String? = null
 )
 
 // Requisição/resposta da rota de teste da análise de IA (não dá baixa em nada)

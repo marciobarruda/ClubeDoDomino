@@ -1579,84 +1579,132 @@ fun ComprovantesTab(
                 Text("Nenhum comprovante submetido ainda.", color = DominoMuted, fontSize = 14.sp)
             }
         } else {
+            item {
+                // Cabeçalho da tabela
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("JOGADOR", color = DominoMuted, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.3.sp, modifier = Modifier.weight(1f))
+                    Text("PERÍODO REF.", color = DominoMuted, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.3.sp)
+                }
+            }
             items(uiState.comprovantesHistorico) { c ->
-                ComprovanteHistoricoCard(c)
+                ComprovanteHistoricoRow(c)
             }
         }
     }
 }
 
+// Linha compacta da "tabela" de histórico: jogador + período de referência da cobrança quitada.
+// Clicar abre o diálogo com todos os detalhes (ComprovanteDetalhesDialog).
 @Composable
-private fun ComprovanteHistoricoCard(c: ComprovanteHistoricoDto) {
+private fun ComprovanteHistoricoRow(c: ComprovanteHistoricoDto) {
+    var showDetalhes by remember { mutableStateOf(false) }
     val aprovado = c.decisao == "BAIXA_AUTOMATICA"
     val borderColor = if (aprovado) DominoGreen.copy(alpha = 0.3f) else AlertBorderColor
 
+    if (showDetalhes) {
+        ComprovanteDetalhesDialog(c = c, onDismiss = { showDetalhes = false })
+    }
+
     Card(
         colors = CardDefaults.cardColors(containerColor = DominoSurface),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, borderColor),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp)
-            .shadow(1.dp, RoundedCornerShape(16.dp))
+            .padding(bottom = 6.dp)
+            .clickable { showDetalhes = true }
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(c.jogadorNome ?: "—", color = DominoLight, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(c.jogadorNome ?: "—", color = DominoLight, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                Text(
+                    if (aprovado) "✅ Baixa automática" else "⚠️ Enviado ao Telegram",
+                    color = if (aprovado) DominoGreen else DominoOrange,
+                    fontSize = 11.sp
+                )
+            }
+            Text(
+                c.periodoReferencia?.toBrDate("MM/yyyy") ?: "—",
+                color = DominoMuted,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun ComprovanteDetalhesDialog(c: ComprovanteHistoricoDto, onDismiss: () -> Unit) {
+    val aprovado = c.decisao == "BAIXA_AUTOMATICA"
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DominoSurface,
+        title = { Text(c.jogadorNome ?: "—", color = DominoLight, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     if (aprovado) "✅ Baixa automática" else "⚠️ Enviado ao Telegram",
                     color = if (aprovado) DominoGreen else DominoOrange,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    fontSize = 13.sp
                 )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("Valor esperado: R$ ${"%.2f".format(c.valorEsperado ?: 0.0)}", color = DominoMuted, fontSize = 13.sp)
-            if (c.valorDetectado != null) {
-                Text("Valor detectado pela IA: R$ ${"%.2f".format(c.valorDetectado)}", color = DominoMuted, fontSize = 13.sp)
-            }
-            if (c.bancoOrigem != null) {
-                Text("Banco de origem: ${c.bancoOrigem}", color = DominoMuted, fontSize = 13.sp)
-            }
-            if (c.tipoTransacao != null) {
-                Text("Tipo: ${c.tipoTransacao}", color = DominoMuted, fontSize = 13.sp)
-            }
-            if (c.dataHoraDetectada != null) {
-                Text("Data/hora: ${c.dataHoraDetectada.toBrDate("dd/MM/yyyy HH:mm")}", color = DominoMuted, fontSize = 13.sp)
-            } else if (c.dataDetectada != null) {
-                Text("Data detectada: ${c.dataDetectada.toBrDate()}", color = DominoMuted, fontSize = 13.sp)
-            }
-            if (c.idTransacaoDetectado != null) {
-                Text("ID da transação: ${c.idTransacaoDetectado}", color = DominoMuted, fontSize = 13.sp)
-            }
-            if (c.credorDetectado != null) {
-                val credorInfo = buildString {
-                    append(c.credorDetectado)
-                    if (c.credorDocumento != null) append(", CPF/CNPJ ${c.credorDocumento}")
-                    if (c.credorInstituicao != null) append(", ${c.credorInstituicao}")
-                    if (c.credorChavePix != null) append(", chave ${c.credorChavePix}")
+                Spacer(modifier = Modifier.height(6.dp))
+                if (c.periodoReferencia != null) {
+                    Text("Período de referência: ${c.periodoReferencia.toBrDate("MM/yyyy")}", color = DominoMuted, fontSize = 13.sp)
                 }
-                Text("Destino (credor): $credorInfo", color = DominoMuted, fontSize = 13.sp)
-            }
-            if (c.pagadorDetectado != null) {
-                val pagadorInfo = buildString {
-                    append(c.pagadorDetectado)
-                    if (c.pagadorDocumento != null) append(", CPF/CNPJ ${c.pagadorDocumento}")
+                Text("Valor esperado: R$ ${"%.2f".format(c.valorEsperado ?: 0.0)}", color = DominoMuted, fontSize = 13.sp)
+                if (c.valorDetectado != null) {
+                    Text("Valor detectado pela IA: R$ ${"%.2f".format(c.valorDetectado)}", color = DominoMuted, fontSize = 13.sp)
                 }
-                Text("Origem (pagador): $pagadorInfo", color = DominoMuted, fontSize = 13.sp)
+                if (c.bancoOrigem != null) {
+                    Text("Banco de origem: ${c.bancoOrigem}", color = DominoMuted, fontSize = 13.sp)
+                }
+                if (c.tipoTransacao != null) {
+                    Text("Tipo: ${c.tipoTransacao}", color = DominoMuted, fontSize = 13.sp)
+                }
+                if (c.dataHoraDetectada != null) {
+                    Text("Data/hora: ${c.dataHoraDetectada.toBrDate("dd/MM/yyyy HH:mm")}", color = DominoMuted, fontSize = 13.sp)
+                } else if (c.dataDetectada != null) {
+                    Text("Data detectada: ${c.dataDetectada.toBrDate()}", color = DominoMuted, fontSize = 13.sp)
+                }
+                if (c.idTransacaoDetectado != null) {
+                    Text("ID da transação: ${c.idTransacaoDetectado}", color = DominoMuted, fontSize = 13.sp)
+                }
+                if (c.credorDetectado != null) {
+                    val credorInfo = buildString {
+                        append(c.credorDetectado)
+                        if (c.credorDocumento != null) append(", CPF/CNPJ ${c.credorDocumento}")
+                        if (c.credorInstituicao != null) append(", ${c.credorInstituicao}")
+                        if (c.credorChavePix != null) append(", chave ${c.credorChavePix}")
+                    }
+                    Text("Destino (credor): $credorInfo", color = DominoMuted, fontSize = 13.sp)
+                }
+                if (c.pagadorDetectado != null) {
+                    val pagadorInfo = buildString {
+                        append(c.pagadorDetectado)
+                        if (c.pagadorDocumento != null) append(", CPF/CNPJ ${c.pagadorDocumento}")
+                    }
+                    Text("Origem (pagador): $pagadorInfo", color = DominoMuted, fontSize = 13.sp)
+                }
+                if (!c.motivo.isNullOrBlank()) {
+                    Text(c.motivo, color = if (aprovado) DominoGreen else DominoOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
+                if (c.createdAt != null) {
+                    Text("Enviado em: ${c.createdAt.toBrDate("dd/MM/yyyy HH:mm")}", color = DominoMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                }
             }
-            if (!c.motivo.isNullOrBlank()) {
-                Text(c.motivo, color = if (aprovado) DominoGreen else DominoOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            }
-            if (c.createdAt != null) {
-                Text(c.createdAt.toBrDate("dd/MM/yyyy HH:mm"), color = DominoMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
-            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Fechar") }
         }
-    }
+    )
 }
 
 @Composable
