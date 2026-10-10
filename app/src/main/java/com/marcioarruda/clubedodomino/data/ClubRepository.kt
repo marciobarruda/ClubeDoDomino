@@ -81,6 +81,25 @@ class ClubRepository {
         api.login(LoginRequest(email, pass))
     }
 
+    suspend fun getBancosPix(apenasAtivos: Boolean = false): List<BancoPixDto> = withContext(Dispatchers.IO) {
+        api.getBancosPix(if (apenasAtivos) true else null)
+    }
+
+    suspend fun createBancoPix(nomeExibicao: String, packageName: String, ordem: Int): Unit = withContext(Dispatchers.IO) {
+        api.createBancoPix(CreateBancoPixRequest(nomeExibicao, packageName, ordem))
+        Unit
+    }
+
+    suspend fun updateBancoPix(id: Int, nomeExibicao: String, packageName: String, ativo: Boolean, ordem: Int): Unit = withContext(Dispatchers.IO) {
+        api.updateBancoPix(id, UpdateBancoPixRequest(nomeExibicao, packageName, ativo, ordem))
+        Unit
+    }
+
+    suspend fun deleteBancoPix(id: Int): Unit = withContext(Dispatchers.IO) {
+        api.deleteBancoPix(id)
+        Unit
+    }
+
     suspend fun updatePassword(email: String, pass: String): Unit = withContext(Dispatchers.IO) {
         api.resetPassword(ResetPasswordRequest(email, pass))
         Unit

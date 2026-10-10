@@ -102,6 +102,56 @@ let pool = mysql.createPool({
         if (!/Duplicate column/i.test(e.message)) throw e;
       }
     }
+
+    // Lista de apps de banco usada no seletor de "Pagar com..." ao clicar no saldo vencido em
+    // Finanças. Gerenciável pelo Admin (sem precisar de nova versão do app) — abrir um banco é
+    // feito tentando iniciar a Activity dele direto pelo package name (Intent.setPackage), o que
+    // não exige declarar o pacote em <queries> no manifest (essa restrição do Android 11+ vale só
+    // para CONSULTAR outro app via PackageManager, não para iniciar uma Activity dele por nome).
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS bancos_pix (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nome_exibicao VARCHAR(100) NOT NULL,
+        package_name VARCHAR(150) NOT NULL,
+        ativo TINYINT(1) NOT NULL DEFAULT 1,
+        ordem INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
+    const [[{ total: totalBancos }]] = await pool.query('SELECT COUNT(*) as total FROM bancos_pix');
+    if (totalBancos === 0) {
+      // Ordem inicial por downloads/base de usuários no Brasil (maior primeiro) — o Admin pode
+      // reordenar depois arrastando/ajustando o campo "ordem" de cada banco.
+      const bancosSeed = [
+        ['Nubank', 'com.nu.production'],
+        ['PicPay', 'com.picpay'],
+        ['Caixa', 'br.com.gabba.Caixa'],
+        ['Mercado Pago', 'com.mercadopago.wallet'],
+        ['Banco do Brasil', 'br.com.bb.android'],
+        ['Itaú', 'com.itau'],
+        ['Bradesco', 'com.bradesco'],
+        ['Santander', 'com.santander.app'],
+        ['Banco Inter', 'br.com.intermedium'],
+        ['C6 Bank', 'com.c6bank.app'],
+        ['PagBank', 'br.com.uol.ps.myaccount'],
+        ['Banco Pan', 'br.com.bancopan.cartoes'],
+        ['Neon', 'br.com.neon'],
+        ['BTG Pactual', 'com.btg.pactual.banking'],
+        ['Cora', 'br.com.cora.bank'],
+        ['Nomad', 'com.nomadfintech.bank.app.android'],
+        ['XP Investimentos', 'br.com.xp.carteira'],
+        ['Santander Empresarial', 'com.santandermovelempresarial.app'],
+        ['Inter Empresas', 'br.com.Inter.CDPro']
+      ];
+      for (let i = 0; i < bancosSeed.length; i++) {
+        const [nome, pkg] = bancosSeed[i];
+        await pool.query(
+          'INSERT INTO bancos_pix (nome_exibicao, package_name, ativo, ordem) VALUES (?, ?, 1, ?)',
+          [nome, pkg, i]
+        );
+      }
+      console.log(`✅ Lista inicial de ${bancosSeed.length} bancos Pix criada.`);
+    }
   } catch (error) {
     console.error('❌ Falha ao conectar ao banco de dados MySQL:', error.message);
   }
@@ -1744,6 +1794,78 @@ app.delete('/webhook/partidas-em-andamento/:id', async (req, res) => {
   } catch (error) {
     console.error('Erro ao excluir partida em andamento:', error.message);
     res.status(500).json({ status: 'error', message: 'Erro ao excluir partida em andamento.' });
+  }
+});
+
+// 14b. GET /webhook/bancos-pix — lista os apps de banco para o seletor de "Pagar com..." em
+// Finanças. ?apenasAtivos=true filtra os desativados (usado pelo app; o Admin busca todos).
+app.get('/webhook/bancos-pix', async (req, res) => {
+  try {
+    const apenasAtivos = req.query.apenasAtivos === 'true';
+    const [rows] = await pool.query(
+      `SELECT id, nome_exibicao, package_name, ativo, ordem FROM bancos_pix
+       ${apenasAtivos ? 'WHERE ativo = 1' : ''}
+       ORDER BY ordem ASC, nome_exibicao ASC`
+    );
+    res.json(rows.map(r => ({
+      id: r.id,
+      nomeExibicao: r.nome_exibicao,
+      packageName: r.package_name,
+      ativo: Number(r.ativo) === 1,
+      ordem: r.ordem
+    })));
+  } catch (error) {
+    console.error('Erro ao buscar bancos Pix:', error.message);
+    res.status(500).json({ error: 'Erro ao buscar bancos Pix' });
+  }
+});
+
+// 14c. POST /webhook/bancos-pix — cadastra um novo banco na lista (usado pelo Admin)
+app.post('/webhook/bancos-pix', async (req, res) => {
+  const { nomeExibicao, packageName, ordem } = req.body;
+  if (!nomeExibicao || !packageName) {
+    return res.status(400).json({ status: 'error', message: 'nomeExibicao e packageName são obrigatórios.' });
+  }
+  try {
+    await pool.query(
+      'INSERT INTO bancos_pix (nome_exibicao, package_name, ativo, ordem) VALUES (?, ?, 1, ?)',
+      [nomeExibicao.trim(), packageName.trim(), ordem || 0]
+    );
+    res.status(201).json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao cadastrar banco Pix:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao cadastrar banco Pix.' });
+  }
+});
+
+// 14d. PUT /webhook/bancos-pix/:id — edita nome/pacote/ordem/ativo de um banco
+app.put('/webhook/bancos-pix/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nomeExibicao, packageName, ativo, ordem } = req.body;
+  if (!nomeExibicao || !packageName) {
+    return res.status(400).json({ status: 'error', message: 'nomeExibicao e packageName são obrigatórios.' });
+  }
+  try {
+    await pool.query(
+      'UPDATE bancos_pix SET nome_exibicao = ?, package_name = ?, ativo = ?, ordem = ? WHERE id = ?',
+      [nomeExibicao.trim(), packageName.trim(), ativo ? 1 : 0, ordem || 0, id]
+    );
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao atualizar banco Pix:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao atualizar banco Pix.' });
+  }
+});
+
+// 14e. DELETE /webhook/bancos-pix/:id
+app.delete('/webhook/bancos-pix/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM bancos_pix WHERE id = ?', [id]);
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Erro ao excluir banco Pix:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao excluir banco Pix.' });
   }
 });
 

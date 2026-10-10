@@ -17,6 +17,7 @@ import com.marcioarruda.clubedodomino.data.GlobalStats
 import com.marcioarruda.clubedodomino.data.Match
 import com.marcioarruda.clubedodomino.data.network.BuchoDto
 import com.marcioarruda.clubedodomino.data.network.ComprovanteRequest
+import com.marcioarruda.clubedodomino.data.network.BancoPixDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +49,9 @@ data class FinanceUiState(
     val uploadBaixaAutomatica: Boolean? = null,
     val navigateToHome: Boolean = false,
     val globalStats: GlobalStats? = null,
-    val isRefreshing: Boolean = false
+    val isRefreshing: Boolean = false,
+    val bancosPix: List<BancoPixDto> = emptyList(),
+    val pixKeyCopiedMessage: String? = null
 )
 
 class FinanceViewModel(
@@ -59,6 +62,22 @@ class FinanceViewModel(
     private val mutex = Mutex()
     private val _uiState = MutableStateFlow(FinanceUiState())
     val uiState: StateFlow<FinanceUiState> = _uiState.asStateFlow()
+
+    fun loadBancosPix() {
+        viewModelScope.launch {
+            try {
+                val bancos = repository.getBancosPix(apenasAtivos = true)
+                _uiState.update { it.copy(bancosPix = bancos) }
+            } catch (e: Exception) {
+                // Lista de bancos é um complemento (facilita o pagamento); falha aqui não deve
+                // travar a tela de Finanças.
+            }
+        }
+    }
+
+    fun clearPixKeyCopiedMessage() {
+        _uiState.update { it.copy(pixKeyCopiedMessage = null) }
+    }
 
     fun uploadComprovante(userId: String, uri: Uri, context: Context) {
         viewModelScope.launch {

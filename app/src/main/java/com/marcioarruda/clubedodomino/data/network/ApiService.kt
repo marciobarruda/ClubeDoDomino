@@ -42,6 +42,17 @@ data class CreatePlayerRequest(
     val startMonth: Int? = null
 )
 
+data class BancoPixDto(
+    val id: Int,
+    val nomeExibicao: String,
+    val packageName: String,
+    val ativo: Boolean,
+    val ordem: Int
+)
+
+data class CreateBancoPixRequest(val nomeExibicao: String, val packageName: String, val ordem: Int = 0)
+data class UpdateBancoPixRequest(val nomeExibicao: String, val packageName: String, val ativo: Boolean, val ordem: Int)
+
 data class ActiveMatchDto(
     val id: String,
     val jogador1: String?,
@@ -376,6 +387,18 @@ interface ApiService {
 
     @GET("https://worldtimeapi.org/api/timezone/America/Recife")
     suspend fun getServerTime(): WorldTimeResponse
+
+    @GET("webhook/bancos-pix")
+    suspend fun getBancosPix(@Query("apenasAtivos") apenasAtivos: Boolean? = null): List<BancoPixDto>
+
+    @POST("webhook/bancos-pix")
+    suspend fun createBancoPix(@Body request: CreateBancoPixRequest): SimpleStatusResponse
+
+    @PUT("webhook/bancos-pix/{id}")
+    suspend fun updateBancoPix(@Path("id") id: Int, @Body request: UpdateBancoPixRequest): SimpleStatusResponse
+
+    @DELETE("webhook/bancos-pix/{id}")
+    suspend fun deleteBancoPix(@Path("id") id: Int): SimpleStatusResponse
 }
 
 data class StackTraceRequest(

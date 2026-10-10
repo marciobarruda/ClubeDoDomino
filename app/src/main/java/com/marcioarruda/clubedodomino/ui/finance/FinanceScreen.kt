@@ -67,14 +67,24 @@ fun FinanceScreen(
     // Carrega dados apenas uma vez quando a tela é exibida
     LaunchedEffect(key1 = userId) {
         viewModel.loadFinancialData(userId)
+        viewModel.loadBancosPix()
     }
 
     val uiState by viewModel.uiState.collectAsState()
     var selectedEntry by remember { mutableStateOf<FinancialEntry?>(null) }
     var selectedFilter by remember { mutableStateOf(FinanceFilter.ALL) }
+    var showBancoPixSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+    val bancoPixSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    uiState.pixKeyCopiedMessage?.let { message ->
+        LaunchedEffect(message) {
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.clearPixKeyCopiedMessage()
+        }
+    }
 
     // Launcher para selecionar imagens ou PDFs
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -232,7 +242,10 @@ fun FinanceScreen(
                                     totalAVencer = uiState.totalUpcoming,
                                     pendingCount = pendingCount,
                                     onVencidoClick = {
-                                        copiarValorEAbrirApps(context, uiState.totalDue)
+                                        copiarChavePixParaAreaDeTransferencia(context) { message ->
+                                            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                        showBancoPixSheet = true
                                     }
                                 )
                             }
@@ -316,6 +329,26 @@ fun FinanceScreen(
                 containerColor = DominoSurface
             ) {
                 MatchDetailsBottomSheet(entry = selectedEntry!!, onDismiss = { dismissDetails() })
+            }
+        }
+
+        if (showBancoPixSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showBancoPixSheet = false },
+                sheetState = bancoPixSheetState,
+                containerColor = DominoSurface
+            ) {
+                BancoPixSheet(
+                    bancos = uiState.bancosPix,
+                    onBancoClick = { banco ->
+                        abrirAppDoBanco(context, banco.packageName)
+                        showBancoPixSheet = false
+                    },
+                    onOutroAppClick = {
+                        abrirSeletorGenerico(context)
+                        showBancoPixSheet = false
+                    }
+                )
             }
         }
     }
@@ -608,7 +641,8 @@ fun TotalDueCard(
                     label = "VENCIDO",
                     value = totalVencido,
                     color = DominoError,
-                    onClick = if (totalVencido > 0.0) onVencidoClick else null
+                    onClick = if (totalVencido > 0.0) onVencidoClick else null,
+                    showPixBadge = totalVencido > 0.0
                 )
                 Box(
                     modifier = Modifier
@@ -629,7 +663,13 @@ fun TotalDueCard(
 }
 
 @Composable
-private fun SaldoColumn(label: String, value: Double, color: Color, onClick: (() -> Unit)? = null) {
+private fun SaldoColumn(
+    label: String,
+    value: Double,
+    color: Color,
+    onClick: (() -> Unit)? = null,
+    showPixBadge: Boolean = false
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
@@ -641,30 +681,63 @@ private fun SaldoColumn(label: String, value: Double, color: Color, onClick: (()
             fontSize = 24.sp
         )
         Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            label,
-            color = DominoOnDarkMuted,
-            fontWeight = FontWeight.Bold,
-            fontSize = 10.sp,
-            letterSpacing = 0.5.sp
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                label,
+                color = DominoOnDarkMuted,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                letterSpacing = 0.5.sp
+            )
+            if (showPixBadge) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(DominoYellow.copy(alpha = 0.18f))
+                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                ) {
+                    Text("⚡ PIX", color = DominoYellow, fontWeight = FontWeight.Black, fontSize = 8.5.sp, letterSpacing = 0.3.sp)
+                }
+            }
+        }
     }
 }
 
-// Copia o valor vencido para a área de transferência (facilita colar no app do banco ao fazer
-// o Pix) e abre o seletor de apps do Android para compartilhar o valor, que lista os apps
-// instalados que aceitam texto — normalmente inclui os principais bancos/carteiras com Pix,
-// sem precisar manter uma lista fixa de pacotes conhecidos.
-private fun copiarValorEAbrirApps(context: android.content.Context, valor: Double) {
-    val valorFormatado = String.format(java.util.Locale.US, "%.2f", valor)
+// Chave Pix do clube — copiada automaticamente ao clicar no saldo vencido, para o jogador só
+// colar no app do banco que escolher.
+private const val CHAVE_PIX_CLUBE = "clubedominoemprel@gmail.com"
+
+private fun copiarChavePixParaAreaDeTransferencia(context: android.content.Context, onCopiado: (String) -> Unit) {
     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Valor do Pix", valorFormatado))
+    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Chave Pix", CHAVE_PIX_CLUBE))
+    onCopiado("Chave Pix copiada: $CHAVE_PIX_CLUBE")
+}
 
-    android.widget.Toast.makeText(context, "Valor copiado para a área de transferência", android.widget.Toast.LENGTH_SHORT).show()
+// Tenta abrir o app do banco direto pelo package name (sem checar antes via PackageManager —
+// essa checagem é que exigiria declarar o pacote em <queries> no manifest; iniciar a Activity
+// direto por nome não exige). Se o app não estiver instalado, cai no seletor genérico do Android.
+private fun abrirAppDoBanco(context: android.content.Context, packageName: String) {
+    val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+    if (launchIntent != null) {
+        launchIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            context.startActivity(launchIntent)
+            return
+        } catch (_: android.content.ActivityNotFoundException) {
+            // cai no fallback abaixo
+        }
+    }
+    android.widget.Toast.makeText(context, "App não encontrado neste aparelho.", android.widget.Toast.LENGTH_SHORT).show()
+    abrirSeletorGenerico(context)
+}
 
+// Fallback: seletor padrão do Android para "abrir com", usado quando o banco escolhido não está
+// instalado ou quando o jogador prefere escolher manualmente.
+private fun abrirSeletorGenerico(context: android.content.Context) {
     val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
         type = "text/plain"
-        putExtra(android.content.Intent.EXTRA_TEXT, valorFormatado)
+        putExtra(android.content.Intent.EXTRA_TEXT, CHAVE_PIX_CLUBE)
     }
     val chooser = android.content.Intent.createChooser(sendIntent, "Pagar com...").apply {
         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -672,7 +745,58 @@ private fun copiarValorEAbrirApps(context: android.content.Context, valor: Doubl
     try {
         context.startActivity(chooser)
     } catch (_: android.content.ActivityNotFoundException) {
-        // Nenhum app disponível para abrir — o valor já foi copiado, então o usuário ainda
-        // consegue colar manualmente no app do banco que preferir.
+        // Nenhum app disponível — a chave já foi copiada, o jogador ainda consegue colar
+        // manualmente no app do banco que preferir.
+    }
+}
+
+@Composable
+private fun BancoPixSheet(
+    bancos: List<com.marcioarruda.clubedodomino.data.network.BancoPixDto>,
+    onBancoClick: (com.marcioarruda.clubedodomino.data.network.BancoPixDto) -> Unit,
+    onOutroAppClick: () -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            "Chave Pix copiada!",
+            color = DominoLight,
+            fontWeight = FontWeight.Bold,
+            fontSize = 17.sp
+        )
+        Text(
+            "Escolha o app do seu banco para colar e pagar.",
+            color = DominoMuted,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
+        )
+        LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+            items(bancos, key = { it.id }) { banco ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onBancoClick(banco) }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🏦", fontSize = 20.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(banco.nomeExibicao, color = DominoLight, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                }
+            }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOutroAppClick() }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("➕", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Outro app", color = DominoMuted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }

@@ -14,6 +14,7 @@ import com.marcioarruda.clubedodomino.data.network.BuchoDto
 import com.marcioarruda.clubedodomino.data.network.MensalidadeDto
 import com.marcioarruda.clubedodomino.data.network.ComprovanteHistoricoDto
 import com.marcioarruda.clubedodomino.data.network.TestarAnaliseComprovanteResponse
+import com.marcioarruda.clubedodomino.data.network.BancoPixDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,7 +44,9 @@ data class AdminUiState(
     val isLoadingComprovantes: Boolean = false,
     val isTestingComprovante: Boolean = false,
     val testeComprovanteResultado: TestarAnaliseComprovanteResponse? = null,
-    val testeComprovanteError: String? = null
+    val testeComprovanteError: String? = null,
+    val bancosPix: List<BancoPixDto> = emptyList(),
+    val isSavingBancoPix: Boolean = false
 )
 
 data class AdminPlayerItem(
@@ -107,6 +110,12 @@ class AdminViewModel(
                     addAll(allMensalidades.mapNotNull { with(repository) { it.toFinancialEntry(users) } })
                 }
 
+                val bancosPix = try {
+                    repository.getBancosPix().sortedBy { it.ordem }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+
                 val debtors = adminPlayers.mapNotNull { playerItem ->
                     val userId = playerItem.user.id
                     val overdueDebts = allEntries.filter { entry ->
@@ -135,7 +144,8 @@ class AdminViewModel(
                         mensalidades = mensalidadesNaoPagas,
                         players = adminPlayers,
                         debtors = debtors,
-                        globalStats = stats
+                        globalStats = stats,
+                        bancosPix = bancosPix
                     )
                 }
 
@@ -246,6 +256,72 @@ class AdminViewModel(
                 _uiState.update { it.copy(error = "Erro ao salvar: ${e.message}") }
             }
         }
+    }
+
+    fun createBancoPix(nomeExibicao: String, packageNameOuLink: String) {
+        val packageName = extrairPackageName(packageNameOuLink)
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingBancoPix = true) }
+            try {
+                val ordem = (_uiState.value.bancosPix.maxOfOrNull { it.ordem } ?: -1) + 1
+                repository.createBancoPix(nomeExibicao.trim(), packageName, ordem)
+                val bancosPix = repository.getBancosPix().sortedBy { it.ordem }
+                _uiState.update { it.copy(isSavingBancoPix = false, bancosPix = bancosPix, message = "$nomeExibicao adicionado à lista de bancos.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSavingBancoPix = false, error = "Erro ao cadastrar banco: ${e.message}") }
+            }
+        }
+    }
+
+    fun updateBancoPix(banco: BancoPixDto, nomeExibicao: String, packageNameOuLink: String) {
+        val packageName = extrairPackageName(packageNameOuLink)
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingBancoPix = true) }
+            try {
+                repository.updateBancoPix(banco.id, nomeExibicao.trim(), packageName, banco.ativo, banco.ordem)
+                val bancosPix = repository.getBancosPix().sortedBy { it.ordem }
+                _uiState.update { it.copy(isSavingBancoPix = false, bancosPix = bancosPix, message = "$nomeExibicao atualizado.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSavingBancoPix = false, error = "Erro ao atualizar banco: ${e.message}") }
+            }
+        }
+    }
+
+    fun toggleBancoPixAtivo(banco: BancoPixDto, ativo: Boolean) {
+        _uiState.update { state ->
+            state.copy(bancosPix = state.bancosPix.map { if (it.id == banco.id) it.copy(ativo = ativo) else it })
+        }
+        viewModelScope.launch {
+            try {
+                repository.updateBancoPix(banco.id, banco.nomeExibicao, banco.packageName, ativo, banco.ordem)
+            } catch (e: Exception) {
+                _uiState.update { state ->
+                    state.copy(
+                        bancosPix = state.bancosPix.map { if (it.id == banco.id) it.copy(ativo = !ativo) else it },
+                        error = "Erro ao salvar: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun deleteBancoPix(banco: BancoPixDto) {
+        viewModelScope.launch {
+            try {
+                repository.deleteBancoPix(banco.id)
+                _uiState.update { it.copy(bancosPix = it.bancosPix.filter { b -> b.id != banco.id }, message = "${banco.nomeExibicao} removido.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Erro ao remover banco: ${e.message}") }
+            }
+        }
+    }
+
+    // Aceita tanto o package name puro quanto um link da Play Store
+    // (ex: "https://play.google.com/store/apps/details?id=com.itau") e extrai só o package.
+    private fun extrairPackageName(input: String): String {
+        val trimmed = input.trim()
+        val match = Regex("[?&]id=([a-zA-Z0-9_.]+)").find(trimmed)
+        return match?.groupValues?.get(1) ?: trimmed
     }
 
     private fun updateLocalPlayerState(userId: String, update: (AdminPlayerItem) -> AdminPlayerItem) {

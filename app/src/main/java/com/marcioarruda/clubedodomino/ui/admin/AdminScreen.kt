@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.marcioarruda.clubedodomino.domain.MatchAvailabilityManager
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,9 +79,9 @@ fun AdminScreen(
     val isMarcioTab = userName.equals("MÁRCIO", ignoreCase = true)
 
     val tabs = if (isMarcioTab) {
-        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes", "Comprovantes")
+        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes", "Comprovantes", "Bancos Pix")
     } else {
-        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes")
+        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes", "Bancos Pix")
     }
 
     LaunchedEffect(Unit) {
@@ -430,11 +431,32 @@ fun AdminScreen(
                             canEdit = canEdit
                         )
                         4 -> DebtorsList(debtors = uiState.debtors)
-                        5 -> ComprovantesTab(
-                            uiState = uiState,
-                            onLoadHistorico = { viewModel.loadComprovantesHistorico() },
-                            onTestarAnalise = { valor, imagemBase64 -> viewModel.testarAnaliseComprovante(valor, imagemBase64) },
-                            onDismissTeste = { viewModel.dismissTesteComprovante() }
+                        5 -> if (isMarcioTab) {
+                            ComprovantesTab(
+                                uiState = uiState,
+                                onLoadHistorico = { viewModel.loadComprovantesHistorico() },
+                                onTestarAnalise = { valor, imagemBase64 -> viewModel.testarAnaliseComprovante(valor, imagemBase64) },
+                                onDismissTeste = { viewModel.dismissTesteComprovante() }
+                            )
+                        } else {
+                            BancosPixList(
+                                bancos = uiState.bancosPix,
+                                onToggleAtivo = { b, ativo -> viewModel.toggleBancoPixAtivo(b, ativo) },
+                                onCreate = { nome, pkg -> viewModel.createBancoPix(nome, pkg) },
+                                onUpdate = { b, nome, pkg -> viewModel.updateBancoPix(b, nome, pkg) },
+                                onDelete = { b -> viewModel.deleteBancoPix(b) },
+                                isSaving = uiState.isSavingBancoPix,
+                                canEdit = canEdit
+                            )
+                        }
+                        6 -> BancosPixList(
+                            bancos = uiState.bancosPix,
+                            onToggleAtivo = { b, ativo -> viewModel.toggleBancoPixAtivo(b, ativo) },
+                            onCreate = { nome, pkg -> viewModel.createBancoPix(nome, pkg) },
+                            onUpdate = { b, nome, pkg -> viewModel.updateBancoPix(b, nome, pkg) },
+                            onDelete = { b -> viewModel.deleteBancoPix(b) },
+                            isSaving = uiState.isSavingBancoPix,
+                            canEdit = canEdit
                         )
                     }
                 }
@@ -1184,6 +1206,193 @@ private fun VacationPeriodDialog(
             DatePicker(state = state)
         }
     }
+}
+
+// Lista de bancos usados no seletor "Pagar com..." em Finanças (clique no saldo vencido).
+// O campo de pacote aceita tanto o package name puro quanto um link da Play Store — a extração
+// de "id=..." acontece no ViewModel (AdminViewModel.extrairPackageName), então aqui só repassamos
+// o texto digitado como veio.
+@Composable
+fun BancosPixList(
+    bancos: List<com.marcioarruda.clubedodomino.data.network.BancoPixDto>,
+    onToggleAtivo: (com.marcioarruda.clubedodomino.data.network.BancoPixDto, Boolean) -> Unit,
+    onCreate: (nomeExibicao: String, packageNameOuLink: String) -> Unit,
+    onUpdate: (banco: com.marcioarruda.clubedodomino.data.network.BancoPixDto, nomeExibicao: String, packageNameOuLink: String) -> Unit,
+    onDelete: (com.marcioarruda.clubedodomino.data.network.BancoPixDto) -> Unit,
+    isSaving: Boolean,
+    canEdit: Boolean
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    var bancoEditando by remember { mutableStateOf<com.marcioarruda.clubedodomino.data.network.BancoPixDto?>(null) }
+    var bancoExcluindo by remember { mutableStateOf<com.marcioarruda.clubedodomino.data.network.BancoPixDto?>(null) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (canEdit) {
+            Button(
+                onClick = { showAddDialog = true },
+                modifier = Modifier.fillMaxWidth().padding(16.dp, 16.dp, 16.dp, 8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DominoGreen)
+            ) {
+                Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Cadastrar banco")
+            }
+        }
+
+        LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 16.dp)) {
+            items(bancos, key = { it.id }) { banco ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .padding(vertical = 4.dp)
+                        .fillMaxWidth()
+                        .shadow(1.dp, RoundedCornerShape(16.dp))
+                        .let { if (canEdit) it.clickable { bancoEditando = banco } else it }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(banco.nomeExibicao, color = DominoLight, fontWeight = FontWeight.Bold)
+                            Text(banco.packageName, color = DominoMuted, fontSize = 12.sp)
+                        }
+                        Switch(
+                            checked = banco.ativo,
+                            onCheckedChange = { if (canEdit) onToggleAtivo(banco, it) },
+                            enabled = canEdit,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = DominoGreen,
+                                checkedTrackColor = DominoGreen.copy(alpha = 0.5f)
+                            )
+                        )
+                        if (canEdit) {
+                            IconButton(onClick = { bancoExcluindo = banco }) {
+                                Text("🗑️", fontSize = 16.sp)
+                            }
+                        }
+                    }
+                }
+            }
+            if (bancos.isEmpty()) {
+                item {
+                    Text(
+                        "Nenhum banco cadastrado.",
+                        color = DominoMuted,
+                        modifier = Modifier.padding(24.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        AddEditBancoPixDialog(
+            banco = null,
+            isLoading = isSaving,
+            onDismiss = { showAddDialog = false },
+            onConfirm = { nome, pkg ->
+                onCreate(nome, pkg)
+                showAddDialog = false
+            }
+        )
+    }
+
+    bancoEditando?.let { banco ->
+        AddEditBancoPixDialog(
+            banco = banco,
+            isLoading = isSaving,
+            onDismiss = { bancoEditando = null },
+            onConfirm = { nome, pkg ->
+                onUpdate(banco, nome, pkg)
+                bancoEditando = null
+            }
+        )
+    }
+
+    bancoExcluindo?.let { banco ->
+        AlertDialog(
+            onDismissRequest = { bancoExcluindo = null },
+            containerColor = DominoSurface,
+            title = { Text("Remover banco", color = DominoLight, fontWeight = FontWeight.Bold) },
+            text = { Text("Remover \"${banco.nomeExibicao}\" da lista de bancos?", color = DominoMuted) },
+            confirmButton = {
+                TextButton(onClick = { onDelete(banco); bancoExcluindo = null }) {
+                    Text("Remover", color = DominoOrange)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { bancoExcluindo = null }) { Text("Cancelar") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun AddEditBancoPixDialog(
+    banco: com.marcioarruda.clubedodomino.data.network.BancoPixDto?,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (nomeExibicao: String, packageNameOuLink: String) -> Unit
+) {
+    var nome by remember { mutableStateOf(banco?.nomeExibicao ?: "") }
+    var pacote by remember { mutableStateOf(banco?.packageName ?: "") }
+
+    val nomeError = nome.isBlank()
+    val pacoteError = pacote.isBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DominoSurface,
+        title = { Text(if (banco == null) "Cadastrar banco" else "Editar banco", color = DominoLight, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = nome,
+                    onValueChange = { nome = it },
+                    label = { Text("Nome de exibição (ex: Itaú)", color = DominoMuted) },
+                    singleLine = true,
+                    isError = nome.isNotBlank() && nomeError,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                        focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
+                    )
+                )
+                OutlinedTextField(
+                    value = pacote,
+                    onValueChange = { pacote = it },
+                    label = { Text("Link da Play Store ou package", color = DominoMuted) },
+                    placeholder = { Text("play.google.com/store/apps/details?id=...", color = DominoMuted, fontSize = 11.sp) },
+                    singleLine = true,
+                    isError = pacote.isNotBlank() && pacoteError,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DominoLight, unfocusedTextColor = DominoLight,
+                        focusedBorderColor = DominoGreen, unfocusedBorderColor = Color(0xFFE6DAB8),
+                        focusedContainerColor = Color(0xFFF2EADB), unfocusedContainerColor = Color(0xFFF2EADB)
+                    )
+                )
+                Text(
+                    "Pode colar o link da página do app na Play Store — o pacote é extraído automaticamente.",
+                    color = DominoMuted,
+                    fontSize = 11.sp
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(nome, pacote) },
+                enabled = !nomeError && !pacoteError && !isLoading
+            ) { Text("Salvar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
 }
 
 @Composable
