@@ -424,11 +424,10 @@ private fun StatsRow(state: DashboardUiState, navController: NavController, user
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         StatMiniCard("Jogadores", state.totalPlayers.toString(), Modifier.weight(1f))
-        StatMiniCard(
-            "Partidas no mês",
-            "${state.minhasPartidasNoMes}/${state.metaPartidasNoMes}",
-            Modifier.weight(1f),
-            valueColor = if (state.minhasPartidasNoMes >= state.metaPartidasNoMes) DominoGreen else DominoOrange
+        PartidasNoMesCard(
+            minhasPartidas = state.minhasPartidasNoMes,
+            meta = state.metaPartidasNoMes,
+            modifier = Modifier.weight(1f)
         )
         StatMiniCard(
             "Meu débito",
@@ -461,6 +460,30 @@ private fun StatMiniCard(
             Text(value, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = valueColor, maxLines = 1)
             Spacer(Modifier.height(2.dp))
             Text(label, fontSize = 10.sp, color = DominoMuted, textAlign = TextAlign.Center, maxLines = 1)
+        }
+    }
+}
+
+// Card de participação mensal: mostra "minhas partidas / meta" (ex: "33/16") em destaque, e uma
+// legenda explicando o que cada número significa — a meta é a média de partidas de quem jogou no
+// mês, então sem essa legenda "33/16" por si só não deixa claro qual número é qual.
+@Composable
+private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, modifier: Modifier = Modifier) {
+    val atingiuMeta = minhasPartidas >= meta
+    val valueColor = if (atingiuMeta) DominoGreen else DominoOrange
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = DominoSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("$minhasPartidas/$meta", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = valueColor, maxLines = 1)
+            Spacer(Modifier.height(2.dp))
+            Text("Você / Média do mês", fontSize = 10.sp, color = DominoMuted, textAlign = TextAlign.Center, maxLines = 1)
         }
     }
 }

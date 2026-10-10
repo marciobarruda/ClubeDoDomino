@@ -531,7 +531,13 @@ const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
     if (nome in buchosPorJogador) buchosPorJogador[nome] += parseFloat(r.valor) || 0;
   }
 
-  const activeCount = jogadoresAtivos.length;
+  // A média é calculada só sobre quem de fato jogou pelo menos 1 partida no mês — jogador
+  // elegível que ficou parado o mês inteiro não entra no denominador, senão "dilui" a média pra
+  // baixo e deixa quem jogou bastante com uma meta artificialmente fácil. A lista de ELEGÍVEIS
+  // continua sendo jogadoresAtivos (ativo + sem férias cobrindo o mês inteiro) — isso só muda a
+  // base da média, não quem pode ser cobrado.
+  const jogadoresQueJogaram = jogadoresAtivos.filter(nome => (partidasPorJogador[nome.toUpperCase()] || 0) > 0);
+  const activeCount = jogadoresQueJogaram.length || 1; // evita divisão por zero se ninguém jogou
   const totalPartidas = Object.values(partidasPorJogador).reduce((a, b) => a + b, 0);
   const totalBuchos = Object.values(buchosPorJogador).reduce((a, b) => a + b, 0);
   const avgMatches = totalPartidas / activeCount;

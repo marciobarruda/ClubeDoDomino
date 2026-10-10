@@ -193,8 +193,14 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
             }
         }
 
+        // A média considera só quem de fato jogou pelo menos 1 partida no mês — um elegível que
+        // ficou parado o mês inteiro não entra no denominador, senão "dilui" a média pra baixo e
+        // deixa quem jogou bastante com uma meta artificialmente fácil (mesma regra usada em
+        // gerarTaxaExtraBuchosParaMes no backend). A lista de elegíveis continua sendo quem PODE
+        // ser contado (ativo, sem férias no mês inteiro) — isso só muda a base da média.
+        val jogadoresQueJogaram = nomesElegiveis.count { (partidasPorJogador[it] ?: 0) > 0 }
         val totalPartidas = partidasPorJogador.values.sum()
-        val avgMatches = totalPartidas.toDouble() / elegiveis.size
+        val avgMatches = if (jogadoresQueJogaram > 0) totalPartidas.toDouble() / jogadoresQueJogaram else 0.0
 
         // Fator de disponibilidade do jogador logado (dias fora de férias no mês / dias do mês) —
         // mesma lógica de diasDisponiveisNoMes no backend.
