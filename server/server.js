@@ -1602,23 +1602,70 @@ app.get('/webhook/comprovantes', async (req, res) => {
               possui_autenticacao, credor_detectado, data_detectada, valor_detectado,
               decisao, motivo, createdAt, banco_origem, tipo_transacao, data_hora_detectada,
               id_transacao_detectado, credor_documento, credor_instituicao, credor_chave_pix,
-              pagador_detectado, pagador_documento
+              pagador_detectado, pagador_documento, bucho_ids, mensalidade_ids
        FROM comprovantes_submetidos
        ORDER BY id_tabela DESC
        LIMIT ?`,
       [limit]
     );
+
+    // "Período de referência": mês/ano da(s) cobrança(s) que esse comprovante quitou — não o mês
+    // em que o comprovante foi enviado. Resolve consultando as datas reais em `buchos`/
+    // `mensalidades` a partir dos ids salvos no momento da submissão (bucho_ids/mensalidade_ids,
+    // arrays JSON), pois um único comprovante pode cobrir mais de uma cobrança.
+    const todosBuchoIds = new Set();
+    const todasMensalidadeIds = new Set();
+    for (const r of rows) {
+      try { (JSON.parse(r.bucho_ids || '[]')).forEach(id => todosBuchoIds.add(id)); } catch (_) {}
+      try { (JSON.parse(r.mensalidade_ids || '[]')).forEach(id => todasMensalidadeIds.add(id)); } catch (_) {}
+    }
+
+    const dataPorBuchoId = {};
+    if (todosBuchoIds.size > 0) {
+      const [buchoRows] = await pool.query(
+        `SELECT id_tabela, data FROM buchos WHERE id_tabela IN (${[...todosBuchoIds].map(() => '?').join(',')})`,
+        [...todosBuchoIds]
+      );
+      for (const b of buchoRows) dataPorBuchoId[b.id_tabela] = b.data;
+    }
+    const dataPorMensalidadeId = {};
+    if (todasMensalidadeIds.size > 0) {
+      const [mensRows] = await pool.query(
+        `SELECT id_tabela, mensalidade FROM mensalidades WHERE id_tabela IN (${[...todasMensalidadeIds].map(() => '?').join(',')})`,
+        [...todasMensalidadeIds]
+      );
+      for (const m of mensRows) dataPorMensalidadeId[m.id_tabela] = m.mensalidade;
+    }
+
     // O driver mysql2 retorna DECIMAL como string e TINYINT(1) como number (0/1), mas o app
     // Android desserializa esses campos como Double/Boolean via Gson, que é estrito quanto a tipo
     // e falha (silenciosamente, via exceção capturada) ao receber um tipo diferente do esperado
     // no JSON — isso fazia a lista de comprovantes aparecer sempre vazia no app.
-    const rowsNormalizadas = rows.map(r => ({
-      ...r,
-      valor_esperado: r.valor_esperado !== null ? Number(r.valor_esperado) : null,
-      valor_detectado: r.valor_detectado !== null ? Number(r.valor_detectado) : null,
-      parece_comprovante_bancario: r.parece_comprovante_bancario === null ? null : Boolean(Number(r.parece_comprovante_bancario)),
-      possui_autenticacao: r.possui_autenticacao === null ? null : Boolean(Number(r.possui_autenticacao))
-    }));
+    const rowsNormalizadas = rows.map(r => {
+      let buchoIds = [];
+      let mensalidadeIds = [];
+      try { buchoIds = JSON.parse(r.bucho_ids || '[]'); } catch (_) {}
+      try { mensalidadeIds = JSON.parse(r.mensalidade_ids || '[]'); } catch (_) {}
+
+      const datasReferencia = [
+        ...buchoIds.map(id => dataPorBuchoId[id]).filter(Boolean),
+        ...mensalidadeIds.map(id => dataPorMensalidadeId[id]).filter(Boolean)
+      ].map(dbDateToYMD).filter(Boolean);
+      // Mês/ano mais recente entre as cobranças cobertas (formato yyyy-MM-dd, o app formata para exibição)
+      const periodoReferencia = datasReferencia.length > 0
+        ? datasReferencia.reduce((max, d) => (d > max ? d : max))
+        : null;
+
+      const { bucho_ids, mensalidade_ids, ...resto } = r;
+      return {
+        ...resto,
+        valor_esperado: r.valor_esperado !== null ? Number(r.valor_esperado) : null,
+        valor_detectado: r.valor_detectado !== null ? Number(r.valor_detectado) : null,
+        parece_comprovante_bancario: r.parece_comprovante_bancario === null ? null : Boolean(Number(r.parece_comprovante_bancario)),
+        possui_autenticacao: r.possui_autenticacao === null ? null : Boolean(Number(r.possui_autenticacao)),
+        periodo_referencia: periodoReferencia
+      };
+    });
     res.json(rowsNormalizadas);
   } catch (error) {
     console.error('Erro ao listar comprovantes:', error.message);
