@@ -120,6 +120,19 @@ class ClubRepository {
         Unit
     }
 
+    // Payload do Pix Copia e Cola (BR Code) pronto pra colar no app do banco, com valor e
+    // identificador da cobrança já preenchidos — gerado no backend (ver gerarPixCopiaECola em
+    // server.js). Retorna null em caso de falha de rede, para o chamador poder cair no fallback
+    // de copiar só a chave solta.
+    suspend fun getPixCopiaCola(valor: Double?, txid: String? = null): String? = withContext(Dispatchers.IO) {
+        try {
+            val valorStr = valor?.let { String.format(java.util.Locale.US, "%.2f", it) }
+            api.getPixCopiaCola(valorStr, txid).payload
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun updatePassword(email: String, pass: String): Unit = withContext(Dispatchers.IO) {
         api.resetPassword(ResetPasswordRequest(email, pass))
         Unit

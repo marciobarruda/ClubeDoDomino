@@ -1797,6 +1797,81 @@ app.delete('/webhook/partidas-em-andamento/:id', async (req, res) => {
   }
 });
 
+// ─── Pix Copia e Cola (BR Code estático) ───────────────────────────────────
+// Especificação: Manual de Padrões para Iniciação do Pix (BCB), seção 2.6 (QR Code Estático)
+// e 3.1 (Pix Copia e Cola). Payload EMV/BR Code: sequência de campos TLV (ID de 2 dígitos +
+// tamanho de 2 dígitos + valor), terminando no CRC16 (ID 63) calculado sobre tudo que vem antes.
+const CHAVE_PIX_CLUBE = 'clubedominoemprel@gmail.com';
+// O app do banco do pagador ignora este campo e mostra o nome real do titular consultado no
+// DICT (Manual de Padrões para Iniciação do Pix, nota 26: "O MerchantName será ignorado pelo
+// pagador") — por isso pode ser um nome amigável em vez do nome oficial do titular da chave.
+const PIX_MERCHANT_NAME = 'CLUBE DO DOMINO';
+const PIX_MERCHANT_CITY = 'RECIFE';
+
+// Monta um campo EMV: ID (2 dígitos) + tamanho do valor (2 dígitos, left-pad) + valor.
+const emvField = (id, value) => {
+  const len = String(value.length).padStart(2, '0');
+  return `${id}${len}${value}`;
+};
+
+// CRC16-CCITT (polinômio 0x1021, valor inicial 0xFFFF) — mesmo algoritmo do exemplo oficial do
+// manual do BCB (payload termina em "6304" + 4 dígitos hex maiúsculos do CRC).
+const crc16ccitt = (str) => {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let bit = 0; bit < 8; bit++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+};
+
+// Gera o payload completo do Pix Copia e Cola (QR Code estático) para a chave do clube.
+// valor: string "0.00"..."99999.99" (já formatada com ponto decimal) ou null/undefined para
+// deixar o pagador digitar o valor no app do banco. txid: até 25 caracteres alfanuméricos
+// (a-z, A-Z, 0-9); usa "***" quando não há identificador de transação específico.
+const gerarPixCopiaECola = (valor, txid) => {
+  const merchantAccountInfo = emvField('00', 'br.gov.bcb.pix') + emvField('01', CHAVE_PIX_CLUBE);
+  const txidLimpo = (txid || '***').replace(/[^a-zA-Z0-9]/g, '').slice(0, 25) || '***';
+
+  let payload =
+    emvField('00', '01') + // Payload Format Indicator
+    emvField('26', merchantAccountInfo) + // Merchant Account Information (Pix)
+    emvField('52', '0000') + // Merchant Category Code (não informado)
+    emvField('53', '986') + // Transaction Currency (BRL)
+    (valor ? emvField('54', valor) : '') + // Transaction Amount (opcional)
+    emvField('58', 'BR') + // Country Code
+    emvField('59', PIX_MERCHANT_NAME) + // Merchant Name
+    emvField('60', PIX_MERCHANT_CITY) + // Merchant City
+    emvField('62', emvField('05', txidLimpo)); // Additional Data Field (txid)
+
+  payload += '6304'; // ID 63 (CRC16) + tamanho fixo 04, incluído no cálculo do próprio CRC
+  return payload + crc16ccitt(payload);
+};
+
+// GET /webhook/pix-copia-cola — gera o payload do Pix Copia e Cola para a chave do clube.
+// Query params opcionais: valor (ex: "12.50"), txid (ex: "MENSALIDADEOUT26").
+app.get('/webhook/pix-copia-cola', (req, res) => {
+  try {
+    const { valor, txid } = req.query;
+    let valorFormatado = null;
+    if (valor) {
+      const num = parseFloat(valor);
+      if (isNaN(num) || num <= 0 || num > 99999.99) {
+        return res.status(400).json({ status: 'error', message: 'Valor inválido.' });
+      }
+      valorFormatado = num.toFixed(2);
+    }
+    const payload = gerarPixCopiaECola(valorFormatado, txid);
+    res.json({ status: 'success', payload, chave: CHAVE_PIX_CLUBE });
+  } catch (error) {
+    console.error('Erro ao gerar Pix Copia e Cola:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao gerar código Pix.' });
+  }
+});
+
 // 14b. GET /webhook/bancos-pix — lista os apps de banco para o seletor de "Pagar com..." em
 // Finanças. ?apenasAtivos=true filtra os desativados (usado pelo app; o Admin busca todos).
 app.get('/webhook/bancos-pix', async (req, res) => {

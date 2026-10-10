@@ -53,6 +53,8 @@ data class BancoPixDto(
 data class CreateBancoPixRequest(val nomeExibicao: String, val packageName: String, val ordem: Int = 0)
 data class UpdateBancoPixRequest(val nomeExibicao: String, val packageName: String, val ativo: Boolean, val ordem: Int)
 
+data class PixCopiaColaResponse(val status: String, val payload: String?, val chave: String?)
+
 data class ActiveMatchDto(
     val id: String,
     val jogador1: String?,
@@ -399,6 +401,9 @@ interface ApiService {
 
     @DELETE("webhook/bancos-pix/{id}")
     suspend fun deleteBancoPix(@Path("id") id: Int): SimpleStatusResponse
+
+    @GET("webhook/pix-copia-cola")
+    suspend fun getPixCopiaCola(@Query("valor") valor: String? = null, @Query("txid") txid: String? = null): PixCopiaColaResponse
 }
 
 data class StackTraceRequest(

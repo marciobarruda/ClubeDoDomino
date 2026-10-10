@@ -247,8 +247,11 @@ fun FinanceScreen(
                                     totalAVencer = uiState.totalUpcoming,
                                     pendingCount = pendingCount,
                                     onVencidoClick = {
-                                        copiarChavePixParaAreaDeTransferencia(context) { message ->
-                                            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                                        scope.launch {
+                                            val payload = viewModel.getPixCopiaCola(uiState.totalDue)
+                                            copiarPixParaAreaDeTransferencia(context, payload) { message ->
+                                                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                         showBancoPixSheet = true
                                     }
@@ -720,14 +723,22 @@ private fun SaldoColumn(
     }
 }
 
-// Chave Pix do clube — copiada automaticamente ao clicar no saldo vencido, para o jogador só
-// colar no app do banco que escolher.
+// Chave Pix do clube — usada como fallback caso o backend não consiga gerar o payload completo
+// do Pix Copia e Cola (ex: sem rede), e também para o texto que o jogador vê como confirmação.
 private const val CHAVE_PIX_CLUBE = "clubedominoemprel@gmail.com"
 
-private fun copiarChavePixParaAreaDeTransferencia(context: android.content.Context, onCopiado: (String) -> Unit) {
+// Copia o payload do Pix Copia e Cola (BR Code, já com o valor devido preenchido) para a área de
+// transferência. Se o payload não puder ser obtido, cai no fallback de copiar só a chave Pix
+// solta — o jogador ainda consegue colar e completar o pagamento manualmente.
+private fun copiarPixParaAreaDeTransferencia(context: android.content.Context, payload: String?, onCopiado: (String) -> Unit) {
     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Chave Pix", CHAVE_PIX_CLUBE))
-    onCopiado("Chave Pix copiada: $CHAVE_PIX_CLUBE")
+    if (payload != null) {
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Pix Copia e Cola", payload))
+        onCopiado("Pix copiado! Cole no app do seu banco para pagar.")
+    } else {
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Chave Pix", CHAVE_PIX_CLUBE))
+        onCopiado("Chave Pix copiada: $CHAVE_PIX_CLUBE")
+    }
 }
 
 // true se o app estiver instalado E visível para este app — requer que o package esteja
@@ -780,7 +791,7 @@ private fun BancoPixSheet(
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(
-            "Chave Pix copiada!",
+            "Código Pix copiado!",
             color = DominoLight,
             fontWeight = FontWeight.Bold,
             fontSize = 17.sp

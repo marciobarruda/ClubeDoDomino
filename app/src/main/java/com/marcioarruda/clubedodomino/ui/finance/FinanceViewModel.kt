@@ -79,6 +79,11 @@ class FinanceViewModel(
         _uiState.update { it.copy(pixKeyCopiedMessage = null) }
     }
 
+    // Payload do Pix Copia e Cola já com o valor devido preenchido, pronto para colar no app do
+    // banco. Retorna null se a chamada falhar (ex: sem rede) — o chamador cai no fallback de
+    // copiar só a chave Pix solta.
+    suspend fun getPixCopiaCola(valor: Double): String? = repository.getPixCopiaCola(valor)
+
     fun uploadComprovante(userId: String, uri: Uri, context: Context) {
         viewModelScope.launch {
             _uiState.update { it.copy(uploadStatus = UploadStatus.UPLOADING, uploadError = null) }
