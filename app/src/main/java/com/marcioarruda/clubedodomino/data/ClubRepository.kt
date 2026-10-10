@@ -79,7 +79,7 @@ class ClubRepository {
 
     suspend fun login(email: String, pass: String): LoginResponse = withContext(Dispatchers.IO) {
         try {
-            api.login(LoginRequest(email, pass))
+            api.login(LoginRequest(email, pass, appVersion = com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME))
         } catch (e: retrofit2.HttpException) {
             throw Exception(extrairMensagemDeErro(e) ?: "Não foi possível entrar. Tente novamente.")
         }
@@ -487,6 +487,42 @@ class ClubRepository {
         return total
     }
 
+    // Separa o débito pendente do usuário em "vencido" (mensalidade/taxa extra sempre contam;
+    // bucho só se for de mês anterior ao atual) e "a vencer" (bucho do mês corrente em diante) —
+    // mesma regra usada em FinanceViewModel.updateUiState, reaproveitada aqui para o KPI da
+    // Dashboard mostrar os dois valores sem duplicar a lógica de negócio.
+    suspend fun getDebtBreakdown(userId: String): Pair<Double, Double> {
+        val users = if (allUsers.isEmpty()) getPlayers() else allUsers
+        val allEntries = buildList {
+            getBuchosResult().onSuccess { addAll(it.mapNotNull { dto -> dto.toFinancialEntry(users) }) }
+            getMensalidadesResult().onSuccess { addAll(it.mapNotNull { dto -> dto.toFinancialEntry(users) }) }
+        }
+        val pendingDebts = allEntries.filter { it.userId == userId && it.status == FinancialEntryStatus.PENDING }
+
+        val now = java.util.Calendar.getInstance()
+        val currentYear = now.get(java.util.Calendar.YEAR)
+        val currentMonth = now.get(java.util.Calendar.MONTH)
+
+        val totalVencido = pendingDebts.filter { entry ->
+            if (entry.type == FinancialEntryType.MONTHLY_FEE || entry.type == FinancialEntryType.EXTRA_TAX) return@filter true
+            if (entry.type == FinancialEntryType.BUCHO) {
+                val cal = java.util.Calendar.getInstance().apply { time = entry.dueDate }
+                val y = cal.get(java.util.Calendar.YEAR); val m = cal.get(java.util.Calendar.MONTH)
+                return@filter if (y < currentYear) true else (y == currentYear && m < currentMonth)
+            }
+            false
+        }.sumOf { it.amount }
+
+        val totalAVencer = pendingDebts.filter { entry ->
+            if (entry.type != FinancialEntryType.BUCHO) return@filter false
+            val cal = java.util.Calendar.getInstance().apply { time = entry.dueDate }
+            val y = cal.get(java.util.Calendar.YEAR); val m = cal.get(java.util.Calendar.MONTH)
+            if (y > currentYear) true else (y == currentYear && m >= currentMonth)
+        }.sumOf { it.amount }
+
+        return totalVencido to totalAVencer
+    }
+
     suspend fun uploadComprovante(request: ComprovanteRequest): com.marcioarruda.clubedodomino.data.network.UploadComprovanteResponse =
         withContext(Dispatchers.IO) {
             RetrofitClient.instance.uploadComprovante(request)
@@ -602,7 +638,8 @@ class ClubRepository {
             password = this.senha?.trim(),
             isActive = (this.ativo ?: 1) == 1,
             vacationStart = parseAnyDate(this.feriasInicio),
-            vacationEnd = parseAnyDate(this.feriasFim)
+            vacationEnd = parseAnyDate(this.feriasFim),
+            appVersion = this.appVersion
         )
     }
 

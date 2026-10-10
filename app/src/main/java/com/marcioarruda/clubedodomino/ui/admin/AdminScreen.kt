@@ -1060,7 +1060,16 @@ fun PlayersList(
                             grayscale = !item.isActive
                         )
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(item.user.displayName, color = DominoLight, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Column {
+                            Text(item.user.displayName, color = DominoLight, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            val versao = item.user.appVersion
+                            val versaoAtual = com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME
+                            Text(
+                                text = if (versao.isNullOrBlank()) "Versão do app: desconhecida" else "Versão do app: $versao",
+                                color = if (!versao.isNullOrBlank() && versao != versaoAtual) DominoOrange else DominoMuted,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 

@@ -62,6 +62,14 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
         )
     }
 
+    if (uiState.isLoading) {
+        // Mesma tela do Splash (fundo verde, peça grande, textos) — evita a "piscada" de trocar
+        // para o fundo creme da Dashboard só para mostrar um indicador de carregamento genérico,
+        // já que o Splash e este primeiro carregamento acontecem em sequência imediata.
+        com.marcioarruda.clubedodomino.ui.ClubeDominoLoadingScreen()
+        return
+    }
+
     Scaffold(
         containerColor = DominoBg
     ) { padding ->
@@ -86,10 +94,6 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
                     )
             )
             when {
-                uiState.isLoading -> com.marcioarruda.clubedodomino.ui.DominoLoadingAnimation(
-                    modifier = Modifier.align(Alignment.Center),
-                    artworkSize = 140.dp
-                )
                 uiState.error != null -> ErrorView(uiState.error!!) { viewModel.loadDashboardData(userId) }
                 uiState.user != null -> {
                     PullToRefreshBox(
@@ -318,7 +322,7 @@ private fun DashboardContent(state: DashboardUiState, navController: NavControll
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
-            items(matches) { MatchItem(it, onMatchClick) }
+            items(matches) { MatchItem(it, userId, onMatchClick) }
         }
 
         item { Spacer(Modifier.height(16.dp)) }
@@ -429,11 +433,10 @@ private fun StatsRow(state: DashboardUiState, navController: NavController, user
             partidasHoje = state.totalMatchesToday,
             modifier = Modifier.weight(2f)
         )
-        StatMiniCard(
-            "Meu débito",
-            "R$ ${String.format(Locale("pt", "BR"), "%.2f", state.totalDebt)}",
-            Modifier.weight(1f),
-            valueColor = if (state.totalDebt > 0) DominoOrange else DominoGreen,
+        MeuDebitoCard(
+            totalVencido = state.totalVencido,
+            totalAVencer = state.totalAVencer,
+            modifier = Modifier.weight(1f),
             onClick = { navController.navigate("finance/$userId") }
         )
     }
@@ -503,6 +506,41 @@ private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, partidasHoje: Int,
                 Spacer(Modifier.height(1.dp))
                 Text("Partidas", fontSize = 9.sp, color = DominoMuted, textAlign = TextAlign.Center, maxLines = 1)
             }
+        }
+    }
+}
+
+// Card "Meu débito": mesma altura do card de Partidas, com o valor vencido e a vencer em duas
+// linhas (em vez de um único total somado), para dar a mesma informação que já existe em
+// Finanças sem precisar abrir a tela.
+@Composable
+private fun MeuDebitoCard(totalVencido: Double, totalAVencer: Double, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    Card(
+        modifier = modifier.let { if (onClick != null) it.clickable(onClick = onClick) else it },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = DominoSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("VENCIDO", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
+            Text(
+                "R$ ${String.format(Locale("pt", "BR"), "%.2f", totalVencido)}",
+                fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
+                color = if (totalVencido > 0) DominoError else DominoGreen,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(4.dp))
+            Text("A VENCER", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
+            Text(
+                "R$ ${String.format(Locale("pt", "BR"), "%.2f", totalAVencer)}",
+                fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
+                color = if (totalAVencer > 0) DominoAmber else DominoGreen,
+                maxLines = 1
+            )
         }
     }
 }
@@ -590,14 +628,17 @@ private fun AwardCard(
 }
 
 @Composable
-private fun MatchItem(match: Match, onMatchClick: (String) -> Unit) {
+private fun MatchItem(match: Match, currentUserId: String, onMatchClick: (String) -> Unit) {
     val isTeam1Winner = match.score1 > match.score2
     val accentColor = if (match.wasBuchoRe) DominoOrange else DominoGreen.copy(alpha = 0.6f)
+    val isCurrentUserInMatch = currentUserId.isNotBlank() && listOf(
+        match.team1Player1, match.team1Player2, match.team2Player1, match.team2Player2
+    ).any { it.id.equals(currentUserId, ignoreCase = true) }
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onMatchClick(match.id) },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DominoSurface)
+        colors = CardDefaults.cardColors(containerColor = if (isCurrentUserInMatch) DominoGreen.copy(alpha = 0.08f) else DominoSurface)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

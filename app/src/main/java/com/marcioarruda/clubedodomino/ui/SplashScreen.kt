@@ -118,8 +118,12 @@ fun DominoLoadingAnimation(
     }
 }
 
+// Tela de carregamento com a identidade visual do clube (fundo verde em gradiente, peça de
+// dominó animada, nome do clube e "Carregando..."). Usada tanto no Splash inicial do app quanto
+// no primeiro carregamento da Dashboard, para que a transição entre as duas pareça uma única tela
+// contínua em vez de piscar entre o verde do Splash e o creme da Dashboard.
 @Composable
-fun SplashScreen() {
+fun ClubeDominoLoadingScreen() {
     val alphaAnim = remember { Animatable(0f) }
     val textAlpha = remember { Animatable(0f) }
 
@@ -227,4 +231,9 @@ fun SplashScreen() {
             )
         }
     }
+}
+
+@Composable
+fun SplashScreen() {
+    ClubeDominoLoadingScreen()
 }

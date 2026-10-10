@@ -20,7 +20,8 @@ data class User(
     val password: String? = null,
     val isActive: Boolean = true,
     val vacationStart: Date? = null,
-    val vacationEnd: Date? = null
+    val vacationEnd: Date? = null,
+    val appVersion: String? = null
 ) {
     // true se hoje cai dentro do período de férias (fim em aberto = férias sem data de volta definida)
     val isOnVacationNow: Boolean

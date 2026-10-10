@@ -26,7 +26,8 @@ data class PlayerDTO(
     val ativo: Int? = 1,
     val ferias: Int? = 0,
     val feriasInicio: String? = null,
-    val feriasFim: String? = null
+    val feriasFim: String? = null,
+    val appVersion: String? = null
 )
 
 data class SetPlayerActiveRequest(val email: String, val ativo: Boolean)
@@ -166,7 +167,8 @@ data class DebitRequest(
 
 data class LoginRequest(
     val email: String,
-    val senha: String
+    val senha: String,
+    val appVersion: String? = null
 )
 
 data class LoginResponse(

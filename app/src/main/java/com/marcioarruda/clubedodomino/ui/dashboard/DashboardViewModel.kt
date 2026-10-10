@@ -24,6 +24,8 @@ data class DashboardUiState(
     val totalPlayers: Int = 0,
     val totalMatchesToday: Int = 0,
     val totalDebt: Double = 0.0,
+    val totalVencido: Double = 0.0,
+    val totalAVencer: Double = 0.0,
     val isNewMatchVisible: Boolean = false,
     val groupedMatches: Map<String, List<Match>> = emptyMap(),
     val bestPlayers: List<BestPlayer> = emptyList(),
@@ -66,6 +68,7 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                 val totalPlayers = repository.getTotalPlayers()
                 val totalMatchesToday = repository.getMatchesCountToday()
                 val totalDebt = repository.getTotalDebt(userId)
+                val (totalVencido, totalAVencer) = repository.getDebtBreakdown(userId)
 
                 // Carrega e processa as partidas recentes
                 val allMatches = repository.getMatches().distinctBy { it.id }.sortedByDescending { it.date }
@@ -127,6 +130,8 @@ class DashboardViewModel(private val repository: ClubRepository) : ViewModel() {
                         totalPlayers = totalPlayers,
                         totalMatchesToday = totalMatchesToday,
                         totalDebt = totalDebt,
+                        totalVencido = totalVencido,
+                        totalAVencer = totalAVencer,
                         groupedMatches = groupedMatches,
                         bestPlayers = topPlayers,
                         worstPlayers = bottomPlayers,
