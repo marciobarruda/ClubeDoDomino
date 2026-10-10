@@ -333,13 +333,16 @@ fun FinanceScreen(
         }
 
         if (showBancoPixSheet) {
+            val bancosInstalados = remember(uiState.bancosPix) {
+                uiState.bancosPix.filter { isAppInstalado(context, it.packageName) }
+            }
             ModalBottomSheet(
                 onDismissRequest = { showBancoPixSheet = false },
                 sheetState = bancoPixSheetState,
                 containerColor = DominoSurface
             ) {
                 BancoPixSheet(
-                    bancos = uiState.bancosPix,
+                    bancos = bancosInstalados,
                     onBancoClick = { banco ->
                         abrirAppDoBanco(context, banco.packageName)
                         showBancoPixSheet = false
@@ -714,9 +717,14 @@ private fun copiarChavePixParaAreaDeTransferencia(context: android.content.Conte
     onCopiado("Chave Pix copiada: $CHAVE_PIX_CLUBE")
 }
 
-// Tenta abrir o app do banco direto pelo package name (sem checar antes via PackageManager —
-// essa checagem é que exigiria declarar o pacote em <queries> no manifest; iniciar a Activity
-// direto por nome não exige). Se o app não estiver instalado, cai no seletor genérico do Android.
+// true se o app estiver instalado E visível para este app — requer que o package esteja
+// declarado em <queries> no AndroidManifest (ver comentário lá); os pacotes vindos do Admin fora
+// dessa lista sempre retornam false aqui até o manifest ser atualizado numa próxima versão.
+private fun isAppInstalado(context: android.content.Context, packageName: String): Boolean =
+    context.packageManager.getLaunchIntentForPackage(packageName) != null
+
+// Abre o app do banco direto pelo package name. Só é chamado para bancos já filtrados como
+// instalados (ver isAppInstalado), mas ainda cai no seletor genérico em caso de falha inesperada.
 private fun abrirAppDoBanco(context: android.content.Context, packageName: String) {
     val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
     if (launchIntent != null) {
@@ -728,12 +736,13 @@ private fun abrirAppDoBanco(context: android.content.Context, packageName: Strin
             // cai no fallback abaixo
         }
     }
-    android.widget.Toast.makeText(context, "App não encontrado neste aparelho.", android.widget.Toast.LENGTH_SHORT).show()
-    abrirSeletorGenerico(context)
+    android.widget.Toast.makeText(context, "Não foi possível abrir o app. A chave Pix já está copiada — cole no app do seu banco.", android.widget.Toast.LENGTH_LONG).show()
 }
 
-// Fallback: seletor padrão do Android para "abrir com", usado quando o banco escolhido não está
-// instalado ou quando o jogador prefere escolher manualmente.
+// Fallback manual — só acionado quando o jogador escolhe "Outro app" na lista (nenhum banco
+// cadastrado foi detectado como instalado, ou o banco dele não está na lista). Abre o seletor
+// padrão do Android para "compartilhar"; a chave já está copiada, então o jogador consegue colar
+// mesmo sem escolher nada aqui.
 private fun abrirSeletorGenerico(context: android.content.Context) {
     val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
         type = "text/plain"
@@ -764,7 +773,7 @@ private fun BancoPixSheet(
             fontSize = 17.sp
         )
         Text(
-            "Escolha o app do seu banco para colar e pagar.",
+            if (bancos.isEmpty()) "Não encontramos seu banco instalado. Toque em \"Outro app\" para escolher." else "Escolha o app do seu banco para colar e pagar.",
             color = DominoMuted,
             fontSize = 13.sp,
             modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)

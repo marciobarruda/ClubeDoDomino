@@ -4,6 +4,34 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Apps de banco usados no seletor de "Pagar com..." em Finanças (clique no saldo vencido).
+         A partir do Android 11 (API 30), checar se outro app está instalado ou abrir a Activity
+         dele por package name exige declarar o pacote aqui — sem isso, o app aparenta não estar
+         instalado mesmo quando está. A lista de bancos em si é administrável pelo Admin (tabela
+         bancos_pix no backend), mas um banco com pacote fora desta lista só terá filtro/abertura
+         confiáveis a partir de uma versão do app que inclua o pacote dele aqui. -->
+    <queries>
+        <package android:name="com.nu.production" /> <!-- Nubank -->
+        <package android:name="com.picpay" /> <!-- PicPay -->
+        <package android:name="br.com.gabba.Caixa" /> <!-- Caixa -->
+        <package android:name="com.mercadopago.wallet" /> <!-- Mercado Pago -->
+        <package android:name="br.com.bb.android" /> <!-- Banco do Brasil -->
+        <package android:name="com.itau" /> <!-- Itaú -->
+        <package android:name="com.bradesco" /> <!-- Bradesco -->
+        <package android:name="com.santander.app" /> <!-- Santander -->
+        <package android:name="br.com.intermedium" /> <!-- Banco Inter -->
+        <package android:name="com.c6bank.app" /> <!-- C6 Bank -->
+        <package android:name="br.com.uol.ps.myaccount" /> <!-- PagBank -->
+        <package android:name="br.com.bancopan.cartoes" /> <!-- Banco Pan -->
+        <package android:name="br.com.neon" /> <!-- Neon -->
+        <package android:name="com.btg.pactual.banking" /> <!-- BTG Pactual -->
+        <package android:name="br.com.cora.bank" /> <!-- Cora -->
+        <package android:name="com.nomadfintech.bank.app.android" /> <!-- Nomad -->
+        <package android:name="br.com.xp.carteira" /> <!-- XP Investimentos -->
+        <package android:name="com.santandermovelempresarial.app" /> <!-- Santander Empresarial -->
+        <package android:name="br.com.Inter.CDPro" /> <!-- Inter Empresas -->
+    </queries>
+
     <application
         android:name=".DominoClubApplication"
         android:allowBackup="true"
