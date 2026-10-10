@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Android 12+: a splash do sistema (ícone sobre fundo) é obrigatória; usamos o mesmo verde
+         da tela de carregamento para que a transição entre as duas pareça contínua. -->
+    <style name="Theme.ClubeDoDomino" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+    </style>
+</resources>

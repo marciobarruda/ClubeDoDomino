@@ -64,14 +64,9 @@ fun DashboardScreen(navController: NavController, userId: String, viewModel: Das
     }
 
     if (uiState.isLoading) {
-        // Mesma tela do Splash (fundo verde, peça grande, textos) — evita a "piscada" de trocar
-        // para o fundo creme da Dashboard só para mostrar um indicador de carregamento genérico,
-        // já que o Splash e este primeiro carregamento acontecem em sequência imediata.
-        // skipEntranceAnimation=true: esta tela é a CONTINUAÇÃO visual do Splash (outra instância
-        // do mesmo composable), então já entra com opacidade total em vez de reiniciar o fade-in
-        // do zero — é esse replay da animação, não a cor de fundo, que fazia parecer duas telas
-        // piscando uma depois da outra.
-        com.marcioarruda.clubedodomino.ui.ClubeDominoLoadingScreen(skipEntranceAnimation = true)
+        // Primeira tela animada do app: a splash do sistema e o estado de leitura da sessão
+        // usam só o fundo verde, então a peça de dominó entra aqui uma única vez, sem replay.
+        com.marcioarruda.clubedodomino.ui.ClubeDominoLoadingScreen()
         return
     }
 
@@ -436,7 +431,7 @@ private fun StatsRow(state: DashboardUiState, navController: NavController, user
             minhasPartidas = state.minhasPartidasNoMes,
             meta = state.metaPartidasNoMes,
             partidasHoje = state.totalMatchesToday,
-            modifier = Modifier.weight(2f)
+            modifier = Modifier.weight(1.25f)
         )
         MeuDebitoCard(
             totalVencido = state.totalVencido,
@@ -517,13 +512,14 @@ private fun PartidasNoMesCard(minhasPartidas: Int, meta: Int, partidasHoje: Int,
 
 // Altura fixa compartilhada pelos dois KPIs da StatsRow (Partidas e Débito), para garantir que
 // fiquem com a mesma altura independente de quantas linhas de texto cada um tiver internamente —
-// confiar que o conteúdo interno "coincidiria" por acaso não funcionou (Débito tem 4 linhas de
-// texto, Partidas tem 3).
+// confiar que o conteúdo interno "coincidiria" por acaso não funcionou (os dois cards têm
+// estruturas de texto diferentes).
 private val StatsCardHeight = 72.dp
 
 // Card "Meu débito": mesma altura do card de Partidas, com o valor vencido e a vencer em duas
-// linhas (em vez de um único total somado), para dar a mesma informação que já existe em
-// Finanças sem precisar abrir a tela.
+// linhas "rótulo ... valor" (em vez de um único total somado), para dar a mesma informação que já
+// existe em Finanças sem precisar abrir a tela. Rótulo e valor na mesma linha cabem nos 72dp de
+// altura — empilhados (4 linhas) o valor "a vencer" ficava cortado.
 @Composable
 private fun MeuDebitoCard(totalVencido: Double, totalAVencer: Double, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     Card(
@@ -533,26 +529,34 @@ private fun MeuDebitoCard(totalVencido: Double, totalAVencer: Double, modifier: 
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("VENCIDO", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
-            Text(
-                "R$ ${String.format(Locale("pt", "BR"), "%.2f", totalVencido)}",
-                fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
-                color = if (totalVencido > 0) DominoError else DominoGreen,
-                maxLines = 1
-            )
+            Text("MEU DÉBITO", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
             Spacer(Modifier.height(4.dp))
-            Text("A VENCER", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
-            Text(
-                "R$ ${String.format(Locale("pt", "BR"), "%.2f", totalAVencer)}",
-                fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
-                color = if (totalAVencer > 0) DominoAmber else DominoGreen,
-                maxLines = 1
-            )
+            DebitoLinha("Vencido", totalVencido, if (totalVencido > 0) DominoError else DominoGreen)
+            Spacer(Modifier.height(2.dp))
+            DebitoLinha("A vencer", totalAVencer, if (totalAVencer > 0) DominoAmber else DominoGreen)
         }
+    }
+}
+
+@Composable
+private fun DebitoLinha(label: String, valor: Double, color: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, fontSize = 9.sp, color = DominoMuted, maxLines = 1)
+        Spacer(Modifier.width(6.dp))
+        Text(
+            "R$ ${String.format(Locale("pt", "BR"), "%.2f", valor)}",
+            fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
+            color = color,
+            maxLines = 1
+        )
     }
 }
 

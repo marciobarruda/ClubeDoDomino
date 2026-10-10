@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.ClubeDoDomino" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- windowBackground verde: é o que aparece antes do primeiro frame do Compose, emendando
+         direto na tela de carregamento (mesmo verde) em vez de um flash de fundo claro. -->
+    <style name="Theme.ClubeDoDomino" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
 </resources>

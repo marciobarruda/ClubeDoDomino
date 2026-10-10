@@ -43,7 +43,11 @@ fun AppNavigation() {
     ) {
         when (val state = authState) {
             is AuthState.Loading -> {
-                SplashScreen()
+                // A leitura da sessão (DataStore) resolve em milissegundos: aqui só mantemos o
+                // mesmo fundo verde da splash do sistema (windowBackground), sem animação própria,
+                // para que a tela seguinte (loading da Dashboard ou Login) entre direto, sem uma
+                // tela intermediária piscando entre as duas.
+                ClubeDominoLoadingBackground()
             }
             is AuthState.Authenticated -> {
                 AppNavHost(navController, startDestination = "dashboard/{userId}", session = state.session)
