@@ -59,6 +59,9 @@ private enum class FinanceFilter(val label: String) {
     BUCHO("BUCHOS")
 }
 
+// Cor oficial da marca Pix, usada no badge/ícone que indica o clique no saldo vencido.
+private val PixTeal = Color(0xFF32BCAD)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinanceScreen(
@@ -699,10 +702,18 @@ private fun SaldoColumn(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(5.dp))
-                        .background(DominoYellow.copy(alpha = 0.18f))
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                        .background(PixTeal)
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
                 ) {
-                    Text("⚡ PIX", color = DominoYellow, fontWeight = FontWeight.Black, fontSize = 8.5.sp, letterSpacing = 0.3.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.marcioarruda.clubedodomino.R.drawable.ic_pix),
+                            contentDescription = null,
+                            modifier = Modifier.size(9.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("PIX", color = Color.White, fontWeight = FontWeight.Black, fontSize = 8.5.sp, letterSpacing = 0.3.sp)
+                    }
                 }
             }
         }
