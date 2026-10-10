@@ -21,7 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -787,7 +789,7 @@ private fun BancoPixSheet(
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🏦", fontSize = 20.sp)
+                    BankAppIcon(packageName = banco.packageName, size = 28.dp)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(banco.nomeExibicao, color = DominoLight, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 }
@@ -807,5 +809,31 @@ private fun BancoPixSheet(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+// Ícone real do app do banco (o mesmo que aparece na gaveta de apps do aparelho), lido via
+// PackageManager. Cai no emoji de prédio se o app não puder ser consultado (não instalado, ou
+// pacote fora da lista declarada em <queries> no manifest).
+@Composable
+private fun BankAppIcon(packageName: String, size: androidx.compose.ui.unit.Dp) {
+    val context = LocalContext.current
+    val bitmap = remember(packageName) {
+        try {
+            context.packageManager.getApplicationIcon(packageName).toBitmap().asImageBitmap()
+        } catch (_: Exception) {
+            null
+        }
+    }
+    if (bitmap != null) {
+        androidx.compose.foundation.Image(
+            bitmap = bitmap,
+            contentDescription = null,
+            modifier = Modifier
+                .size(size)
+                .clip(RoundedCornerShape(6.dp))
+        )
+    } else {
+        Text("🏦", fontSize = (size.value * 0.7).sp)
     }
 }

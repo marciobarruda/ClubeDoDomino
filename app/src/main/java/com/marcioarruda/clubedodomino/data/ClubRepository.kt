@@ -78,7 +78,27 @@ class ClubRepository {
     }
 
     suspend fun login(email: String, pass: String): LoginResponse = withContext(Dispatchers.IO) {
-        api.login(LoginRequest(email, pass))
+        try {
+            api.login(LoginRequest(email, pass))
+        } catch (e: retrofit2.HttpException) {
+            throw Exception(extrairMensagemDeErro(e) ?: "Não foi possível entrar. Tente novamente.")
+        }
+    }
+
+    // O backend responde erros (ex: 401 de login inválido) com um corpo JSON
+    // {"status":"error","message":"..."} — mas como os endpoints do Retrofit aqui declaram o tipo
+    // de sucesso diretamente (ex: LoginResponse, não retrofit2.Response<LoginResponse>), qualquer
+    // status não-2xx vira HttpException e o corpo não é desserializado automaticamente. Extrai a
+    // mensagem manualmente do errorBody() para não exibir só "HTTP 401 Unauthorized" pro usuário.
+    private data class ErrorBody(val message: String?)
+
+    private fun extrairMensagemDeErro(e: retrofit2.HttpException): String? {
+        return try {
+            val raw = e.response()?.errorBody()?.string() ?: return null
+            com.google.gson.Gson().fromJson(raw, ErrorBody::class.java)?.message
+        } catch (_: Exception) {
+            null
+        }
     }
 
     suspend fun getBancosPix(apenasAtivos: Boolean = false): List<BancoPixDto> = withContext(Dispatchers.IO) {

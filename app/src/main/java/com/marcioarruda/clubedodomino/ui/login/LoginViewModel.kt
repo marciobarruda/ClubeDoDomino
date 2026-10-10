@@ -43,10 +43,12 @@ class LoginViewModel(
                         _loginState.value = LoginUiState.Error("Login autorizado, mas perfil do usuário não encontrado.")
                     }
                 } else {
-                    _loginState.value = LoginUiState.Error("Email ou senha inválidos.")
+                    _loginState.value = LoginUiState.Error("Não foi possível entrar. Confira o e-mail e a senha, ou procure um administrador do clube.")
                 }
             } catch (e: Exception) {
-                _loginState.value = LoginUiState.Error("Erro: ${e.message}")
+                // ClubRepository.login já traduz o 401 do backend para uma mensagem legível
+                // (ver extrairMensagemDeErro); aqui só repassamos, com fallback para erros de rede.
+                _loginState.value = LoginUiState.Error(e.message ?: "Não foi possível entrar. Verifique sua conexão e tente novamente.")
             }
         }
     }

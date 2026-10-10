@@ -297,7 +297,7 @@ app.post('/webhook/login', async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ status: 'error', message: 'E-mail ou senha incorretos.' });
+      return res.status(401).json({ status: 'error', message: 'Não foi possível entrar. Confira o e-mail e a senha, ou procure um administrador do clube.' });
     }
 
     const stored = rows[0].senha ? rows[0].senha.trim() : '';
@@ -317,7 +317,7 @@ app.post('/webhook/login', async (req, res) => {
     if (valid) {
       return res.json({ status: 'success' });
     } else {
-      return res.status(401).json({ status: 'error', message: 'E-mail ou senha incorretos.' });
+      return res.status(401).json({ status: 'error', message: 'Não foi possível entrar. Confira o e-mail e a senha, ou procure um administrador do clube.' });
     }
   } catch (error) {
     console.error('Erro no login:', error.message);
