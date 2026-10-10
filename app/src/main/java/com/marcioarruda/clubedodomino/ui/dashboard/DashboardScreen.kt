@@ -297,13 +297,13 @@ private fun DashboardContent(state: DashboardUiState, navController: NavControll
             TopBar(state.user!!, onAvatarClick)
         }
 
-        if (state.bestPlayers.isNotEmpty() || state.worstPlayers.isNotEmpty()) {
-            item { DailyAwardsRow(state.bestPlayers, state.worstPlayers) }
-        }
-
         item { ShortcutsGrid(navController, userId) }
 
         item { StatsRow(state, navController, userId) }
+
+        // Sempre visível (mesmo sem partidas hoje): sem ganhador definido, os cards mostram o
+        // estado vazio em vez de sumir — antes a linha inteira desaparecia nos dias sem partidas.
+        item { DailyAwardsRow(state.bestPlayers, state.worstPlayers) }
 
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -563,39 +563,39 @@ private fun DebitoLinha(label: String, valor: Double, color: Color) {
 @Composable
 fun DailyAwardsRow(bestPlayers: List<BestPlayer>, worstPlayers: List<BestPlayer>) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (bestPlayers.isNotEmpty()) {
-            AwardCard(
-                modifier = Modifier.weight(1f),
-                backgroundColor = DominoGreen,
-                label = "🏆 CRAQUE DO DIA",
-                labelColor = DominoYellow,
-                player = bestPlayers[0]
-            )
-        }
-        if (worstPlayers.isNotEmpty()) {
-            AwardCard(
-                modifier = Modifier.weight(1f),
-                backgroundColor = DominoPiorBg,
-                label = "🫠 PIORZINHO",
-                labelColor = DominoPiorAccent,
-                player = worstPlayers[0]
-            )
-        }
+        AwardCard(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            backgroundColor = DominoCraqueBg,
+            label = "🏆 CRAQUE DO DIA",
+            labelColor = DominoYellow,
+            player = bestPlayers.firstOrNull()
+        )
+        AwardCard(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            backgroundColor = DominoPiorBg,
+            label = "🫠 PIORZINHO",
+            labelColor = DominoPiorAccent,
+            player = worstPlayers.firstOrNull()
+        )
     }
 }
 
+// player == null: ninguém atingiu ainda o mínimo de partidas no dia — o card mantém o mesmo
+// layout (com traços no lugar dos números) para não mudar de tamanho quando o ganhador surgir.
 @Composable
 private fun AwardCard(
     modifier: Modifier = Modifier,
     backgroundColor: Color,
     label: String,
     labelColor: Color,
-    player: BestPlayer,
+    player: BestPlayer?,
     onClick: (() -> Unit)? = null
 ) {
+    // Branco translúcido em vez de DominoOnDarkMuted (esverdeado), que destoava no card vermelho.
+    val mutedColor = DominoOnDark.copy(alpha = 0.7f)
     Card(
         modifier = modifier.let { if (onClick != null) it.clickable(onClick = onClick) else it },
         shape = RoundedCornerShape(20.dp),
@@ -606,7 +606,7 @@ private fun AwardCard(
             Spacer(Modifier.height(6.dp))
             // TODO: fonte "Fraunces" pendente — peso Black simula o destaque serifado por ora.
             Text(
-                text = player.player.name.split(" ").first(),
+                text = player?.player?.name?.split(" ")?.first() ?: "—",
                 color = DominoOnDark,
                 fontWeight = FontWeight.Black,
                 fontSize = 20.sp,
@@ -623,18 +623,19 @@ private fun AwardCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("PONTOS NO DIA", color = DominoOnDarkMuted, fontSize = 9.sp, letterSpacing = 0.3.sp)
-                    Text("${player.points}", color = labelColor, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                    Text("PONTOS NO DIA", color = mutedColor, fontSize = 9.sp, letterSpacing = 0.3.sp)
+                    Text(player?.points?.toString() ?: "–", color = labelColor, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("VITÓRIAS", color = DominoOnDarkMuted, fontSize = 9.sp, letterSpacing = 0.3.sp)
-                    Text("${player.wins}", color = DominoOnDark, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                    Text("VITÓRIAS", color = mutedColor, fontSize = 9.sp, letterSpacing = 0.3.sp)
+                    Text(player?.wins?.toString() ?: "–", color = DominoOnDark, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
                 }
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "${player.wins}V–${player.matches - player.wins}D em ${player.matches} partidas",
-                color = DominoOnDarkMuted,
+                if (player != null) "${player.wins}V–${player.matches - player.wins}D em ${player.matches} partidas"
+                else "Mín. de 5 partidas no dia",
+                color = mutedColor,
                 fontSize = 11.sp,
                 maxLines = 1
             )

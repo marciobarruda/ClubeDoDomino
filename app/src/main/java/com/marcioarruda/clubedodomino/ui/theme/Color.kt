@@ -19,9 +19,10 @@ val DominoAmber    = Color(0xFFE0A030)  // Upcoming/due-soon — warm amber, bet
 val DominoLight    = Color(0xFF1F3327)  // Primary text over light backgrounds (dark green-black)
 val DominoMuted    = Color(0xFF8A6F3D)  // Muted/secondary text (warm brown-gold)
 
-// Piorzinho / negative-highlight surface (used on dark cards, e.g. worst-of-day)
-val DominoPiorBg     = Color(0xFF3A2A1E)
-val DominoPiorAccent = Color(0xFFF2A65A)
+// Cards de destaque do dia: verde vivo (sucesso) para o Craque, vermelho (falha) para o Piorzinho
+val DominoCraqueBg   = Color(0xFF1E7A4C)
+val DominoPiorBg     = Color(0xFF9E2B22)
+val DominoPiorAccent = Color(0xFFFFC9BF)
 
 // Text-on-dark tokens (used inside DominoGreen surfaces: header, nav, highlight cards)
 val DominoOnDark      = Color(0xFFFBF4E4)
