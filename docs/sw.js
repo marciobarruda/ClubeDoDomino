@@ -1,43 +1,60 @@
-const CACHE_NAME = 'domino-v3';
-const ASSETS = [
+// Trocar a versão a cada release do PWA: o navegador detecta o sw.js alterado, instala a nova
+// versão, apaga os caches antigos e a página recarrega sozinha (ver controllerchange em index.html).
+const CACHE_NAME = 'domino-v101';
+const SHELL = [
   './',
   './index.html',
   './manifest.json',
-  'https://unpkg.com/lucide@latest',
-  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap'
+  './domino_pieces.webp',
+  './icon-192.png',
+  './icon-512.png',
+  './apple-touch-icon.png'
 ];
 
-// Instalação - força o novo cache
 self.addEventListener('install', event => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)));
 });
 
-// Ativação - limpa caches antigos
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)));
-    })
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
   );
 });
 
-// Estratégia: Network First para o HTML, Cache First para o resto
+// HTML, manifest e version.json: rede primeiro (sempre a versão publicada mais recente), com o
+// cache só como fallback offline. Imagens: cache primeiro. A API (outro domínio) não passa por aqui.
 self.addEventListener('fetch', event => {
-  const isHtml = event.request.mode === 'navigate' || 
-                 (event.request.method === 'GET' && event.request.headers.get('accept').includes('text/html'));
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
 
-  if (isHtml) {
+  const isDocument = req.mode === 'navigate' || /\.(html|json)$/.test(url.pathname) || url.pathname.endsWith('/');
+  if (isDocument) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(req, { cache: 'no-cache' })
+        .then(res => {
+          if (res.ok && !url.pathname.endsWith('version.json')) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
     );
-  } else {
-    event.respondWith(
-      caches.match(event.request).then(response => {
-        return response || fetch(event.request);
-      })
-    );
+    return;
   }
+
+  event.respondWith(
+    caches.match(req).then(cached => cached || fetch(req).then(res => {
+      if (res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+      }
+      return res;
+    }))
+  );
 });
