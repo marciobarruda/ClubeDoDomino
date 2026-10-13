@@ -50,6 +50,15 @@ fun AppNavigation() {
                 ClubeDominoLoadingBackground()
             }
             is AuthState.Authenticated -> {
+                // Registra a versão instalada a cada abertura (o servidor só grava se mudou), para
+                // o Admin ver a versão atual sem o jogador precisar sair e entrar de novo.
+                LaunchedEffect(state.session.userEmail) {
+                    try {
+                        clubRepository.reportAppVersion(state.session.userEmail)
+                    } catch (_: Exception) {
+                        // Informativo apenas — falha de rede aqui não deve afetar a abertura do app.
+                    }
+                }
                 AppNavHost(navController, startDestination = "dashboard/{userId}", session = state.session)
             }
             is AuthState.Unauthenticated -> {

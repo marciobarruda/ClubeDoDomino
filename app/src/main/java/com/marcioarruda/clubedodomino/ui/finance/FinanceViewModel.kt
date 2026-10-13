@@ -38,6 +38,32 @@ enum class UploadStatus {
     ERROR
 }
 
+// O que o comprovante enviado está pagando: define quais IDs vão no pedido de baixa e o valor
+// esperado que o servidor confere contra o valor lido no comprovante.
+enum class EscopoPagamento { VENCIDO, A_VENCER, TUDO }
+
+// Vencido: mensalidades/taxa extra pendentes e buchos de meses anteriores. A vencer: buchos
+// pendentes do mês corrente (ou futuro), cobrados só no mês seguinte.
+private fun FinancialEntry.isBuchoDoMesCorrenteOuFuturo(): Boolean {
+    val now = Calendar.getInstance()
+    val itemCal = Calendar.getInstance().apply { time = dueDate }
+    val itemYear = itemCal.get(Calendar.YEAR)
+    val currentYear = now.get(Calendar.YEAR)
+    return itemYear > currentYear || (itemYear == currentYear && itemCal.get(Calendar.MONTH) >= now.get(Calendar.MONTH))
+}
+
+private fun FinancialEntry.isVencido(): Boolean {
+    if (status != FinancialEntryStatus.PENDING) return false
+    return when (type) {
+        FinancialEntryType.MONTHLY_FEE, FinancialEntryType.EXTRA_TAX -> true
+        FinancialEntryType.BUCHO -> !isBuchoDoMesCorrenteOuFuturo()
+        else -> false
+    }
+}
+
+private fun FinancialEntry.isAVencer(): Boolean =
+    status == FinancialEntryStatus.PENDING && type == FinancialEntryType.BUCHO && isBuchoDoMesCorrenteOuFuturo()
+
 data class FinanceUiState(
     val isLoading: Boolean = false,
     val debts: List<FinancialEntry> = emptyList(),
@@ -84,7 +110,7 @@ class FinanceViewModel(
     // copiar só a chave Pix solta.
     suspend fun getPixCopiaCola(valor: Double): String? = repository.getPixCopiaCola(valor)
 
-    fun uploadComprovante(userId: String, uri: Uri, context: Context) {
+    fun uploadComprovante(userId: String, uri: Uri, context: Context, escopo: EscopoPagamento = EscopoPagamento.VENCIDO) {
         viewModelScope.launch {
             _uiState.update { it.copy(uploadStatus = UploadStatus.UPLOADING, uploadError = null) }
             try {
@@ -101,20 +127,12 @@ class FinanceViewModel(
                 val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
                 val users = repository.getPlayers()
                 val user = users.find { it.id == userId } ?: throw Exception("Usuário não encontrado")
-                val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-                val currentMonth = Calendar.getInstance().get(Calendar.MONTH)
-
                 val pendingDebts = _uiState.value.debts.filter { entry ->
-                    if (entry.status != FinancialEntryStatus.PENDING) return@filter false
-                    if (entry.type == FinancialEntryType.MONTHLY_FEE || entry.type == FinancialEntryType.EXTRA_TAX) return@filter true
-                    if (entry.type == FinancialEntryType.BUCHO) {
-                        val itemCal = Calendar.getInstance()
-                        itemCal.time = entry.dueDate
-                        val itemYear = itemCal.get(Calendar.YEAR)
-                        val itemMonth = itemCal.get(Calendar.MONTH)
-                        return@filter if (itemYear < currentYear) true else (itemYear == currentYear && itemMonth < currentMonth)
+                    when (escopo) {
+                        EscopoPagamento.VENCIDO -> entry.isVencido()
+                        EscopoPagamento.A_VENCER -> entry.isAVencer()
+                        EscopoPagamento.TUDO -> entry.isVencido() || entry.isAVencer()
                     }
-                    false
                 }
                 
                 // Taxa extra é fisicamente um registro na tabela `buchos` no servidor (ver
@@ -137,6 +155,9 @@ class FinanceViewModel(
 
                 val response = repository.uploadComprovante(request)
                 _uiState.update { it.copy(uploadStatus = UploadStatus.SUCCESS, uploadBaixaAutomatica = response.baixaAutomatica == true) }
+                // Baixa automática já marcou os débitos como pagos no servidor: recarrega para os
+                // totais e a lista refletirem isso sem o jogador precisar puxar para atualizar.
+                if (response.baixaAutomatica == true) loadFinancialData(userId, isRefreshing = true)
             } catch (e: Exception) {
                 _uiState.update { it.copy(uploadStatus = UploadStatus.ERROR, uploadError = e.message ?: "Erro desconhecido ao enviar.") }
             }
@@ -205,30 +226,8 @@ class FinanceViewModel(
             it.status != FinancialEntryStatus.PAID && !isPaidExtraTax
         }
         val sortedDebts = pendingDebts.sortedByDescending { it.dueDate }
-        val now = Calendar.getInstance()
-        val currentYear = now.get(Calendar.YEAR)
-        val currentMonth = now.get(Calendar.MONTH)
-
-        val totalDue = pendingDebts.filter { entry ->
-            if (entry.status != FinancialEntryStatus.PENDING) return@filter false
-            if (entry.type == FinancialEntryType.MONTHLY_FEE || entry.type == FinancialEntryType.EXTRA_TAX) return@filter true
-            if (entry.type == FinancialEntryType.BUCHO) {
-                val itemCal = Calendar.getInstance().apply { time = entry.dueDate }
-                val itemYear = itemCal.get(Calendar.YEAR)
-                val itemMonth = itemCal.get(Calendar.MONTH)
-                return@filter if (itemYear < currentYear) true else (itemYear == currentYear && itemMonth < currentMonth)
-            }
-            false
-        }.sumOf { it.amount }
-
-        val totalUpcoming = pendingDebts.filter { entry ->
-            if (entry.status != FinancialEntryStatus.PENDING) return@filter false
-            if (entry.type != FinancialEntryType.BUCHO) return@filter false
-            val itemCal = Calendar.getInstance().apply { time = entry.dueDate }
-            val itemYear = itemCal.get(Calendar.YEAR)
-            val itemMonth = itemCal.get(Calendar.MONTH)
-            return@filter if (itemYear > currentYear) true else (itemYear == currentYear && itemMonth >= currentMonth)
-        }.sumOf { it.amount }
+        val totalDue = pendingDebts.filter { it.isVencido() }.sumOf { it.amount }
+        val totalUpcoming = pendingDebts.filter { it.isAVencer() }.sumOf { it.amount }
 
         _uiState.update {
             it.copy(

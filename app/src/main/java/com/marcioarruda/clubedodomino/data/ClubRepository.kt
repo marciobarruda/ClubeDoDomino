@@ -63,6 +63,10 @@ class ClubRepository {
         }
     }
 
+    suspend fun reportAppVersion(email: String): Unit = withContext(Dispatchers.IO) {
+        api.reportAppVersion(ReportAppVersionRequest(email))
+    }
+
     suspend fun setPlayerActive(email: String, isActive: Boolean): Unit = withContext(Dispatchers.IO) {
         api.setPlayerActive(SetPlayerActiveRequest(email, isActive))
         allUsers = allUsers.map { if (it.id == email) it.copy(isActive = isActive) else it }

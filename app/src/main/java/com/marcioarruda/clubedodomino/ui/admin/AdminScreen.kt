@@ -1,5 +1,6 @@
 package com.marcioarruda.clubedodomino.ui.admin
 
+import com.marcioarruda.clubedodomino.ui.util.formatBRL
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -78,10 +79,11 @@ fun AdminScreen(
     val canEdit = userName.equals("MÁRCIO", ignoreCase = true) || userName.equals("CALÁBRIA", ignoreCase = true)
     val isMarcioTab = userName.equals("MÁRCIO", ignoreCase = true)
 
+    // Comprovantes e Bancos Pix: exclusivas do Márcio.
     val tabs = if (isMarcioTab) {
         listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes", "Comprovantes", "Bancos Pix")
     } else {
-        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes", "Bancos Pix")
+        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes")
     }
 
     LaunchedEffect(Unit) {
@@ -438,18 +440,8 @@ fun AdminScreen(
                                 onTestarAnalise = { valor, imagemBase64 -> viewModel.testarAnaliseComprovante(valor, imagemBase64) },
                                 onDismissTeste = { viewModel.dismissTesteComprovante() }
                             )
-                        } else {
-                            BancosPixList(
-                                bancos = uiState.bancosPix,
-                                onToggleAtivo = { b, ativo -> viewModel.toggleBancoPixAtivo(b, ativo) },
-                                onCreate = { nome, pkg -> viewModel.createBancoPix(nome, pkg) },
-                                onUpdate = { b, nome, pkg -> viewModel.updateBancoPix(b, nome, pkg) },
-                                onDelete = { b -> viewModel.deleteBancoPix(b) },
-                                isSaving = uiState.isSavingBancoPix,
-                                canEdit = canEdit
-                            )
                         }
-                        6 -> BancosPixList(
+                        6 -> if (isMarcioTab) BancosPixList(
                             bancos = uiState.bancosPix,
                             onToggleAtivo = { b, ativo -> viewModel.toggleBancoPixAtivo(b, ativo) },
                             onCreate = { nome, pkg -> viewModel.createBancoPix(nome, pkg) },
@@ -585,7 +577,7 @@ fun BuchosList(
                         Text(bucho.data.toBrDate(), color = DominoMuted, style = MaterialTheme.typography.bodySmall)
                         Text(bucho.jogador ?: "", color = DominoLight, fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Valor: R$ ${bucho.valor}", color = DominoGreen, fontWeight = FontWeight.SemiBold)
+                            Text("Valor: ${formatBRL(bucho.valor ?: 0.0)}", color = DominoGreen, fontWeight = FontWeight.SemiBold)
                             if (bucho.buchore == true) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("🔥 BUCHO DE RÉ", color = DominoOrange, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
@@ -643,7 +635,7 @@ fun MensalidadesList(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(formatMensalidadeReferencia(mensalidade.mensalidade), color = DominoMuted, style = MaterialTheme.typography.bodySmall)
                         Text(mensalidade.jogador ?: "", color = DominoLight, fontWeight = FontWeight.Bold)
-                        Text("Valor: R$ 10,00", color = DominoGreen, fontWeight = FontWeight.SemiBold)
+                        Text("Valor: ${formatBRL(10.0)}", color = DominoGreen, fontWeight = FontWeight.SemiBold)
                     }
                     Row {
                         if (isMarcio) {
@@ -715,7 +707,7 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                         )
                     }
                     Text(
-                        "R$ ${"%.2f".format(totalGeral)}",
+                        "${formatBRL(totalGeral)}",
                         color = DominoOrange, fontWeight = FontWeight.Bold, fontSize = 20.sp,
                         fontFamily = FontFamily.Serif
                     )
@@ -773,7 +765,7 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                             )
                         }
                         Text(
-                            "R$ ${"%.2f".format(debtor.totalDue)}",
+                            "${formatBRL(debtor.totalDue)}",
                             color = DominoOrange, fontWeight = FontWeight.Bold, fontSize = 15.sp
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -832,7 +824,7 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                                         }
                                     }
                                     Text(
-                                        "R$ ${"%.2f".format(entry.amount)}",
+                                        "${formatBRL(entry.amount)}",
                                         color = DominoOrange, fontSize = 13.sp, fontWeight = FontWeight.Medium
                                     )
                                 }
@@ -844,7 +836,7 @@ fun DebtorsList(debtors: List<DebtorItem>) {
                             ) {
                                 Text("Total: ", color = DominoMuted, fontSize = 13.sp)
                                 Text(
-                                    "R$ ${"%.2f".format(debtor.totalDue)}",
+                                    "${formatBRL(debtor.totalDue)}",
                                     color = DominoOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp
                                 )
                             }
@@ -1659,9 +1651,9 @@ private fun ComprovanteDetalhesDialog(c: ComprovanteHistoricoDto, onDismiss: () 
                 if (c.periodoReferencia != null) {
                     Text("Período de referência: ${c.periodoReferencia.toBrDate("MM/yyyy")}", color = DominoMuted, fontSize = 13.sp)
                 }
-                Text("Valor esperado: R$ ${"%.2f".format(c.valorEsperado ?: 0.0)}", color = DominoMuted, fontSize = 13.sp)
+                Text("Valor esperado: ${formatBRL(c.valorEsperado ?: 0.0)}", color = DominoMuted, fontSize = 13.sp)
                 if (c.valorDetectado != null) {
-                    Text("Valor detectado pela IA: R$ ${"%.2f".format(c.valorDetectado)}", color = DominoMuted, fontSize = 13.sp)
+                    Text("Valor detectado pela IA: ${formatBRL(c.valorDetectado)}", color = DominoMuted, fontSize = 13.sp)
                 }
                 if (c.bancoOrigem != null) {
                     Text("Banco de origem: ${c.bancoOrigem}", color = DominoMuted, fontSize = 13.sp)
@@ -1794,7 +1786,7 @@ private fun TestarComprovanteDialog(
                         a.bancoOrigem?.let { Text("Banco de origem: $it", color = DominoLight, fontSize = 13.sp) }
                         a.tipoTransacao?.let { Text("Tipo: $it", color = DominoLight, fontSize = 13.sp) }
                         (a.dataHoraPagamento ?: a.dataPagamento)?.let { Text("Data/hora: ${it.toBrDate("dd/MM/yyyy HH:mm")}", color = DominoLight, fontSize = 13.sp) }
-                        a.valorPago?.let { Text("Valor: R$ %.2f".format(it), color = DominoLight, fontSize = 13.sp) }
+                        a.valorPago?.let { Text("Valor: ${formatBRL(it)}", color = DominoLight, fontSize = 13.sp) }
                         a.idTransacao?.let { Text("ID da transação: $it", color = DominoLight, fontSize = 13.sp) }
                         if (a.credor != null || a.credorDocumento != null || a.credorInstituicao != null || a.credorChavePix != null) {
                             val credorInfo = buildString {

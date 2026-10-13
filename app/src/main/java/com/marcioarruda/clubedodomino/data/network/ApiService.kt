@@ -30,6 +30,10 @@ data class PlayerDTO(
     val appVersion: String? = null
 )
 
+data class ReportAppVersionRequest(
+    val email: String,
+    val appVersion: String = com.marcioarruda.clubedodomino.BuildConfig.VERSION_NAME
+)
 data class SetPlayerActiveRequest(val email: String, val ativo: Boolean)
 data class SetPlayerVacationRequest(val email: String, val feriasInicio: String?, val feriasFim: String?)
 data class UpdateAvatarRequest(val email: String, val avatar: String)
@@ -351,6 +355,9 @@ interface ApiService {
 
     @POST("webhook/buscar-info-mensalidade/{id}/pagar")
     suspend fun markMensalidadeAsPaid(@Path("id") id: String): SimpleStatusResponse
+
+    @POST("webhook/jogador/app-version")
+    suspend fun reportAppVersion(@Body request: ReportAppVersionRequest): SimpleStatusResponse
 
     @POST("webhook/jogador/ativo")
     suspend fun setPlayerActive(@Body request: SetPlayerActiveRequest): SimpleStatusResponse

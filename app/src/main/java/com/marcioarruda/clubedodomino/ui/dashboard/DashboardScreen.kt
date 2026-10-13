@@ -1,5 +1,6 @@
 package com.marcioarruda.clubedodomino.ui.dashboard
 
+import com.marcioarruda.clubedodomino.ui.util.formatBRL
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -533,10 +534,9 @@ private fun MeuDebitoCard(totalVencido: Double, totalAVencer: Double, modifier: 
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("MEU DÉBITO", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
-            Spacer(Modifier.height(4.dp))
+            Text("MEU DÉBITO", fontSize = 7.5.sp, lineHeight = 9.sp, fontWeight = FontWeight.Bold, color = DominoMuted, letterSpacing = 0.3.sp, maxLines = 1)
+            Spacer(Modifier.height(3.dp))
             DebitoLinha("Vencido", totalVencido, if (totalVencido > 0) DominoError else DominoGreen)
-            Spacer(Modifier.height(2.dp))
             DebitoLinha("A vencer", totalAVencer, if (totalAVencer > 0) DominoAmber else DominoGreen)
         }
     }
@@ -549,11 +549,13 @@ private fun DebitoLinha(label: String, valor: Double, color: Color) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, fontSize = 9.sp, color = DominoMuted, maxLines = 1)
+        Text(label, fontSize = 9.sp, lineHeight = 11.sp, color = DominoMuted, maxLines = 1)
         Spacer(Modifier.width(6.dp))
         Text(
-            "R$ ${String.format(Locale("pt", "BR"), "%.2f", valor)}",
-            fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
+            formatBRL(valor),
+            // lineHeight justo (padrão do 13sp é ~20sp): sem isso as duas linhas encostavam no
+            // rodapé do card de 72dp.
+            fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.ExtraBold,
             color = color,
             maxLines = 1
         )

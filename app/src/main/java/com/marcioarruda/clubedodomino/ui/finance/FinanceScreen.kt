@@ -1,5 +1,6 @@
 package com.marcioarruda.clubedodomino.ui.finance
 
+import com.marcioarruda.clubedodomino.ui.util.formatBRL
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -79,6 +80,8 @@ fun FinanceScreen(
     var selectedEntry by remember { mutableStateOf<FinancialEntry?>(null) }
     var selectedFilter by remember { mutableStateOf(FinanceFilter.ALL) }
     var showBancoPixSheet by remember { mutableStateOf(false) }
+    var showEscopoDialog by remember { mutableStateOf(false) }
+    var escopoSelecionado by remember { mutableStateOf(EscopoPagamento.VENCIDO) }
     val sheetState = rememberModalBottomSheetState()
     val bancoPixSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
@@ -96,8 +99,64 @@ fun FinanceScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.uploadComprovante(userId, it, context)
+            viewModel.uploadComprovante(userId, it, context, escopoSelecionado)
         }
+    }
+
+    // Opções de "o que este comprovante paga" — só as que têm valor. Com uma única opção o seletor
+    // de arquivo abre direto, sem perguntar.
+    val escoposDisponiveis = buildList {
+        if (uiState.totalDue > 0.0) add(EscopoPagamento.VENCIDO to uiState.totalDue)
+        if (uiState.totalUpcoming > 0.0) add(EscopoPagamento.A_VENCER to uiState.totalUpcoming)
+        if (uiState.totalDue > 0.0 && uiState.totalUpcoming > 0.0) add(EscopoPagamento.TUDO to uiState.totalDue + uiState.totalUpcoming)
+    }
+
+    fun enviarComprovante(escopo: EscopoPagamento) {
+        escopoSelecionado = escopo
+        filePickerLauncher.launch(arrayOf("image/*", "application/pdf"))
+    }
+
+    fun pagarComPix(valor: Double) {
+        scope.launch {
+            val payload = viewModel.getPixCopiaCola(valor)
+            copiarPixParaAreaDeTransferencia(context, payload) { message ->
+                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+        showBancoPixSheet = true
+    }
+
+    if (showEscopoDialog) {
+        AlertDialog(
+            onDismissRequest = { showEscopoDialog = false },
+            containerColor = DominoSurface,
+            title = { Text("O comprovante é de qual pagamento?", color = DominoLight, fontWeight = FontWeight.Bold, fontSize = 17.sp) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    escoposDisponiveis.forEach { (escopo, valor) ->
+                        val label = when (escopo) {
+                            EscopoPagamento.VENCIDO -> "Vencido"
+                            EscopoPagamento.A_VENCER -> "A vencer (antecipado)"
+                            EscopoPagamento.TUDO -> "Vencido + a vencer"
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                showEscopoDialog = false
+                                enviarComprovante(escopo)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(label, color = DominoLight, modifier = Modifier.weight(1f))
+                            Text(formatBRL(valor), color = DominoGreen, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showEscopoDialog = false }) { Text("Cancelar", color = DominoMuted) }
+            }
+        )
     }
 
     if (uiState.uploadStatus == UploadStatus.SUCCESS) {
@@ -174,7 +233,13 @@ fun FinanceScreen(
 
             if (hasPayableDebt && uiState.uploadStatus != UploadStatus.UPLOADING) {
                 FloatingActionButton(
-                    onClick = { filePickerLauncher.launch(arrayOf("image/*", "application/pdf")) },
+                    onClick = {
+                        when {
+                            escoposDisponiveis.size > 1 -> showEscopoDialog = true
+                            escoposDisponiveis.size == 1 -> enviarComprovante(escoposDisponiveis.first().first)
+                            else -> enviarComprovante(EscopoPagamento.VENCIDO)
+                        }
+                    },
                     containerColor = DominoYellow
                 ) {
                     Icon(Icons.Default.ReceiptLong, contentDescription = "Enviar Comprovante", tint = DominoGreen)
@@ -246,15 +311,8 @@ fun FinanceScreen(
                                     totalVencido = uiState.totalDue,
                                     totalAVencer = uiState.totalUpcoming,
                                     pendingCount = pendingCount,
-                                    onVencidoClick = {
-                                        scope.launch {
-                                            val payload = viewModel.getPixCopiaCola(uiState.totalDue)
-                                            copiarPixParaAreaDeTransferencia(context, payload) { message ->
-                                                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                        showBancoPixSheet = true
-                                    }
+                                    onVencidoClick = { pagarComPix(uiState.totalDue) },
+                                    onAVencerClick = { pagarComPix(uiState.totalUpcoming) }
                                 )
                             }
 
@@ -470,7 +528,7 @@ fun FinancialEntryItem(entry: FinancialEntry, onClick: () -> Unit) {
                     if (isCurrentMonthOrFuture) {
                          Column(horizontalAlignment = Alignment.End) {
                              Text(
-                                text = "R$ ${String.format("%.2f", entry.amount)}",
+                                text = formatBRL(entry.amount),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = DominoYellow,
                                 fontWeight = FontWeight.Bold
@@ -483,7 +541,7 @@ fun FinancialEntryItem(entry: FinancialEntry, onClick: () -> Unit) {
                          }
                     } else {
                         Text(
-                            text = "R$ ${String.format("%.2f", entry.amount)}",
+                            text = formatBRL(entry.amount),
                             style = MaterialTheme.typography.titleMedium,
                             color = amountColor,
                             fontWeight = FontWeight.Bold
@@ -501,7 +559,7 @@ fun FinancialEntryItem(entry: FinancialEntry, onClick: () -> Unit) {
                 FinancialEntryStatus.PAID -> {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "R$ ${String.format("%.2f", entry.amount)}",
+                            text = formatBRL(entry.amount),
                             style = MaterialTheme.typography.titleMedium,
                             color = amountColor,
                             fontWeight = FontWeight.Bold
@@ -561,7 +619,7 @@ fun MatchDetailsBottomSheet(entry: FinancialEntry, onDismiss: () -> Unit) {
             }
 
             DetailRow(label = if(isMonthly) "Vencimento" else "Data", value = dateStr)
-            DetailRow(label = "Valor", value = "R$ ${String.format("%.2f", entry.amount)}", isHighlight = true)
+            DetailRow(label = "Valor", value = formatBRL(entry.amount), isHighlight = true)
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -620,7 +678,8 @@ fun TotalDueCard(
     totalVencido: Double,
     totalAVencer: Double,
     pendingCount: Int,
-    onVencidoClick: () -> Unit = {}
+    onVencidoClick: () -> Unit = {},
+    onAVencerClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -661,7 +720,14 @@ fun TotalDueCard(
                         .height(44.dp)
                         .background(DominoOnDark.copy(alpha = 0.15f))
                 )
-                SaldoColumn(label = "A VENCER", value = totalAVencer, color = DominoAmber)
+                // Pix também no "a vencer", para quem quiser pagar os buchos do mês antecipadamente.
+                SaldoColumn(
+                    label = "A VENCER",
+                    value = totalAVencer,
+                    color = DominoAmber,
+                    onClick = if (totalAVencer > 0.0) onAVencerClick else null,
+                    showPixBadge = totalAVencer > 0.0
+                )
             }
             Spacer(modifier = Modifier.height(14.dp))
             Text(
@@ -686,7 +752,7 @@ private fun SaldoColumn(
         modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
     ) {
         Text(
-            text = "R$ ${String.format("%.2f", value)}",
+            text = formatBRL(value),
             color = color,
             fontWeight = FontWeight.Black,
             fontSize = 24.sp

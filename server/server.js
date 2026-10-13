@@ -420,6 +420,27 @@ app.post('/webhook/jogador/ativo', async (req, res) => {
   }
 });
 
+// 2b2. POST /webhook/jogador/app-version — chamado pelo app a cada abertura com sessão ativa, para
+// manter a versão registrada em dia sem exigir logout/login. Só grava quando a versão mudou
+// (affectedRows = 0 quando já está igual), evitando escrita a cada abertura do app.
+app.post('/webhook/jogador/app-version', async (req, res) => {
+  const { email, appVersion } = req.body;
+  if (!email || !appVersion) {
+    return res.status(400).json({ status: 'error', message: 'email e appVersion são obrigatórios.' });
+  }
+  try {
+    const versao = String(appVersion).slice(0, 20);
+    const [result] = await pool.query(
+      'UPDATE jogadores SET app_version = ?, app_version_updated_at = NOW() WHERE email = ? AND (app_version IS NULL OR app_version <> ?)',
+      [versao, email.trim(), versao]
+    );
+    res.json({ status: 'success', atualizado: result.affectedRows > 0 });
+  } catch (error) {
+    console.error('Erro ao registrar versão do app:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao registrar versão do app.' });
+  }
+});
+
 // 2c. POST /webhook/jogador/ferias — marca/desmarca o período de férias de um jogador.
 // Body: { email, feriasInicio: 'yyyy-MM-dd'|null, feriasFim: 'yyyy-MM-dd'|null }.
 // Compatibilidade: { email, ferias: false } limpa o período; { email, ferias: true } sem datas é rejeitado.
