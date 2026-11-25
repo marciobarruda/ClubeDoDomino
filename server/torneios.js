@@ -20,6 +20,13 @@
 //   bimba_ouro       — maior aproveitamento no ano       ┘ data de corte — o torneio não conta.
 // Data de corte (corte_titulos): último dia de partidas normais considerado nos títulos anuais.
 // Opcional no cadastro; quando vazia, vale o dia anterior ao torneio.
+//
+// Cobranças antecipadas: na data de corte, após o fim da janela normal de partidas (14:00), o
+// servidor gera a taxa extra de buchos do mês do corte (apurada com as partidas até o corte, de
+// forma definitiva — o cron do dia 1º não reprocessa o mês) e a mensalidade do mês seguinte,
+// para os jogadores poderem quitar tudo antes do torneio. Se o corte cair em dezembro, a
+// mensalidade de janeiro NÃO é antecipada (é do ano seguinte). Buchos de partidas normais depois
+// do corte continuam sendo cobrados normalmente, como sempre.
 
 const TITULOS = {
   campeao_torneio: 'Campeão do Torneio',
@@ -38,6 +45,9 @@ const contaNoRanking = (nome) => !!nome && !IGNORADOS.has(nome) && !isNaoMembro(
 // Depois do fim do torneio, partidas que já estavam em andamento ainda podem ser salvas por
 // este período; passado isso (ou sem partidas abertas após o fim), o cron encerra o torneio.
 const TOLERANCIA_POS_FIM_MIN = 180;
+
+// Fim da janela normal de partidas do clube — a partir daí, no dia do corte, saem as cobranças.
+const HORA_COBRANCAS_ANTECIPADAS = '14:00';
 
 // "Agora" no fuso de Recife, como strings comparáveis lexicograficamente.
 const agoraRecife = () => {
@@ -99,6 +109,8 @@ const torneioToJson = (t, extra = {}) => ({
   status: statusDoTorneio(t),
   corteTitulos: corteDoTorneio(t),
   revelado: isRevelado(t),
+  cobrancasPrevistasPara: `${corteDoTorneio(t)} ${HORA_COBRANCAS_ANTECIPADAS}`,
+  cobrancasGeradasEm: t.cobrancas_geradas_em || null,
   revelacaoEm: revelacaoEm(t),
   criadoPor: t.criado_por || null,
   finalizadoEm: t.finalizado_em || null,
@@ -151,7 +163,7 @@ const lideres = (lista, primario, desempate) => {
   return topo;
 };
 
-module.exports = function registrarRotasDeTorneio(app, getPool) {
+module.exports = function registrarRotasDeTorneio(app, getPool, cobrancas = {}) {
   const db = () => getPool();
 
   const garantirTabelas = async () => {
@@ -165,6 +177,7 @@ module.exports = function registrarRotasDeTorneio(app, getPool) {
         criado_por VARCHAR(100) NULL,
         finalizado_em VARCHAR(19) NULL,
         corte_titulos VARCHAR(10) NULL,
+        cobrancas_geradas_em VARCHAR(19) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`);
     await db().query(`
@@ -198,10 +211,12 @@ module.exports = function registrarRotasDeTorneio(app, getPool) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_torneio_titulo (torneio_id)
       )`);
-    try {
-      await db().query('ALTER TABLE torneios ADD COLUMN corte_titulos VARCHAR(10) NULL');
-    } catch (e) {
-      if (!/Duplicate column/i.test(e.message)) throw e;
+    for (const coluna of ['corte_titulos VARCHAR(10) NULL', 'cobrancas_geradas_em VARCHAR(19) NULL']) {
+      try {
+        await db().query(`ALTER TABLE torneios ADD COLUMN ${coluna}`);
+      } catch (e) {
+        if (!/Duplicate column/i.test(e.message)) throw e;
+      }
     }
     // Partida em andamento aberta durante um torneio carrega o id dele, para que ao salvar ela
     // vá para o torneio mesmo que o horário do torneio tenha acabado no meio da partida.
@@ -556,9 +571,38 @@ module.exports = function registrarRotasDeTorneio(app, getPool) {
     }
   };
 
+  // Gera as cobranças antecipadas dos torneios cuja data de corte já passou das 14:00 (roda no
+  // mesmo cron de 5 em 5 minutos). Cada torneio gera uma única vez (cobrancas_geradas_em).
+  const gerarCobrancasAntecipadasDeTorneios = async () => {
+    if (!cobrancas.gerarTaxaExtraBuchosParaMes || !cobrancas.gerarMensalidadesDoMes) return;
+    try {
+      const agora = agoraRecife();
+      const [pendentes] = await db().query(
+        'SELECT * FROM torneios WHERE finalizado_em IS NULL AND cobrancas_geradas_em IS NULL'
+      );
+      for (const t of pendentes) {
+        const corte = corteDoTorneio(t);
+        if (agora.dataHora < `${corte} ${HORA_COBRANCAS_ANTECIPADAS}`) continue;
+        try {
+          const [ano, mes] = corte.split('-').map(Number);
+          await cobrancas.gerarTaxaExtraBuchosParaMes(ano, mes, { ate: corte, origem: `Torneio #${t.id} ${t.nome}`.slice(0, 100) });
+          if (mes !== 12) {
+            await cobrancas.gerarMensalidadesDoMes(ano, mes + 1);
+          }
+          await db().query('UPDATE torneios SET cobrancas_geradas_em = ? WHERE id = ?', [agora.dataHoraSeg, t.id]);
+          console.log(`💳 Cobranças antecipadas do torneio "${t.nome}" (#${t.id}) geradas (corte ${corte}).`);
+        } catch (e) {
+          console.error(`❌ Erro ao gerar cobranças antecipadas do torneio #${t.id}:`, e.message);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erro na geração de cobranças antecipadas de torneios:', error.message);
+    }
+  };
+
   garantirTabelas()
     .then(() => console.log('✅ Tabelas de torneio verificadas.'))
     .catch(e => console.error('❌ Falha ao criar tabelas de torneio:', e.message));
 
-  return { encerrarTorneiosVencidos };
+  return { encerrarTorneiosVencidos, gerarCobrancasAntecipadasDeTorneios };
 };

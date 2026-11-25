@@ -75,6 +75,24 @@ data class ActiveMatchDto(
     @SerializedName("torneio_id") val torneioId: Int? = null
 )
 
+// --- Custo de filiação (GET webhook/custo-filiacao) ---
+data class CustoFiliacaoMesDto(
+    val mes: Int,
+    val nome: String,
+    val mensalidade: Double,
+    val mediaBuchos: Double? = null // null = mês corrente (ainda não fechado)
+)
+
+data class CustoFiliacaoDto(
+    val ano: Int,
+    val mesAtual: Int,
+    val valorMensalidade: Double,
+    val meses: List<CustoFiliacaoMesDto> = emptyList(),
+    val totalMensalidades: Double,
+    val totalMedias: Double,
+    val total: Double
+)
+
 // --- Torneios (ver server/torneios.js) ---
 
 data class TorneioTituloDto(
@@ -129,6 +147,9 @@ data class TorneioDto(
     // Títulos do ano só são revelados (vencedor + pontuação) no fim do horário do torneio.
     val revelado: Boolean = true,
     val revelacaoEm: String? = null,  // yyyy-MM-dd HH:mm
+    // Cobranças antecipadas (mensalidade do mês seguinte + taxa extra do mês) — ver server/torneios.js.
+    val cobrancasPrevistasPara: String? = null, // yyyy-MM-dd HH:mm
+    val cobrancasGeradasEm: String? = null,
     val criadoPor: String? = null,
     val finalizadoEm: String? = null,
     val totalPartidas: Int = 0,
@@ -489,6 +510,9 @@ interface ApiService {
 
     @DELETE("webhook/bancos-pix/{id}")
     suspend fun deleteBancoPix(@Path("id") id: Int): SimpleStatusResponse
+
+    @GET("webhook/custo-filiacao")
+    suspend fun getCustoFiliacao(): CustoFiliacaoDto
 
     // --- Torneios ---
     @GET("webhook/torneios")

@@ -414,7 +414,7 @@
         'use strict';
 
         // Versão do PWA — acompanha o app Android (docs/version.json). Atualizar junto a cada release.
-        const PWA_VERSION = { code: 102, name: '1.67' };
+        const PWA_VERSION = { code: 103, name: '1.68' };
 
         // ─── Armazenamento local (pode falhar em navegação privada) ─────────────────
         const store = {
@@ -683,7 +683,11 @@
                 amount: Number(b.valor) || 0,
                 status: b.pago ? 'PAID' : 'PENDING',
                 dueDate: parseAnyDate(b.data) || now(),
-                description: isTaxa ? 'Taxa Extra (Déficit Mês Anterior)' : (b.placar || 'N/A'),
+                // Médias cobradas na filiação de um novo jogador também são taxa extra no servidor
+                // (obs "Taxa extra - Média de buchos (filiação) MM/AAAA") — exibidas pelo próprio texto.
+                description: isTaxa
+                    ? (/filiação/i.test(b.obs || '') ? String(b.obs).replace(/^Taxa extra - /i, '') : 'Taxa Extra (Déficit Mês Anterior)')
+                    : (b.placar || 'N/A'),
                 winningPair: b.dupla_vencedora,
                 losingPair: b.dupla_perdedora,
                 remoteId: b.id,
@@ -2184,6 +2188,21 @@
             </div>`;
         }
 
+        // Aviso das cobranças antecipadas: mensalidade do mês seguinte (exceto em dezembro) e taxa
+        // extra do mês, geradas na data de corte após 14h para os jogadores pagarem antes do torneio.
+        const MESES_NOME = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        function cobrancasTexto(t) {
+            const prev = t.cobrancasPrevistasPara;
+            if (!prev) return null;
+            const mes = parseInt(prev.slice(5, 7), 10);
+            if (!mes) return null;
+            const dez = mes === 12;
+            const itens = dez ? 'Taxa extra de dezembro' : `Mensalidade de ${MESES_NOME[mes]} e taxa extra de ${MESES_NOME[mes - 1]}`;
+            return t.cobrancasGeradasEm
+                ? `💳 ${itens} ${dez ? 'já disponível' : 'já disponíveis'} em Finanças para pagar antes do torneio.`
+                : `💳 ${itens} ${dez ? 'será liberada' : 'serão liberadas'} em ${prev.slice(8, 10)}/${prev.slice(5, 7)} após ${prev.slice(11, 16)}, para pagar antes do torneio.`;
+        }
+
         // "2026-11-28 18:00" → "28/11 às 18:00"
         const revelacaoTexto = t => {
             const q = t.revelacaoEm || `${t.data} ${t.horaFim}`;
@@ -2400,6 +2419,7 @@
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div class="nm">${esc(d.nome)}</div><span style="background:var(--on-dark);border-radius:999px;flex-shrink:0">${statusBadge(d.status)}</span></div>
                         <div class="dd">📅 ${esc(torneioData(d))} · ⏰ ${esc(torneioJanela(d))} · 🎲 ${partidasLabel(partidas.length)}</div>
                         ${d.corteTitulos ? `<div class="dd">Títulos do ano: partidas até ${esc(d.corteTitulos.split('-').reverse().join('/'))}</div>` : ''}
+                        ${(d.status !== 'encerrado' || d.cobrancasGeradasEm) && cobrancasTexto(d) ? `<div class="dd" style="color:var(--yellow);font-weight:600">${esc(cobrancasTexto(d))}</div>` : ''}
                     </div>
                     ${adminHtml}
                     ${indicadosHtml}

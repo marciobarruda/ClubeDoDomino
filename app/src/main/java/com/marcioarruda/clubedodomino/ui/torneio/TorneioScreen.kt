@@ -375,6 +375,12 @@ private fun TorneioDetalhe(
                     torneio.corteTitulos?.let {
                         Text("Títulos do ano: partidas até ${formatarData(it, "dd/MM/yyyy")}", color = DominoOnDarkMuted, fontSize = 12.sp)
                     }
+                    if (torneio.status != "encerrado" || torneio.cobrancasGeradasEm != null) {
+                        cobrancasTexto(torneio)?.let {
+                            Spacer(Modifier.height(4.dp))
+                            Text(it, color = DominoYellow, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -557,6 +563,22 @@ private fun TrofeuImagem(tipo: String, size: androidx.compose.ui.unit.Dp) {
         } else {
             Text(TROFEU_EMOJI[tipo] ?: "🏆", fontSize = (size.value * 0.5f).sp)
         }
+    }
+}
+
+private val MESES = listOf("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
+
+// Aviso das cobranças antecipadas: mensalidade do mês seguinte (exceto em dezembro) e taxa extra
+// do mês, geradas na data de corte após 14h para os jogadores pagarem antes do torneio.
+private fun cobrancasTexto(t: TorneioDto): String? {
+    val prev = t.cobrancasPrevistasPara ?: return null
+    val mes = prev.substring(5, 7).toIntOrNull() ?: return null
+    val dezembro = mes == 12
+    val itens = if (dezembro) "Taxa extra de dezembro" else "Mensalidade de ${MESES[mes]} e taxa extra de ${MESES[mes - 1]}"
+    return if (t.cobrancasGeradasEm != null) {
+        "💳 $itens ${if (dezembro) "já disponível" else "já disponíveis"} em Finanças para pagar antes do torneio."
+    } else {
+        "💳 $itens ${if (dezembro) "será liberada" else "serão liberadas"} em ${formatarData(prev.take(10), "dd/MM")} após ${prev.drop(11).take(5)}, para pagar antes do torneio."
     }
 }
 

@@ -79,11 +79,11 @@ fun AdminScreen(
     val canEdit = userName.equals("MÁRCIO", ignoreCase = true) || userName.equals("CALÁBRIA", ignoreCase = true)
     val isMarcioTab = userName.equals("MÁRCIO", ignoreCase = true)
 
-    // Comprovantes e Bancos Pix: exclusivas do Márcio.
+    // Comprovantes e Bancos Pix: exclusivas do Márcio. Filiação: todos.
     val tabs = if (isMarcioTab) {
-        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes", "Comprovantes", "Bancos Pix")
+        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes", "Filiação", "Comprovantes", "Bancos Pix")
     } else {
-        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes")
+        listOf("Partidas", "Buchos", "Mensalidades", "Jogadores", "Inadimplentes", "Filiação")
     }
 
     LaunchedEffect(Unit) {
@@ -293,14 +293,15 @@ fun AdminScreen(
                 if (uiState.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = DominoGreen)
                 } else {
-                    when (selectedTab) {
-                        0 -> MatchesList(
+                    // Seleção pelo título (a lista de abas muda conforme o usuário).
+                    when (tabs.getOrNull(selectedTab)) {
+                        "Partidas" -> MatchesList(
                             matches = uiState.matches,
                             onDelete = { viewModel.deleteMatch(it) },
                             onEdit = { matchId -> onEditMatch(matchId) },
                             canEdit = canEdit
                         )
-                        1 -> {
+                        "Buchos" -> {
                             var expanded by remember { mutableStateOf(false) }
                             val playerNames = remember(uiState.players) {
                                 listOf("Todos os Jogadores") + uiState.players.map { it.user.name }.distinct().sorted()
@@ -363,7 +364,7 @@ fun AdminScreen(
                                 )
                             }
                         }
-                        2 -> {
+                        "Mensalidades" -> {
                             var mensalidadeExpanded by remember { mutableStateOf(false) }
                             val playerNames = remember(uiState.players) {
                                 listOf("Todos os Jogadores") + uiState.players.map { it.user.name }.distinct().sorted()
@@ -426,14 +427,18 @@ fun AdminScreen(
                                 )
                             }
                         }
-                        3 -> PlayersList(
+                        "Jogadores" -> PlayersList(
                             players = uiState.players,
                             onToggleActive = { u, a -> viewModel.togglePlayerActive(u, a) },
                             onSetVacation = { u, start, end -> viewModel.setPlayerVacation(u, start, end) },
                             canEdit = canEdit
                         )
-                        4 -> DebtorsList(debtors = uiState.debtors)
-                        5 -> if (isMarcioTab) {
+                        "Inadimplentes" -> DebtorsList(debtors = uiState.debtors)
+                        "Filiação" -> FiliacaoTab(
+                            uiState = uiState,
+                            onLoad = { viewModel.loadCustoFiliacao() }
+                        )
+                        "Comprovantes" -> if (isMarcioTab) {
                             ComprovantesTab(
                                 uiState = uiState,
                                 onLoadHistorico = { viewModel.loadComprovantesHistorico() },
@@ -441,7 +446,7 @@ fun AdminScreen(
                                 onDismissTeste = { viewModel.dismissTesteComprovante() }
                             )
                         }
-                        6 -> if (isMarcioTab) BancosPixList(
+                        "Bancos Pix" -> if (isMarcioTab) BancosPixList(
                             bancos = uiState.bancosPix,
                             onToggleAtivo = { b, ativo -> viewModel.toggleBancoPixAtivo(b, ativo) },
                             onCreate = { nome, pkg -> viewModel.createBancoPix(nome, pkg) },
@@ -864,7 +869,8 @@ fun AddPlayerDialog(
     // Date pickers — day/month/year for billing start
     val today = Calendar.getInstance()
     var billingDay by remember { mutableStateOf(1) }
-    var billingMonth by remember { mutableStateOf(today.get(Calendar.MONTH) + 1) } // 1-based for display
+    // Padrão: janeiro — a filiação cobra as mensalidades e médias de buchos do ano inteiro.
+    var billingMonth by remember { mutableStateOf(1) } // 1-based for display
     var billingYear by remember { mutableStateOf(today.get(Calendar.YEAR)) }
 
     val availableAvatars = listOf(
@@ -933,6 +939,11 @@ fun AddPlayerDialog(
                 )
 
                 Text("Início das cobranças", color = DominoMuted, fontSize = 12.sp)
+                Text(
+                    "Gera as mensalidades do mês de início até o mês atual e a média de buchos de cada mês já fechado (veja a aba Filiação).",
+                    color = DominoMuted,
+                    fontSize = 11.sp
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = billingDay.toString(),
@@ -1824,3 +1835,102 @@ private fun TestarComprovanteDialog(
         }
     )
 }
+
+// Aba "Filiação": quanto custa entrar no clube hoje — mensalidades de janeiro até o mês corrente
+// e a média de buchos de cada mês já fechado (a mesma média da taxa extra), calculadas no servidor.
+@Composable
+fun FiliacaoTab(uiState: AdminUiState, onLoad: () -> Unit) {
+    LaunchedEffect(Unit) { onLoad() }
+    val context = LocalContext.current
+    val custo = uiState.custoFiliacao
+
+    when {
+        uiState.isLoadingCustoFiliacao && custo == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = DominoGreen)
+        }
+        custo == null -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+            Text(uiState.custoFiliacaoError ?: "Sem dados.", color = DominoOrange, textAlign = TextAlign.Center)
+        }
+        else -> LazyColumn(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = DominoGreen),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("CUSTO DE FILIAÇÃO HOJE", color = DominoGold.copy(alpha = 0.8f), fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 0.5.sp)
+                        Text(formatBRL(custo.total), color = DominoGold, fontWeight = FontWeight.Black, fontSize = 30.sp)
+                        Text(
+                            "Mensalidades: ${formatBRL(custo.totalMensalidades)} · Médias de buchos: ${formatBRL(custo.totalMedias)}",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+            item {
+                Text(
+                    "Mensalidades de janeiro até o mês atual e a média de buchos dos meses já fechados de ${custo.ano} (média por jogador que jogou no mês — a mesma usada na taxa extra).",
+                    color = DominoMuted,
+                    fontSize = 11.sp
+                )
+            }
+            item {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                    Text("MÊS", color = DominoMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.2f))
+                    Text("MENSALIDADE", color = DominoMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                    Text("MÉDIA BUCHOS", color = DominoMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                }
+            }
+            items(custo.meses) { m ->
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = DominoSurface),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(m.nome, color = DominoLight, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1.2f))
+                        Text(formatBRL(m.mensalidade), color = DominoLight, fontSize = 13.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                        Text(
+                            m.mediaBuchos?.let { formatBRL(it) } ?: "em aberto",
+                            color = if (m.mediaBuchos == null) DominoMuted else DominoLight,
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.End
+                        )
+                    }
+                }
+            }
+            item {
+                Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Filiação", mensagemFiliacao(custo)))
+                        android.widget.Toast.makeText(context, "Mensagem copiada!", android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = DominoGold, contentColor = DominoGreen)
+                ) { Text("Copiar mensagem para o novo jogador", fontWeight = FontWeight.Bold) }
+            }
+        }
+    }
+}
+
+// Texto pronto para mandar ao interessado (WhatsApp etc.).
+private fun mensagemFiliacao(c: com.marcioarruda.clubedodomino.data.network.CustoFiliacaoDto): String = buildString {
+    val mesAtual = c.meses.lastOrNull()?.nome?.lowercase() ?: ""
+    appendLine("🎲 Clube do Dominó — filiação em $mesAtual/${c.ano}")
+    appendLine()
+    appendLine("Para entrar no clube agora, o valor é ${formatBRL(c.total)}:")
+    appendLine("• Mensalidades de janeiro a $mesAtual (${c.meses.size} x ${formatBRL(c.valorMensalidade)}): ${formatBRL(c.totalMensalidades)}")
+    val fechados = c.meses.filter { it.mediaBuchos != null }
+    if (fechados.isNotEmpty()) {
+        appendLine("• Média de buchos dos meses anteriores: ${formatBRL(c.totalMedias)}")
+        fechados.forEach { appendLine("   - ${it.nome}: ${formatBRL(it.mediaBuchos ?: 0.0)}") }
+    }
+}.trimEnd()

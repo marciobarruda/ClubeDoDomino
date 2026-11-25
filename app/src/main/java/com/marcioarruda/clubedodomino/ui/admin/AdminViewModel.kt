@@ -46,7 +46,10 @@ data class AdminUiState(
     val testeComprovanteResultado: TestarAnaliseComprovanteResponse? = null,
     val testeComprovanteError: String? = null,
     val bancosPix: List<BancoPixDto> = emptyList(),
-    val isSavingBancoPix: Boolean = false
+    val isSavingBancoPix: Boolean = false,
+    val custoFiliacao: com.marcioarruda.clubedodomino.data.network.CustoFiliacaoDto? = null,
+    val isLoadingCustoFiliacao: Boolean = false,
+    val custoFiliacaoError: String? = null
 )
 
 data class AdminPlayerItem(
@@ -348,6 +351,19 @@ class AdminViewModel(
                 _uiState.update { it.copy(isCreatingPlayer = false, message = "Jogador \"$name\" cadastrado com mensalidades retroativas aplicadas.") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isCreatingPlayer = false, error = "Erro ao cadastrar jogador: ${e.message}") }
+            }
+        }
+    }
+
+    fun loadCustoFiliacao() {
+        if (_uiState.value.isLoadingCustoFiliacao) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingCustoFiliacao = true, custoFiliacaoError = null) }
+            try {
+                val custo = repository.getCustoFiliacao()
+                _uiState.update { it.copy(isLoadingCustoFiliacao = false, custoFiliacao = custo) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadingCustoFiliacao = false, custoFiliacaoError = "Erro ao calcular o custo de filiação: ${e.message}") }
             }
         }
     }

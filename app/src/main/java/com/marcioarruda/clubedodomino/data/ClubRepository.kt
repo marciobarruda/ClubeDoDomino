@@ -584,7 +584,14 @@ class ClubRepository {
             amount = this.valor ?: 0.0,
             status = if (this.pago == true) FinancialEntryStatus.PAID else FinancialEntryStatus.PENDING,
             dueDate = parsedDate,
-            description = if (isTaxaExtra) "Taxa Extra (Déficit Mês Anterior)" else (this.placar ?: "N/A"),
+            // Médias cobradas na filiação de um novo jogador também são taxa extra no servidor
+            // (obs "Taxa extra - Média de buchos (filiação) MM/AAAA") — exibidas pelo próprio texto.
+            description = when {
+                isTaxaExtra && this.obs?.contains("filiação", ignoreCase = true) == true ->
+                    this.obs.substringAfter("Taxa extra - ", this.obs)
+                isTaxaExtra -> "Taxa Extra (Déficit Mês Anterior)"
+                else -> this.placar ?: "N/A"
+            },
             winningPair = this.dupla_vencedora,
             losingPair = this.dupla_perdedora,
             originalRemoteId = this.id,
@@ -771,6 +778,9 @@ class ClubRepository {
         dataCriacao = null,
         torneioId = this.torneioId
     )
+
+    // Quanto custa entrar no clube hoje (mensalidades do ano + médias de buchos dos meses fechados).
+    suspend fun getCustoFiliacao(): CustoFiliacaoDto = withContext(Dispatchers.IO) { api.getCustoFiliacao() }
 
     // ─── Torneios ─────────────────────────────────────────────────────────
     // Partidas de torneio ficam numa tabela própria no servidor: não geram bucho e não entram

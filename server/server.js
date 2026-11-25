@@ -64,7 +64,11 @@ let pool = mysql.createPool({
 
 // Módulo de torneios (server/torneios.js). Recebe um getter do pool porque `pool` é recriado
 // quando a senha do banco é trocada em runtime.
-const { encerrarTorneiosVencidos } = registrarRotasDeTorneio(app, () => pool);
+// As funções de cobrança são passadas como wrappers porque só são definidas mais abaixo no arquivo.
+const { encerrarTorneiosVencidos, gerarCobrancasAntecipadasDeTorneios } = registrarRotasDeTorneio(app, () => pool, {
+  gerarMensalidadesDoMes: (...args) => gerarMensalidadesDoMes(...args),
+  gerarTaxaExtraBuchosParaMes: (...args) => gerarTaxaExtraBuchosParaMes(...args)
+});
 
 // Testar conexão inicial com o banco de dados e garantir tabelas auxiliares
 (async () => {
@@ -118,6 +122,18 @@ const { encerrarTorneiosVencidos } = registrarRotasDeTorneio(app, () => pool);
         if (!/Duplicate column/i.test(e.message)) throw e;
       }
     }
+
+    // Meses cuja taxa extra de buchos já foi apurada de forma definitiva. Usado quando um torneio
+    // antecipa a apuração (ver server/torneios.js): a geração automática do dia 1º pula o mês
+    // inteiro, inclusive quem não foi cobrado na apuração antecipada.
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS taxa_extra_apurada (
+        mes VARCHAR(10) PRIMARY KEY,
+        ate VARCHAR(10) NULL,
+        origem VARCHAR(100) NULL,
+        apurado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
 
     // Lista de apps de banco usada no seletor de "Pagar com..." ao clicar no saldo vencido em
     // Finanças. Gerenciável pelo Admin (sem precisar de nova versão do app) — abrir um banco é
@@ -262,6 +278,13 @@ const diasDisponiveisNoMes = (mesInicio, mesFim, feriasInicio, feriasFim) => {
 // Só o status "inativo" isenta.
 const gerarMensalidadesDoMesAtual = async () => {
   const { year, month } = getSaoPauloDateParts();
+  await gerarMensalidadesDoMes(year, month);
+};
+
+// Gera a mensalidade do mês informado para os jogadores ativos (exceto "não membro") que ainda
+// não a têm. Usada pelo cron do dia 1º (mês atual) e pela geração antecipada antes de um torneio
+// (mês seguinte) — idempotente, então o cron do dia 1º não duplica o que já foi antecipado.
+const gerarMensalidadesDoMes = async (year, month) => {
   const mesReferencia = `${year}-${String(month).padStart(2, '0')}-01`;
 
   try {
@@ -521,9 +544,11 @@ const getLastBusinessDayOfMonth = (year, month) => {
 // (mesma condição usada na isenção de mensalidade).
 // Idempotente — verifica se já existe um débito do tipo "Taxa extra" para aquele jogador/mês antes de inserir.
 // Retorna um resumo { mes, mediaPartidas, mediaBuchos, gerados: [{jogador, valor}] } para uso em logs/relatórios.
-const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
-  const { inicio: mesInicio, fim: mesFim } = getMonthBounds(targetYear, targetMonth);
-
+// Base de cálculo da taxa extra de um mês: jogadores elegíveis, partidas e buchos por jogador e as
+// médias do grupo. Compartilhada pela taxa extra, pelo custo de filiação e pelas médias cobradas
+// do novo jogador — para os três usarem exatamente a mesma média de buchos.
+// mesFim (exclusivo) pode ser antes do fim do mês, na apuração antecipada de um torneio.
+const calcularBaseTaxaExtra = async (mesInicio, mesFim) => {
   // Diferente da isenção de mensalidade (tudo-ou-nada): aqui só exclui quem tem férias cobrindo
   // o mês INTEIRO (inicio <= mesInicio E fim em aberto ou >= último dia do mês). Férias parciais
   // mantêm o jogador na lista, com a meta reduzida via fatorDisponibilidade mais abaixo.
@@ -535,7 +560,6 @@ const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
     [mesInicio, mesFim]
   );
   const jogadoresAtivos = jogadoresRows.map(r => (r.jogador || '').trim()).filter(Boolean);
-  if (jogadoresAtivos.length === 0) return { mes: mesInicio, gerados: [] };
 
   // Fator [0, 1] de dias disponíveis no mês por jogador, para reduzir a meta de quem teve férias parciais.
   const fatorDisponibilidade = {};
@@ -563,11 +587,12 @@ const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
     }
   }
 
-  // Exclui lançamentos de "Taxa extra" do cálculo da média: são cobranças corretivas, não
+  // Exclui lançamentos de "Taxa extra" (inclusive as médias cobradas na filiação, que também
+  // começam com "Taxa extra") do cálculo da média: são cobranças corretivas, não
   // desempenho real do jogador no mês — incluí-las infla a média a cada execução (rodar o
   // backfill duas vezes geraria uma 2ª cobrança sobre a média já distorcida pela 1ª).
   const [buchosRows] = await pool.query(
-    "SELECT jogador, valor FROM buchos WHERE data >= ? AND data < ? AND (obs IS NULL OR obs != 'Taxa extra')",
+    "SELECT jogador, valor FROM buchos WHERE data >= ? AND data < ? AND (obs IS NULL OR obs NOT LIKE 'Taxa extra%')",
     [mesInicio, mesFim]
   );
   const buchosPorJogador = {};
@@ -589,9 +614,39 @@ const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
   const avgMatches = totalPartidas / activeCount;
   const avgBuchos = totalBuchos / activeCount;
 
+  return { jogadoresAtivos, fatorDisponibilidade, partidasPorJogador, buchosPorJogador, avgMatches, avgBuchos, jogadoresQueJogaram };
+};
+
+// Opções:
+//   ate: 'yyyy-MM-dd' — apuração antecipada (antes de um torneio): considera só partidas/buchos até
+//        essa data (inclusive), e a proporção de férias passa a ser sobre esse período.
+//   origem: texto gravado em taxa_extra_apurada (ex.: "Torneio #3").
+// Mês já apurado de forma definitiva (taxa_extra_apurada) não é processado de novo.
+const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth, { ate = null, origem = null } = {}) => {
+  const { inicio: mesInicio, fim: mesFimReal } = getMonthBounds(targetYear, targetMonth);
+
+  const [[apurado]] = await pool.query('SELECT mes, ate FROM taxa_extra_apurada WHERE mes = ?', [mesInicio]);
+  if (apurado) {
+    console.log(`ℹ️ Taxa extra de ${mesInicio} já apurada${apurado.ate ? ` (até ${apurado.ate})` : ''} — nada a fazer.`);
+    return { mes: mesInicio, jaApurado: true, gerados: [] };
+  }
+
+  // Fim (exclusivo) do período apurado: dia seguinte ao "ate", limitado ao fim do mês.
+  let mesFim = mesFimReal;
+  if (ate) {
+    const [y, m, d] = ate.split('-').map(Number);
+    const seguinte = new Date(Date.UTC(y, m - 1, d + 1));
+    const seguinteStr = `${seguinte.getUTCFullYear()}-${String(seguinte.getUTCMonth() + 1).padStart(2, '0')}-${String(seguinte.getUTCDate()).padStart(2, '0')}`;
+    if (seguinteStr < mesFim) mesFim = seguinteStr;
+  }
+
+  const { jogadoresAtivos, fatorDisponibilidade, partidasPorJogador, buchosPorJogador, avgMatches, avgBuchos } =
+    await calcularBaseTaxaExtra(mesInicio, mesFim);
+  if (jogadoresAtivos.length === 0) return { mes: mesInicio, gerados: [] };
+
   const [existentesRows] = await pool.query(
-    "SELECT jogador FROM buchos WHERE obs = 'Taxa extra' AND data >= ? AND data < ?",
-    [mesInicio, mesFim]
+    "SELECT jogador FROM buchos WHERE obs LIKE 'Taxa extra%' AND data >= ? AND data < ?",
+    [mesInicio, mesFimReal] // mês inteiro: a taxa é lançada no último dia útil, depois de um eventual "ate"
   );
   const jaGerados = new Set(existentesRows.map(r => (r.jogador || '').trim().toUpperCase()));
 
@@ -622,8 +677,16 @@ const gerarTaxaExtraBuchosParaMes = async (targetYear, targetMonth) => {
     gerados.push({ jogador: nome, valor: Number(deficit.toFixed(2)) });
   }
 
-  console.log(`✅ Taxa extra de buchos de ${mesInicio} gerada para ${gerados.length} jogador(es) (média de ${avgMatches.toFixed(1)} partidas / ${avgBuchos.toFixed(2)} de bucho).`);
-  return { mes: mesInicio, mediaPartidas: avgMatches, mediaBuchos: avgBuchos, gerados };
+  // A apuração antecipada é definitiva para o mês: registra para o cron do dia 1º não reprocessar.
+  if (ate) {
+    await pool.query(
+      'INSERT IGNORE INTO taxa_extra_apurada (mes, ate, origem) VALUES (?, ?, ?)',
+      [mesInicio, ate, origem]
+    );
+  }
+
+  console.log(`✅ Taxa extra de buchos de ${mesInicio}${ate ? ` (até ${ate})` : ''} gerada para ${gerados.length} jogador(es) (média de ${avgMatches.toFixed(1)} partidas / ${avgBuchos.toFixed(2)} de bucho).`);
+  return { mes: mesInicio, ate, mediaPartidas: avgMatches, mediaBuchos: avgBuchos, gerados };
 };
 
 // Wrapper usado pelo cron mensal e pelo boot do servidor: sempre calcula sobre o mês anterior
@@ -641,7 +704,8 @@ const gerarTaxaExtraBuchosMesAnterior = async () => {
   }
 };
 
-// Gera mensalidades retroativas para um jogador, do mês de início (startDate) até o mês anterior ao atual.
+// Gera mensalidades retroativas para um jogador, do mês de início (startDate) até o mês atual
+// (inclusive) — a filiação cobra todas as mensalidades do ano até o mês corrente.
 const gerarMensalidadesRetroativas = async (playerName, startYear, startMonth) => {
   const [existentesRows] = await pool.query(
     'SELECT mensalidade FROM mensalidades WHERE UPPER(TRIM(jogador)) = UPPER(?)',
@@ -650,10 +714,9 @@ const gerarMensalidadesRetroativas = async (playerName, startYear, startMonth) =
   const existentes = new Set(existentesRows.map(r => r.mensalidade));
 
   const { year: anoAtual, month: mesAtual } = getSaoPauloDateParts();
-  // Limite: até o mês anterior ao atual (inclusive)
-  let limiteAno = anoAtual;
-  let limiteMes = mesAtual - 1;
-  if (limiteMes === 0) { limiteMes = 12; limiteAno -= 1; }
+  // Limite: até o mês atual (inclusive)
+  const limiteAno = anoAtual;
+  const limiteMes = mesAtual;
 
   let cursorAno = startYear;
   let cursorMes = startMonth;
@@ -671,6 +734,74 @@ const gerarMensalidadesRetroativas = async (playerName, startYear, startMonth) =
   }
 };
 
+const VALOR_MENSALIDADE = 10;
+const NOMES_MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// Média de buchos de um mês fechado — a mesma média usada na taxa extra.
+const mediaDeBuchosDoMes = async (year, month) => {
+  const { inicio, fim } = getMonthBounds(year, month);
+  const { avgBuchos } = await calcularBaseTaxaExtra(inicio, fim);
+  return round2(avgBuchos);
+};
+
+// Lança para o novo jogador a média de buchos de cada mês já FECHADO, do mês de início até o mês
+// anterior ao atual, como cobrança de filiação. Gravada na tabela de buchos com obs começando por
+// "Taxa extra" para o app tratá-la como taxa extra (Finanças, Pix, baixa por comprovante) e para
+// não entrar no cálculo das médias. Idempotente por jogador/mês.
+const gerarMediasDeBuchoDeFiliacao = async (playerName, startYear, startMonth) => {
+  const { year: anoAtual, month: mesAtual } = getSaoPauloDateParts();
+  let ano = startYear;
+  let mes = startMonth;
+  const gerados = [];
+  while (ano < anoAtual || (ano === anoAtual && mes < mesAtual)) {
+    const { inicio, fim } = getMonthBounds(ano, mes);
+    const [existentes] = await pool.query(
+      "SELECT id_tabela FROM buchos WHERE UPPER(TRIM(jogador)) = UPPER(?) AND obs LIKE 'Taxa extra%' AND data >= ? AND data < ?",
+      [playerName, inicio, fim]
+    );
+    if (existentes.length === 0) {
+      const media = await mediaDeBuchosDoMes(ano, mes);
+      if (media > 0.01) {
+        const ref = `${String(mes).padStart(2, '0')}/${ano}`;
+        await pool.query(
+          'INSERT INTO buchos (data, jogador, valor, pago, obs, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+          [getLastBusinessDayOfMonth(ano, mes), playerName, media.toFixed(2), 'false', `Taxa extra - Média de buchos (filiação) ${ref}`]
+        );
+        gerados.push({ mes: ref, valor: media });
+      }
+    }
+    mes++;
+    if (mes > 12) { mes = 1; ano += 1; }
+  }
+  if (gerados.length) console.log(`✅ Médias de bucho de filiação lançadas para ${playerName}: ${gerados.map(g => `${g.mes}=${g.valor}`).join(', ')}`);
+  return gerados;
+};
+
+// 2e0. GET /webhook/custo-filiacao — quanto custa entrar no clube hoje: mensalidades de janeiro
+// até o mês corrente (inclusive) + média de buchos de cada mês já fechado do ano.
+app.get('/webhook/custo-filiacao', async (req, res) => {
+  try {
+    const { year, month } = getSaoPauloDateParts();
+    const meses = [];
+    for (let m = 1; m <= month; m++) {
+      const fechado = m < month;
+      meses.push({
+        mes: m,
+        nome: NOMES_MESES[m - 1],
+        mensalidade: VALOR_MENSALIDADE,
+        mediaBuchos: fechado ? await mediaDeBuchosDoMes(year, m) : null
+      });
+    }
+    const totalMensalidades = round2(meses.reduce((a, m) => a + m.mensalidade, 0));
+    const totalMedias = round2(meses.reduce((a, m) => a + (m.mediaBuchos || 0), 0));
+    res.json({ ano: year, mesAtual: month, valorMensalidade: VALOR_MENSALIDADE, meses, totalMensalidades, totalMedias, total: round2(totalMensalidades + totalMedias) });
+  } catch (error) {
+    console.error('Erro ao calcular custo de filiação:', error.message);
+    res.status(500).json({ status: 'error', message: 'Erro ao calcular custo de filiação.' });
+  }
+});
+
 // 2e. POST /webhook/criar-jogador — cadastra um novo jogador e gera mensalidades retroativas
 app.post('/webhook/criar-jogador', async (req, res) => {
   const { name, email, password, avatarId, startYear, startMonth } = req.body;
@@ -687,6 +818,7 @@ app.post('/webhook/criar-jogador', async (req, res) => {
 
     if (startYear && startMonth) {
       await gerarMensalidadesRetroativas(name.trim(), parseInt(startYear), parseInt(startMonth));
+      await gerarMediasDeBuchoDeFiliacao(name.trim(), parseInt(startYear), parseInt(startMonth));
     }
 
     res.status(201).json({ status: 'success' });
@@ -2206,7 +2338,10 @@ cron.schedule('10 0 1 * *', gerarTaxaExtraBuchosMesAnterior, {
 });
 
 // Cron: a cada 5 minutos, encerra (e grava os títulos de) torneios cujo horário já acabou.
-cron.schedule('*/5 * * * *', encerrarTorneiosVencidos, {
+cron.schedule('*/5 * * * *', async () => {
+  await gerarCobrancasAntecipadasDeTorneios();
+  await encerrarTorneiosVencidos();
+}, {
   timezone: 'America/Sao_Paulo'
 });
 
