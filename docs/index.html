@@ -161,11 +161,12 @@
         .dash-top .date { color: var(--muted); font-size: 12px; font-weight: 500; }
         .dash-top .hello { font-size: 28px; font-weight: 900; margin-top: 2px; line-height: 1.15; }
         .avatar-btn { border: none; background: var(--green); padding: 0; border-radius: 50%; }
-        .shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .shortcut { background: var(--surface); border: none; border-radius: 16px; box-shadow: var(--shadow); aspect-ratio: 1.15; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--text); }
+        /* 4 atalhos (Jogar, Ranking, Finanças, Torneios) numa linha, como o ShortcutsGrid do app */
+        .shortcuts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .shortcut { background: var(--surface); border: none; border-radius: 16px; box-shadow: var(--shadow); aspect-ratio: 0.95; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--text); padding: 4px; min-width: 0; }
         .shortcut:active { transform: scale(.97); }
-        .shortcut .emo { font-size: 26px; }
-        .shortcut .lbl { font-size: 12px; font-weight: 600; }
+        .shortcut .emo { font-size: 24px; }
+        .shortcut .lbl { font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
         .stats-row { display: grid; grid-template-columns: 1.25fr 1fr; gap: 10px; }
         .stat-card { height: 72px; display: flex; align-items: center; padding: 0 6px; }
         .stat-col { flex: 1; text-align: center; min-width: 0; }
@@ -343,6 +344,47 @@
         .api-config { margin-top: 18px; text-align: center; }
         .api-config .row { display: flex; gap: 8px; margin-top: 10px; }
         .api-config input { flex: 1; padding: 10px 12px; border-radius: 12px; border: 1.5px solid #E7DEC9; font-size: 13px; }
+        /* ─── Torneios ─── */
+        .tour-banner { background: linear-gradient(135deg, var(--green), var(--green-alt)); color: var(--on-dark); border-radius: 16px; padding: 12px 14px; font-size: 13px; line-height: 1.4; border: 1.5px solid rgba(242,194,48,.55); }
+        .tour-banner b { color: var(--yellow); font-weight: 900; letter-spacing: .3px; }
+        .year-summary { text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; background: var(--surface); border-radius: 12px; padding: 8px 12px; box-shadow: var(--shadow); }
+        .year-summary b { color: var(--green); font-weight: 900; }
+        .badge { display: inline-block; border-radius: 999px; padding: 3px 9px; font-size: 10px; font-weight: 900; letter-spacing: .4px; white-space: nowrap; }
+        .badge.agendado { background: rgba(224,160,48,.18); color: #8A5A00; }
+        .badge.em_andamento { background: rgba(31,138,90,.16); color: var(--cyan); }
+        .badge.aguardando_encerramento { background: rgba(209,87,63,.14); color: var(--orange); }
+        .badge.encerrado { background: rgba(138,111,61,.14); color: var(--muted); }
+        .tour-item { display: flex; align-items: center; gap: 12px; padding: 14px; width: 100%; border: 1px solid transparent; text-align: left; color: inherit; font: inherit; }
+        .tour-item.live { border-color: rgba(242,194,48,.6); background: rgba(242,194,48,.10); }
+        .tour-item .ic { font-size: 28px; flex-shrink: 0; }
+        .tour-item .info { flex: 1; min-width: 0; }
+        .tour-item .tt { font-weight: 800; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tour-item .dd { font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .tour-head { background: var(--green); color: var(--on-dark); border-radius: 20px; padding: 18px 20px; }
+        .tour-head .nm { font-family: var(--serif); font-weight: 900; font-size: 22px; color: var(--yellow); line-height: 1.2; }
+        .tour-head .dd { color: var(--on-dark-muted); font-size: 13px; margin-top: 6px; }
+        .admin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .admin-actions .btn { width: auto; flex: 1 1 auto; padding: 0 14px; }
+        .btn-danger { background: transparent; color: var(--error); border: 1.5px solid var(--error); font-weight: 700; }
+        .note { color: var(--muted); font-size: 12px; margin: -6px 4px 0; }
+        .trophies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .trophy { padding: 14px 10px 12px; display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; border: 1px solid transparent; }
+        .trophy.campeao { border-color: rgba(242,194,48,.7); background: linear-gradient(180deg, rgba(242,194,48,.16), var(--surface) 60%); }
+        .trophy .art { width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; }
+        .trophy .art img { width: 100%; height: 100%; object-fit: contain; }
+        .trophy .art .emo { font-size: 48px; line-height: 1; }
+        .trophy .tt { font-weight: 900; font-size: 13px; color: var(--green); margin-top: 6px; line-height: 1.2; }
+        .trophy .pl { display: flex; align-items: center; gap: 6px; margin-top: 8px; max-width: 100%; }
+        .trophy .pl span.n { font-weight: 800; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .trophy .vl { font-weight: 900; font-size: 16px; color: var(--orange); margin-top: 6px; }
+        .trophy .dt { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
+        .year-label { font-family: var(--serif); font-weight: 900; font-size: 26px; color: var(--green); margin: 8px 4px -6px; }
+        .gal-tour { font-weight: 800; font-size: 14px; margin: 4px 4px -6px; display: flex; justify-content: space-between; gap: 8px; }
+        .gal-tour span { color: var(--muted); font-weight: 600; font-size: 12px; white-space: nowrap; }
+        .tmatch { position: relative; }
+        .tmatch .del { width: 36px; height: 36px; margin-left: 4px; color: var(--error); flex-shrink: 0; }
+        .tmatch .del svg { width: 20px; height: 20px; }
+        input[type="date"], input[type="time"] { min-height: 50px; -webkit-appearance: none; appearance: none; }
         @media (max-width: 360px) {
             .dash-top .hello { font-size: 24px; }
             .score-num { width: 44px; font-size: 32px; }
@@ -372,7 +414,7 @@
         'use strict';
 
         // Versão do PWA — acompanha o app Android (docs/version.json). Atualizar junto a cada release.
-        const PWA_VERSION = { code: 101, name: '1.66' };
+        const PWA_VERSION = { code: 102, name: '1.67' };
 
         // ─── Armazenamento local (pode falhar em navegação privada) ─────────────────
         const store = {
@@ -412,6 +454,7 @@
             moneyOff: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 6.9c1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-.53.12-1.03.3-1.48.54l1.47 1.47c.41-.17.91-.27 1.51-.27zM5.33 4.06 4.06 5.33 7.5 8.77c0 2.08 1.56 3.21 3.91 3.91l3.51 3.51c-.34.48-1.05.91-2.42.91-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c.96-.18 1.82-.55 2.45-1.12l2.22 2.22 1.27-1.27L5.33 4.06z"/></svg>',
             person: '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
             edit: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',
+            trash: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
             pix: '<svg viewBox="0 0 16 16"><path d="M11.917 11.71a2.046 2.046 0 0 1-1.454-.602l-2.1-2.1a.4.4 0 0 0-.551 0l-2.108 2.108a2.044 2.044 0 0 1-1.454.602h-.414l2.66 2.66c.83.83 2.177.83 3.007 0l2.667-2.668zM4.25 4.282c.55 0 1.066.214 1.454.602l2.108 2.108a.39.39 0 0 0 .552 0l2.1-2.1a2.044 2.044 0 0 1 1.453-.602h.253L9.503 1.623a2.127 2.127 0 0 0-3.007 0l-2.66 2.66z"/><path d="M14.377 6.496 12.765 4.884a.307.307 0 0 1-.114.023h-.733c-.379 0-.75.154-1.017.422l-2.1 2.1a1.005 1.005 0 0 1-1.425 0L5.268 5.32a1.448 1.448 0 0 0-1.018-.422h-.9a.306.306 0 0 1-.109-.021L1.623 6.496c-.83.83-.83 2.177 0 3.008l1.618 1.618a.305.305 0 0 1 .108-.022h.901c.38 0 .75-.153 1.018-.421L7.375 8.57a1.034 1.034 0 0 1 1.426 0l2.1 2.1c.267.268.638.421 1.017.421h.733c.04 0 .079.01.114.024l1.612-1.612c.83-.83.83-2.178 0-3.008z"/></svg>'
         };
 
@@ -481,8 +524,47 @@
             return activeCheckCache.value;
         }
 
+        // Torneio acontecendo agora (relógio do SERVIDOR, fuso de Recife). Libera o registro fora da
+        // janela normal e direciona as partidas para o torneio. Cache de 30s porque a disponibilidade
+        // é checada a cada segundo na tela de partida; chamadas simultâneas compartilham a requisição.
+        let torneioAtivoCache = { at: 0, value: null, pending: null };
+        async function torneioAtivo(force = false) {
+            if (!S.user) return null;
+            if (!force && Date.now() - torneioAtivoCache.at < 30000) return torneioAtivoCache.value;
+            if (torneioAtivoCache.pending) return torneioAtivoCache.pending;
+            torneioAtivoCache.pending = (async () => {
+                try {
+                    const r = await api('webhook/torneios/ativo', { timeout: 10000 });
+                    torneioAtivoCache.value = (r && r.torneio) || null;
+                } catch (_) { torneioAtivoCache.value = null; }
+                torneioAtivoCache.at = Date.now();
+                torneioAtivoCache.pending = null;
+                return torneioAtivoCache.value;
+            })();
+            return torneioAtivoCache.pending;
+        }
+
+        // Nome do torneio de uma partida reidratada (o registro em andamento só guarda o id).
+        async function nomeDoTorneio(id) {
+            const ativo = torneioAtivoCache.value;
+            if (ativo && Number(ativo.id) === Number(id)) return ativo.nome;
+            try {
+                const list = await api('webhook/torneios', { timeout: 10000 });
+                const t = (Array.isArray(list) ? list : []).find(x => Number(x.id) === Number(id));
+                return t ? t.nome : null;
+            } catch (_) { return null; }
+        }
+
+        // Regra original (sem torneio): janela normal ou partida em andamento do usuário. A edição de
+        // partidas normais continua presa a ela — um torneio não libera editar partidas do clube.
+        async function isRegularModuleAvailable() {
+            if (isWithinWindow()) return true;
+            return hasActiveMatchForUser();
+        }
+
         async function isModuleAvailable() {
             if (isWithinWindow()) return true;
+            if (await torneioAtivo()) return true;
             return hasActiveMatchForUser();
         }
 
@@ -507,7 +589,7 @@
             const r = recifeParts();
             const d = match.date;
             if (d.getFullYear() !== r.y || d.getMonth() + 1 !== r.m || d.getDate() !== r.d) return false;
-            return isModuleAvailable();
+            return isRegularModuleAvailable();
         }
 
         // ─── API ────────────────────────────────────────────────────────────────────
@@ -862,6 +944,14 @@
                 return m;
             });
         }
+        function confirmModal(title, message, { okLabel = 'Confirmar', danger = false } = {}) {
+            return new Promise(resolve => {
+                let ok = false;
+                const m = openModal(`<h3>${esc(title)}</h3><div class="msg">${esc(message)}</div>
+                    <div class="modal-actions"><button class="btn btn-text" data-close>Cancelar</button><button class="btn ${danger ? 'btn-danger' : 'btn-green'}" id="cf-ok">${esc(okLabel)}</button></div>`, { onClose: () => resolve(ok) });
+                m.querySelector('#cf-ok').onclick = () => { ok = true; m.close(); };
+            });
+        }
 
         function topbar(title, { serif = false } = {}) {
             return `<div class="topbar"><button class="icon-btn" onclick="App.back()" aria-label="Voltar">${ICONS.back}</button><h1 class="${serif ? 'serif' : ''}">${esc(title)}</h1><span></span></div>`;
@@ -916,6 +1006,9 @@
             if (h.startsWith('/jogar/editar/')) return Jogar.open(decodeURIComponent(h.slice('/jogar/editar/'.length)));
             if (h === '/financas') return Financas.open();
             if (h === '/ranking') return Ranking.open();
+            if (h === '/torneios') return Torneios.open();
+            if (h === '/torneios/galeria') return Galeria.open();
+            if (h.startsWith('/torneios/')) return TorneioDetalhe.open(decodeURIComponent(h.slice('/torneios/'.length)));
             return Dashboard.open();
         }
 
@@ -1092,6 +1185,7 @@
                         <button class="shortcut" onclick="App.go('#/jogar')"><span class="emo">🎲</span><span class="lbl">Jogar</span></button>
                         <button class="shortcut" onclick="App.go('#/ranking')"><span class="emo">🏅</span><span class="lbl">Ranking</span></button>
                         <button class="shortcut" onclick="App.go('#/financas')"><span class="emo">💳</span><span class="lbl">Finanças</span></button>
+                        <button class="shortcut" onclick="App.go('#/torneios')"><span class="emo">🏆</span><span class="lbl">Torneios</span></button>
                     </div>
                     <div class="stats-row">
                         <div class="card stat-card">
@@ -1265,7 +1359,11 @@
             selected: [null, null, null, null], score1: 0, score2: 0, fechas: 0,
             isBuchoRe: false, isBuchoReEnabled: false, loading: false, error: null,
             editing: null, isModuleAvailable: true, remaining: null,
-            isActive: false, activeMatchId: null, availablePlayers: []
+            isActive: false, activeMatchId: null, availablePlayers: [],
+            // torneio: torneio acontecendo agora (banner antes de abrir a partida).
+            // torneioId/torneioNome: torneio ao qual a partida em andamento está vinculada — vale
+            // mesmo se o horário do torneio acabar no meio da partida.
+            torneio: null, torneioId: null, torneioNome: null
         });
 
         const Jogar = {
@@ -1292,7 +1390,10 @@
                     st.isBuchoReEnabled = (m.score1 === 5 && m.score2 > 5) || (m.score2 === 5 && m.score1 > 5);
                     st.editing = { id: m.id, date: m.date, registeredBy: m.registeredBy, s1: m.score1, s2: m.score2, re: m.wasBuchoRe, players: [...m.players] };
                 } else {
-                    await Jogar.loadActiveMatch();
+                    // Busca o torneio antes do 1º render para o banner não "piscar" depois.
+                    const [t] = await Promise.all([torneioAtivo(true), Jogar.loadActiveMatch()]);
+                    st.torneio = t;
+                    if (st.torneioId != null && !st.torneioNome) st.torneioNome = await nomeDoTorneio(st.torneioId);
                 }
                 if (Jogar.st !== st) return; // saiu da tela durante o carregamento
                 Jogar.render();
@@ -1312,6 +1413,8 @@
                     st.activeMatchId = a.id;
                     st.score1 = a.score1 || 0; st.score2 = a.score2 || 0; st.fechas = a.fechas || 0;
                     st.isBuchoReEnabled = (st.score1 === 5 && st.score2 > 5) || (st.score2 === 5 && st.score1 > 5);
+                    // Partida reidratada mantém o vínculo com o torneio em que foi aberta.
+                    st.torneioId = a.torneio_id != null && a.torneio_id !== '' ? Number(a.torneio_id) : null;
                 } catch (_) {}
             },
 
@@ -1326,15 +1429,18 @@
                 };
                 const tickOnce = async st => {
                     const available = st.isActive || await isModuleAvailable();
-                    const remaining = remainingSecondsToClose();
-                    const before = JSON.stringify([st.isModuleAvailable, st.remaining, st.error]);
+                    const torneio = await torneioAtivo();
+                    // Em torneio o fechamento das 14h não se aplica (o torneio tem horário próprio).
+                    const remaining = (torneio || st.torneioId != null) ? null : remainingSecondsToClose();
+                    const before = JSON.stringify([st.isModuleAvailable, st.remaining, st.error, st.torneio && st.torneio.id]);
+                    st.torneio = torneio;
                     if (!available) {
                         st.isModuleAvailable = false; st.remaining = null; st.error = blockedMessage();
                     } else {
                         if (!st.isModuleAvailable && st.error && st.error.startsWith('MÓDULO BLOQUEADO')) st.error = null;
                         st.isModuleAvailable = true; st.remaining = remaining;
                     }
-                    if (JSON.stringify([st.isModuleAvailable, st.remaining, st.error]) !== before) Jogar.render();
+                    if (JSON.stringify([st.isModuleAvailable, st.remaining, st.error, st.torneio && st.torneio.id]) !== before) Jogar.render();
                 };
                 tick();
                 Jogar.timer = setInterval(tick, 1000);
@@ -1395,10 +1501,16 @@
                 }
 
                 const remaining = st.remaining != null ? `<div class="countdown">${ICONS.warning}Fechamento em: ${pad(Math.floor(st.remaining / 60))}:${pad(st.remaining % 60)}</div>` : '';
+                // Partida aberta vale o vínculo dela; sem partida aberta, vale o torneio do momento.
+                const tourName = isEditing ? null : st.isActive
+                    ? (st.torneioId != null ? (st.torneioNome || 'Torneio') : null)
+                    : (st.torneio ? st.torneio.nome : null);
+                const banner = tourName ? `<div class="tour-banner"><b>🏆 MODO TORNEIO: ${esc(tourName)}</b> — partidas não geram cobrança e não contam no ranking do clube</div>` : '';
 
                 $('#app').innerHTML = `<div class="view">
                     ${topbar(isEditing ? 'Editar Partida' : 'Nova Partida', { serif: true })}
                     <div class="stack">
+                        ${banner}
                         ${remaining}
                         <div class="card pcard">${players}</div>
                         <div class="card score-card">
@@ -1520,9 +1632,12 @@
                     if (conflict) return Jogar.set({ loading: false, error: `O participante ${conflict} já está vinculado a uma partida em andamento!` });
                     const ordered = st.selected.some(isNonMember) ? [...st.selected] : shuffleAvoidingSamePairing(st.selected);
                     const id = uuid();
-                    await api('webhook/partidas-em-andamento', { method: 'POST', body: { id, jogador1: ordered[0].name, jogador2: ordered[1].name, jogador3: ordered[2].name, jogador4: ordered[3].name, cadastrador: S.user.name } });
+                    // Abriu durante um torneio: a partida fica vinculada a ele (torneio_id) até ser salva.
+                    const torneio = await torneioAtivo(true);
+                    const torneioId = torneio ? torneio.id : null;
+                    await api('webhook/partidas-em-andamento', { method: 'POST', body: { id, jogador1: ordered[0].name, jogador2: ordered[1].name, jogador3: ordered[2].name, jogador4: ordered[3].name, cadastrador: S.user.name, torneio_id: torneioId } });
                     activeCheckCache = { at: Date.now(), value: true };
-                    Jogar.set({ loading: false, isActive: true, activeMatchId: id, selected: ordered, error: null });
+                    Jogar.set({ loading: false, isActive: true, activeMatchId: id, selected: ordered, error: null, torneio, torneioId, torneioNome: torneio ? torneio.nome : null });
                 } catch (e) {
                     Jogar.set({ loading: false, error: 'Erro ao iniciar partida no banco de dados.' + (e.message ? `\n${e.message}` : '') });
                 }
@@ -1535,7 +1650,7 @@
                 try {
                     await api('webhook/partidas-em-andamento/' + encodeURIComponent(st.activeMatchId), { method: 'DELETE' });
                     activeCheckCache.at = 0;
-                    Jogar.set({ loading: false, isActive: false, activeMatchId: null, score1: 0, score2: 0, fechas: 0, isBuchoRe: false, isBuchoReEnabled: false, selected: [null, null, null, null] });
+                    Jogar.set({ loading: false, isActive: false, activeMatchId: null, score1: 0, score2: 0, fechas: 0, isBuchoRe: false, isBuchoReEnabled: false, selected: [null, null, null, null], torneioId: null, torneioNome: null });
                 } catch (e) {
                     Jogar.set({ loading: false, error: 'Erro ao cancelar partida no banco de dados.' });
                 }
@@ -1555,14 +1670,29 @@
                     const winners = t1Win ? [p1, p2] : [p3, p4];
                     const losers = t1Win ? [p3, p4] : [p1, p2];
                     const date = now();
-                    await api('webhook/partidas', { method: 'POST', body: matchDto({ date, players: st.selected, score1: st.score1, score2: st.score2, wasBuchoRe: st.isBuchoRe, registeredBy: S.user.name }) });
-                    const debit = st.isBuchoRe ? 3 : Math.min(st.score1, st.score2) === 0 ? 2 : 0;
-                    if (debit > 0) await registerDebits({ date, losers, winners, debit, score1: st.score1, score2: st.score2, wasBuchoRe: st.isBuchoRe, registeredBy: S.user.name });
+                    // Destino: a partida aberta manda (vínculo gravado na abertura); sem partida aberta,
+                    // vai para o torneio que estiver acontecendo agora.
+                    let torneioId = st.torneioId;
+                    if (torneioId == null && !st.activeMatchId) {
+                        const t = await torneioAtivo(true);
+                        if (t) { torneioId = t.id; st.torneioId = t.id; st.torneioNome = t.nome; }
+                    }
+                    const dto = matchDto({ date, players: st.selected, score1: st.score1, score2: st.score2, wasBuchoRe: st.isBuchoRe, registeredBy: S.user.name });
+                    if (torneioId != null) {
+                        // Partida de torneio: tabela própria no servidor (que carimba a data), sem
+                        // cobrança de bucho e fora do ranking do clube — por isso NÃO chama registerDebits.
+                        const { id: _id, data: _data, ...body } = dto;
+                        await api('webhook/torneios/' + encodeURIComponent(torneioId) + '/partidas', { method: 'POST', body });
+                    } else {
+                        await api('webhook/partidas', { method: 'POST', body: dto });
+                        const debit = st.isBuchoRe ? 3 : Math.min(st.score1, st.score2) === 0 ? 2 : 0;
+                        if (debit > 0) await registerDebits({ date, losers, winners, debit, score1: st.score1, score2: st.score2, wasBuchoRe: st.isBuchoRe, registeredBy: S.user.name });
+                    }
                     if (st.activeMatchId) await api('webhook/partidas-em-andamento/' + encodeURIComponent(st.activeMatchId), { method: 'DELETE' }).catch(() => {});
                     activeCheckCache.at = 0;
                     st.activeMatchId = null;
                     Jogar.set({ loading: false });
-                    loadData();
+                    if (torneioId == null) loadData();
                     Jogar.repeatDialog();
                 } catch (e) {
                     Jogar.set({ loading: false, error: 'Erro ao salvar: ' + e.message });
@@ -1580,7 +1710,7 @@
             async onRepeat(repeat) {
                 const st = Jogar.st;
                 if (!repeat) {
-                    Object.assign(st, { selected: [null, null, null, null], score1: 0, score2: 0, fechas: 0, isBuchoRe: false, isBuchoReEnabled: false, isActive: false });
+                    Object.assign(st, { selected: [null, null, null, null], score1: 0, score2: 0, fechas: 0, isBuchoRe: false, isBuchoReEnabled: false, isActive: false, torneioId: null, torneioNome: null });
                     back();
                     return;
                 }
@@ -1592,12 +1722,16 @@
                 const prev = chosen.length === 4 ? [new Set([chosen[0].id, chosen[1].id]), new Set([chosen[2].id, chosen[3].id])] : null;
                 const ordered = shuffle ? shuffleAvoidingSamePairing(chosen, prev) : chosen;
                 const id = uuid();
+                // A revanche pertence ao torneio que estiver acontecendo AGORA (mesma regra do app
+                // Android): se o torneio acabou e a janela normal está aberta, vira partida normal.
+                const torneioAgora = await torneioAtivo(true);
+                const torneioId = torneioAgora ? torneioAgora.id : null;
                 let ok = true;
                 try {
-                    await api('webhook/partidas-em-andamento', { method: 'POST', body: { id, jogador1: ordered[0].name, jogador2: ordered[1].name, jogador3: ordered[2].name, jogador4: ordered[3].name, cadastrador: S.user.name } });
+                    await api('webhook/partidas-em-andamento', { method: 'POST', body: { id, jogador1: ordered[0].name, jogador2: ordered[1].name, jogador3: ordered[2].name, jogador4: ordered[3].name, cadastrador: S.user.name, torneio_id: torneioId } });
                     activeCheckCache = { at: Date.now(), value: true };
                 } catch (_) { ok = false; }
-                Jogar.set({ selected: ordered, isActive: ok, activeMatchId: ok ? id : null, score1: 0, score2: 0, fechas: 0, isBuchoRe: false, isBuchoReEnabled: false, error: ok ? null : 'Erro ao iniciar partida repetida no banco de dados.' });
+                Jogar.set({ selected: ordered, isActive: ok, activeMatchId: ok ? id : null, score1: 0, score2: 0, fechas: 0, isBuchoRe: false, isBuchoReEnabled: false, error: ok ? null : 'Erro ao iniciar partida repetida no banco de dados.', torneioId: ok ? torneioId : null, torneioNome: ok && torneioAgora ? torneioAgora.nome : null });
             },
 
             async updateMatch() {
@@ -1959,6 +2093,7 @@
                         ${pos === 1 ? '<div class="crown">👑</div>' : ''}
                         ${avatar(p.photoUrl, size, pos === 1 ? 3 : 2, border)}
                         <div class="nm" style="font-size:${pos === 1 ? 14 : 12}px">${esc(firstName(p.jogador))}</div>
+                        <div style="font-size:10px;color:var(--muted);width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.partidas_ano} partidas no ano</div>
                         <div class="bar" style="height:${bar[2]}px;background:${bar[0]};color:${bar[1]}">${pos}º</div>
                     </button>`;
                 };
@@ -1967,12 +2102,17 @@
                     return `<button class="card rank-row" style="${bal < 0 && Math.abs(bal) >= 10 ? 'border-color:rgba(209,87,63,.4)' : ''}" onclick="App.playerDetails(${list.indexOf(p)})">
                         <span class="pos">${pos}</span>
                         ${avatar(p.photoUrl, 40, 1, 'rgba(138,111,61,.3)')}
-                        <span class="info"><div class="nm">${esc(p.jogador)}</div><div class="sub">${p.partidas_mes} partidas · ${p.vitorias_ano} vitórias</div><div class="sub">${p.pontos_ano} pts no ano · ${p.yearPos}º no ano</div></span>
+                        <span class="info"><div class="nm">${esc(p.jogador)}</div><div class="sub">${p.partidas_mes} partidas · ${p.vitorias_ano} vitórias</div><div class="sub">${p.pontos_ano} pts no ano · ${p.yearPos}º no ano · ${p.partidas_ano} partidas no ano</div></span>
                         <span class="bal" style="color:${bal >= 0 ? 'var(--cyan)' : 'var(--orange)'}">${bal >= 0 ? '+' : ''}${bal} pts</span>
                     </button>`;
                 };
                 const rest = list.slice(3);
+                // Total do clube no ano: partidas normais distintas (S.matchesRaw já vem sem ids repetidos;
+                // partidas de torneio ficam em outra tabela e não aparecem aqui).
+                const ano = recifeParts().y;
+                const partidasAno = S.matchesRaw.filter(m => Number(String(m.data || '').slice(0, 4)) === ano).length;
                 $('#app').innerHTML = `<div class="view">${topbar('Ranking do mês')}${ptrIndicator}<div class="stack">
+                    <div class="year-summary">🎲 <b>${partidasAno}</b> ${partidasAno === 1 ? 'partida jogada' : 'partidas jogadas'} em ${ano}</div>
                     <div class="podium">${pod(list[1], 2)}${pod(list[0], 1)}${pod(list[2], 3)}</div>
                     ${rest.length ? `<div class="caps" style="margin:4px 4px -4px">CLASSIFICAÇÃO GERAL</div>${rest.map((p, i) => row(p, i + 4)).join('')}` : ''}
                 </div></div>`;
@@ -1989,10 +2129,397 @@
             openModal(`<div class="pcard-dark">
                 <div class="hd"><span class="nm">${esc(p.jogador)}</span><button class="icon-btn" data-close aria-label="Fechar">${ICONS.close}</button></div>
                 <div class="metrics">${metric('PONTOS NO MÊS', p.pontos_mes)}<div class="vdiv"></div>${metric('PARTIDAS', p.partidas_mes)}<div class="vdiv"></div>${metric('APROVEITAMENTO ANUAL', rate + '%')}</div>
-                <div class="metrics">${metric('PONTOS NO ANO', p.pontos_ano)}<div class="vdiv"></div>${metric('POSIÇÃO NO ANO', p.yearPos + 'º')}</div>
+                <div class="metrics">${metric('PONTOS NO ANO', p.pontos_ano)}<div class="vdiv"></div>${metric('PARTIDAS NO ANO', p.partidas_ano)}<div class="vdiv"></div>${metric('POSIÇÃO NO ANO', p.yearPos + 'º')}</div>
                 <div class="buchos-box"><div class="k">BUCHOS APLICADOS / SOFRIDOS</div><div class="row">${bk('HOJE', p.buchos_aplicados_dia, p.buchos_sofridos_dia)}${bk('MÊS', p.buchos_aplicados_mes, p.buchos_sofridos_mes)}${bk('ANO', p.buchos_aplicados_ano, p.buchos_sofridos_ano)}</div></div>
             </div>`, { bare: true });
         }
+
+        // ─── Torneios ───────────────────────────────────────────────────────────────
+        // Partidas de torneio ficam numa tabela própria no servidor: não geram cobrança e não entram
+        // no ranking do clube. Ao encerrar, o servidor grava os títulos (Galeria de Troféus).
+        const TITULOS_INFO = {
+            campeao_torneio: ['Campeão do Torneio', '🏆'],
+            chibata_man: ['O Chibata Man', '🥇'],
+            mais_viril: ['O Mais Viril', '💪'],
+            gravida_taubate: ['A Grávida de Taubaté', '🤰'],
+            bimba_ouro: ['O Bimba de Ouro', '🎯']
+        };
+        const ORDEM_TITULOS = Object.keys(TITULOS_INFO);
+        const STATUS_TORNEIO = { agendado: 'Agendado', em_andamento: 'Em andamento', aguardando_encerramento: 'Aguardando encerramento', encerrado: 'Encerrado' };
+        // Mesma regra de edição do Admin no app (AdminScreen.kt: canEdit).
+        const isAdmin = () => !!S.user && (eqi(S.user.name, 'MÁRCIO') || eqi(S.user.name, 'CALÁBRIA'));
+        // Nomes vêm em MAIÚSCULAS do servidor; o casamento com o cadastro é sem diferenciar caixa.
+        const userByName = n => S.users.find(u => eqi(u.name, n) || eqi(u.displayName, n));
+        const torneioData = t => { const d = parseAnyDate(t.data); return d ? dmy(d) : String(t.data || ''); };
+        const torneioJanela = t => `${t.horaInicio}–${t.horaFim}`;
+        const statusBadge = s => `<span class="badge ${esc(s)}">${esc(STATUS_TORNEIO[s] || s)}</span>`;
+        const sortTitulos = list => [...(Array.isArray(list) ? list : [])].sort((a, b) => ORDEM_TITULOS.indexOf(a.tipo) - ORDEM_TITULOS.indexOf(b.tipo));
+        const partidasLabel = n => `${n} ${n === 1 ? 'partida' : 'partidas'}`;
+
+        // Card de troféu com a imagem trofeus/trofeu_<tipo>.webp; se ela não carregar, o onerror
+        // troca a imagem pelo emoji do título.
+        function trophyCard(t) {
+            const info = TITULOS_INFO[t.tipo] || [t.titulo || 'Título', '🏆'];
+            const tipo = String(t.tipo || '').replace(/[^a-z_]/gi, '');
+            const u = userByName(t.jogador);
+            return `<div class="card trophy ${t.tipo === 'campeao_torneio' ? 'campeao' : ''}">
+                <div class="art"><img src="trofeus/trofeu_${tipo}.webp" alt="" loading="lazy" onerror="this.nextElementSibling.style.display='';this.remove()"><span class="emo" style="display:none">${info[1]}</span></div>
+                <div class="tt">${esc(t.titulo || info[0])}</div>
+                <div class="pl">${avatar(u ? u.photoUrl : '', 28, 1.5, 'var(--yellow)')}<span class="n">${esc(u ? u.displayName : t.jogador)}</span></div>
+                ${t.valor ? `<div class="vl">${esc(t.valor)}</div>` : ''}
+                ${t.detalhe ? `<div class="dt">${esc(t.detalhe)}</div>` : ''}
+            </div>`;
+        }
+
+        // Indicados a um título do ano (antes da revelação): 3 nomes em ordem alfabética, sem
+        // pontuação — o servidor nem envia o placar/vencedor antes do fim do horário do torneio.
+        function nomineeCard(ind) {
+            const info = TITULOS_INFO[ind.tipo] || [ind.titulo || 'Título', '🏆'];
+            const tipo = String(ind.tipo || '').replace(/[^a-z_]/gi, '');
+            const nomes = Array.isArray(ind.jogadores) ? ind.jogadores : [];
+            return `<div class="card trophy">
+                <div class="art"><img src="trofeus/trofeu_${tipo}.webp" alt="" loading="lazy" onerror="this.nextElementSibling.style.display='';this.remove()"><span class="emo" style="display:none">${info[1]}</span></div>
+                <div class="tt">${esc(ind.titulo || info[0])}</div>
+                ${nomes.length ? nomes.map(n => { const u = userByName(n); return `<div class="pl">${avatar(u ? u.photoUrl : '', 24, 1.5, 'var(--yellow)')}<span class="n">${esc(u ? u.displayName : n)}</span></div>`; }).join('') : '<div class="dt">Sem indicados ainda.</div>'}
+            </div>`;
+        }
+
+        // "2026-11-28 18:00" → "28/11 às 18:00"
+        const revelacaoTexto = t => {
+            const q = t.revelacaoEm || `${t.data} ${t.horaFim}`;
+            return `${q.slice(8, 10)}/${q.slice(5, 7)} às ${q.slice(11, 16)}`;
+        };
+
+        async function fetchTorneios() {
+            const [list] = await Promise.all([api('webhook/torneios'), S.loaded ? null : loadData()]);
+            return Array.isArray(list) ? list : [];
+        }
+
+        function torneioItem(t) {
+            const live = t.status === 'em_andamento';
+            const campeoes = (t.titulos || []).filter(x => x.tipo === 'campeao_torneio').map(x => x.jogador);
+            return `<button class="card tour-item ${live ? 'live' : ''}" onclick="App.go('#/torneios/${encodeURIComponent(String(t.id))}')">
+                <span class="ic">${t.status === 'encerrado' ? '🏆' : live ? '🔥' : '📅'}</span>
+                <span class="info">
+                    <div class="tt">${esc(t.nome)}</div>
+                    <div class="dd">${esc(torneioData(t))} · ${esc(torneioJanela(t))} · ${partidasLabel(t.totalPartidas || 0)}</div>
+                    ${campeoes.length ? `<div class="dd">👑 ${esc(campeoes.join(', '))}</div>` : ''}
+                    ${t.revelado === false ? '<div class="dd" style="color:var(--green);font-weight:600">🎖️ Indicados aos troféus do ano — toque para ver</div>' : ''}
+                </span>
+                ${statusBadge(t.status)}
+            </button>`;
+        }
+
+        const Torneios = {
+            list: null,
+            error: null,
+            async open() {
+                enablePullToRefresh(() => Torneios.refresh());
+                Torneios.render();
+                await Torneios.refresh();
+                hideBoot();
+            },
+            async refresh() {
+                try { Torneios.list = await fetchTorneios(); Torneios.error = null; } catch (e) { Torneios.error = e.message || 'Erro ao carregar torneios.'; }
+                Torneios.render();
+            },
+            render() {
+                if (location.hash !== '#/torneios') return;
+                const admin = isAdmin();
+                const list = Torneios.list;
+                let body;
+                if (!list) {
+                    body = Torneios.error
+                        ? `<div class="center-msg" style="color:var(--orange)">${esc(Torneios.error)}<button class="btn btn-green" onclick="App.torneiosRefresh()">Tentar novamente</button></div>`
+                        : '<div class="stack">' + '<div class="shimmer"></div>'.repeat(4) + '</div>';
+                } else {
+                    // Acontecendo agora e próximos no topo (em andamento → aguardando → agendados por data);
+                    // encerrados depois, do mais recente para o mais antigo (ordem do servidor).
+                    const ORD = { em_andamento: 0, aguardando_encerramento: 1, agendado: 2 };
+                    const ord = t => (t.status in ORD ? ORD[t.status] : 3);
+                    const key = t => `${t.data} ${t.horaInicio}`;
+                    const vivos = list.filter(t => t.status !== 'encerrado').sort((a, b) => (ord(a) - ord(b)) || (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+                    const passados = list.filter(t => t.status === 'encerrado');
+                    body = `<div class="stack">
+                        <div class="admin-actions">
+                            <button class="btn btn-green btn-sm" onclick="App.go('#/torneios/galeria')">🏛️ Galeria de Troféus</button>
+                            ${admin ? '<button class="btn btn-gold btn-sm" onclick="App.torneioNovo()">➕ Novo torneio</button>' : ''}
+                        </div>
+                        ${vivos.length ? `<div class="caps" style="margin:4px 4px -6px">ACONTECENDO E PRÓXIMOS</div>${vivos.map(torneioItem).join('')}` : ''}
+                        ${passados.length ? `<div class="caps" style="margin:4px 4px -6px">ENCERRADOS</div>${passados.map(torneioItem).join('')}` : ''}
+                        ${!list.length ? '<div class="empty">Nenhum torneio cadastrado ainda. 🏆</div>' : ''}
+                        <div style="height:8px"></div>
+                    </div>`;
+                }
+                $('#app').innerHTML = `<div class="view">${topbar('Torneios', { serif: true })}${ptrIndicator}${body}</div>`;
+            }
+        };
+
+        // Formulário de criar/editar torneio (só Admin). O servidor valida horário e sobreposição
+        // com outro torneio no mesmo dia — a mensagem dele é exibida no próprio formulário.
+        function torneioForm(t, onSaved) {
+            const editing = !!t;
+            const m = openModal(`<h3>${editing ? 'Editar torneio' : 'Novo torneio'}</h3>
+                <div class="field"><label for="tf-nome">Nome</label><input id="tf-nome" maxlength="150" autocomplete="off" placeholder="Ex.: Torneio de Natal" value="${esc(t ? t.nome : '')}"></div>
+                <div class="field"><label for="tf-data">Data</label><input id="tf-data" type="date" value="${esc(t ? t.data : ymd(now()))}"></div>
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
+                    <div class="field"><label for="tf-ini">Hora início</label><input id="tf-ini" type="time" value="${esc(t ? t.horaInicio : '14:00')}"></div>
+                    <div class="field"><label for="tf-fim">Hora fim</label><input id="tf-fim" type="time" value="${esc(t ? t.horaFim : '18:00')}"></div>
+                </div>
+                <div class="field"><label for="tf-corte">Títulos do ano consideram partidas até</label><input id="tf-corte" type="date" value="${esc(t && t.corteTitulos ? t.corteTitulos : '')}">
+                    <div style="margin-top:4px;font-size:11px;color:var(--muted)">Em branco = dia anterior ao torneio.</div></div>
+                <div id="tf-err" class="form-error hidden"></div>
+                <div class="modal-actions"><button class="btn btn-text" data-close>Cancelar</button><button class="btn btn-gold" id="tf-ok">${editing ? 'Salvar' : 'Criar torneio'}</button></div>`, { sheet: true });
+            const err = msg => { const e = m.querySelector('#tf-err'); e.textContent = msg; e.classList.remove('hidden'); };
+            const btn = m.querySelector('#tf-ok');
+            btn.onclick = async () => {
+                const body = {
+                    nome: m.querySelector('#tf-nome').value.trim(),
+                    data: m.querySelector('#tf-data').value,
+                    horaInicio: m.querySelector('#tf-ini').value.slice(0, 5),
+                    horaFim: m.querySelector('#tf-fim').value.slice(0, 5),
+                    corteTitulos: m.querySelector('#tf-corte').value || null,
+                    criadoPor: S.user.name
+                };
+                if (!body.nome) return err('Informe o nome do torneio.');
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(body.data)) return err('Informe a data do torneio.');
+                if (!/^\d{2}:\d{2}$/.test(body.horaInicio) || !/^\d{2}:\d{2}$/.test(body.horaFim)) return err('Informe os horários de início e fim.');
+                if (body.horaFim <= body.horaInicio) return err('O horário de término deve ser depois do início.');
+                if (body.corteTitulos && body.corteTitulos > body.data) return err('A data de corte dos títulos não pode ser depois do torneio.');
+                btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>';
+                try {
+                    if (editing) await api('webhook/torneios/' + encodeURIComponent(t.id), { method: 'PUT', body });
+                    else await api('webhook/torneios', { method: 'POST', body });
+                    torneioAtivoCache.at = 0;
+                    m.close();
+                    toast(editing ? 'Torneio atualizado!' : 'Torneio criado! 🏆');
+                    if (onSaved) onSaved();
+                } catch (e) {
+                    err(e.name === 'AbortError' ? 'O servidor demorou a responder.' : (e.message || 'Erro ao salvar torneio.'));
+                    btn.disabled = false; btn.textContent = editing ? 'Salvar' : 'Criar torneio';
+                }
+            };
+        }
+
+        function tmatchItem(p, canDelete) {
+            const s1 = Number(p.scored1) || 0, s2 = Number(p.scored2) || 0;
+            const t1Win = s1 > s2;
+            const nm = n => { const u = userByName(n); return firstName(u ? u.displayName : n); };
+            const team = (a, b, win) => `<div class="team" style="color:${win ? 'var(--green)' : 'var(--orange)'};font-weight:${win ? 800 : 400}"><div>${esc(nm(a))}</div><div>${esc(nm(b))}</div></div>`;
+            const d = parseAnyDate(p.data);
+            return `<div class="card match-item tmatch">
+                <span class="bar" style="background:${p.buchore ? 'var(--orange)' : 'rgba(20,54,33,.6)'}"></span>
+                ${team(p.jogador1, p.jogador2, t1Win)}
+                <div class="score"><div class="sc">${s1} × ${s2}</div>${p.buchore ? '<div class="re">🔥 BUCHO DE RÉ</div>' : `<div class="pts">${Number(p.pts) || 0} pts</div>`}${d ? `<div class="pts">${pad(d.getHours())}:${pad(d.getMinutes())}</div>` : ''}</div>
+                ${team(p.jogador3, p.jogador4, !t1Win)}
+                ${canDelete ? `<button class="icon-btn del" onclick="App.torneioExcluirPartida(${Number(p.id)})" aria-label="Excluir partida">${ICONS.trash}</button>` : ''}
+            </div>`;
+        }
+
+        const TorneioDetalhe = {
+            id: null,
+            data: null,
+            error: null,
+            busy: false,
+            async open(id) {
+                Object.assign(TorneioDetalhe, { id, data: null, error: null, busy: false });
+                enablePullToRefresh(() => TorneioDetalhe.refresh());
+                TorneioDetalhe.render();
+                await TorneioDetalhe.refresh();
+                hideBoot();
+            },
+            async refresh() {
+                const id = TorneioDetalhe.id;
+                try {
+                    const [d] = await Promise.all([api('webhook/torneios/' + encodeURIComponent(id)), S.loaded ? null : loadData()]);
+                    if (TorneioDetalhe.id !== id) return;
+                    TorneioDetalhe.data = d;
+                    TorneioDetalhe.error = null;
+                } catch (e) {
+                    if (TorneioDetalhe.id !== id) return;
+                    TorneioDetalhe.error = e.message || 'Erro ao carregar o torneio.';
+                }
+                TorneioDetalhe.render();
+            },
+            render() {
+                const h = location.hash.replace(/^#/, '');
+                if (!h.startsWith('/torneios/') || decodeURIComponent(h.slice('/torneios/'.length)) !== String(TorneioDetalhe.id)) return;
+                const d = TorneioDetalhe.data;
+                if (!d) {
+                    $('#app').innerHTML = `<div class="view">${topbar('Torneio', { serif: true })}${TorneioDetalhe.error
+                        ? `<div class="center-msg" style="color:var(--orange)">${esc(TorneioDetalhe.error)}<button class="btn btn-green" onclick="App.torneioRefresh()">Tentar novamente</button></div>`
+                        : '<div class="stack">' + '<div class="shimmer"></div>'.repeat(4) + '</div>'}</div>`;
+                    return;
+                }
+                const admin = isAdmin();
+                const encerrado = d.status === 'encerrado';
+                const dis = TorneioDetalhe.busy ? 'disabled' : '';
+                let adminHtml = '';
+                if (admin) {
+                    const b = [];
+                    if (!encerrado) {
+                        b.push(`<button class="btn btn-outline btn-sm" ${dis} onclick="App.torneioEditar()">✏️ Editar</button>`);
+                        if (d.status !== 'agendado') b.push(`<button class="btn btn-gold btn-sm" ${dis} onclick="App.torneioEncerrar(false)">🏁 Encerrar e definir títulos</button>`);
+                    } else {
+                        b.push(`<button class="btn btn-green btn-sm" ${dis} onclick="App.torneioEncerrar(true)">🔄 Recalcular títulos</button>`);
+                        b.push(`<button class="btn btn-outline btn-sm" ${dis} onclick="App.torneioReabrir()">🔓 Reabrir</button>`);
+                    }
+                    b.push(`<button class="btn btn-danger btn-sm" ${dis} onclick="App.torneioExcluir()">🗑️ Excluir</button>`);
+                    adminHtml = `<div class="admin-actions">${b.join('')}</div>`;
+                }
+
+                const ranking = Array.isArray(d.ranking) ? d.ranking : [];
+                const medal = i => ['🥇', '🥈', '🥉'][i] || String(i + 1);
+                const rankHtml = ranking.length ? ranking.map((r, i) => {
+                    const u = userByName(r.jogador);
+                    return `<div class="card rank-row">
+                        <span class="pos">${medal(i)}</span>
+                        ${avatar(u ? u.photoUrl : '', 40, i === 0 ? 2 : 1, i === 0 ? 'var(--yellow)' : 'rgba(138,111,61,.3)')}
+                        <span class="info"><div class="nm">${esc(r.jogador)}</div><div class="sub">${r.vitorias}V / ${r.derrotas}D · ${partidasLabel(r.partidas)}</div></span>
+                        <span class="bal" style="color:var(--cyan)">${r.pontos} pts</span>
+                    </div>`;
+                }).join('') : '<div class="note" style="margin:0 4px">Nenhuma partida registrada neste torneio ainda.</div>';
+
+                const titulos = sortTitulos(encerrado ? d.titulos : d.titulosParciais);
+                const titulosHtml = `<div class="section-title">${encerrado ? 'TÍTULOS' : 'TÍTULOS PARCIAIS'}</div>
+                    ${!encerrado ? `<div class="note" style="margin-top:0">${d.revelado === false
+                        ? 'Prévia ao vivo do Campeão do Torneio. Os títulos do ano aparecem aqui após o término do torneio.'
+                        : 'Prévia ao vivo — os títulos só são definidos quando o torneio for encerrado. Os títulos do ano contam apenas as partidas normais do clube.'}</div>` : ''}
+                    ${titulos.length ? `<div class="trophies">${titulos.map(trophyCard).join('')}</div>` : '<div class="note" style="margin:0 4px">Nenhum título por enquanto.</div>'}`;
+
+                const indicados = Array.isArray(d.indicados) ? d.indicados : [];
+                const indicadosHtml = d.revelado === false && indicados.length ? `<div class="section-title">INDICADOS AOS TROFÉUS DO ANO</div>
+                    <div class="note" style="margin-top:0">Vencedores e pontuações serão revelados em ${esc(revelacaoTexto(d))}. Os indicados estão em ordem alfabética.</div>
+                    <div class="trophies">${sortTitulos(indicados).map(nomineeCard).join('')}</div>` : '';
+
+                const partidas = Array.isArray(d.partidas) ? d.partidas : [];
+                const canDelete = admin && !encerrado && !TorneioDetalhe.busy;
+
+                $('#app').innerHTML = `<div class="view">${topbar('Torneio', { serif: true })}${ptrIndicator}<div class="stack">
+                    <div class="tour-head">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div class="nm">${esc(d.nome)}</div><span style="background:var(--on-dark);border-radius:999px;flex-shrink:0">${statusBadge(d.status)}</span></div>
+                        <div class="dd">📅 ${esc(torneioData(d))} · ⏰ ${esc(torneioJanela(d))} · 🎲 ${partidasLabel(partidas.length)}</div>
+                        ${d.corteTitulos ? `<div class="dd">Títulos do ano: partidas até ${esc(d.corteTitulos.split('-').reverse().join('/'))}</div>` : ''}
+                    </div>
+                    ${adminHtml}
+                    ${indicadosHtml}
+                    <div class="section-title">CLASSIFICAÇÃO DO TORNEIO</div>
+                    ${rankHtml}
+                    ${titulosHtml}
+                    <div class="section-title">PARTIDAS DO TORNEIO</div>
+                    ${partidas.length ? partidas.map(p => tmatchItem(p, canDelete)).join('') : '<div class="note" style="margin:0 4px">Nenhuma partida registrada ainda.</div>'}
+                    <div style="height:8px"></div>
+                </div></div>`;
+            },
+            // Executa uma ação de Admin com a tela bloqueada e recarrega o detalhe ao final.
+            async run(fn, okMsg) {
+                if (TorneioDetalhe.busy) return false;
+                TorneioDetalhe.busy = true;
+                TorneioDetalhe.render();
+                let ok = true;
+                try {
+                    await fn();
+                    torneioAtivoCache.at = 0;
+                    if (okMsg) toast(okMsg);
+                } catch (e) {
+                    ok = false;
+                    alertModal('Erro', e.name === 'AbortError' ? 'O servidor demorou a responder.' : (e.message || 'Erro desconhecido.'));
+                }
+                TorneioDetalhe.busy = false;
+                await TorneioDetalhe.refresh();
+                return ok;
+            },
+            editar() {
+                const d = TorneioDetalhe.data;
+                if (d && isAdmin()) torneioForm(d, () => TorneioDetalhe.refresh());
+            },
+            async excluir() {
+                const d = TorneioDetalhe.data;
+                if (!d || !isAdmin()) return;
+                if (!(await confirmModal('Excluir torneio', `Excluir "${d.nome}"?\n\nAs partidas e os títulos deste torneio também serão apagados (somem da Galeria de Troféus).`, { okLabel: 'Excluir', danger: true }))) return;
+                TorneioDetalhe.busy = true;
+                TorneioDetalhe.render();
+                try {
+                    await api('webhook/torneios/' + encodeURIComponent(d.id), { method: 'DELETE' });
+                    torneioAtivoCache.at = 0;
+                    toast('Torneio excluído.');
+                    Torneios.list = null;
+                    if (inAppNavigations > 0) back(); else location.replace('#/torneios');
+                } catch (e) {
+                    TorneioDetalhe.busy = false;
+                    TorneioDetalhe.render();
+                    alertModal('Erro', e.message || 'Erro ao excluir torneio.');
+                }
+            },
+            async encerrar(recalcular) {
+                const d = TorneioDetalhe.data;
+                if (!d || !isAdmin()) return;
+                const ok = await confirmModal(recalcular ? 'Recalcular títulos' : 'Encerrar torneio',
+                    recalcular ? 'Recalcular os títulos deste torneio com os dados atuais?'
+                        : `Encerrar "${d.nome}" e definir os títulos?\n\nDepois de encerrado, não entram mais partidas neste torneio (dá para reabrir depois, se precisar).`,
+                    { okLabel: recalcular ? 'Recalcular' : 'Encerrar' });
+                if (ok) await TorneioDetalhe.run(() => api('webhook/torneios/' + encodeURIComponent(d.id) + '/encerrar', { method: 'POST' }), recalcular ? 'Títulos recalculados! 🏆' : 'Torneio encerrado! 🏆');
+            },
+            async reabrir() {
+                const d = TorneioDetalhe.data;
+                if (!d || !isAdmin()) return;
+                if (await confirmModal('Reabrir torneio', 'Reabrir o torneio? Os títulos gravados serão apagados até ele ser encerrado de novo.', { okLabel: 'Reabrir' })) {
+                    await TorneioDetalhe.run(() => api('webhook/torneios/' + encodeURIComponent(d.id) + '/reabrir', { method: 'POST' }), 'Torneio reaberto.');
+                }
+            },
+            async excluirPartida(pid) {
+                const d = TorneioDetalhe.data;
+                if (!d || !isAdmin()) return;
+                if (await confirmModal('Excluir partida', 'Excluir esta partida do torneio?', { okLabel: 'Excluir', danger: true })) {
+                    await TorneioDetalhe.run(() => api('webhook/torneios/' + encodeURIComponent(d.id) + '/partidas/' + encodeURIComponent(pid), { method: 'DELETE' }), 'Partida excluída.');
+                }
+            }
+        };
+
+        // Galeria de Troféus: títulos gravados dos torneios encerrados, por ano (desc) e por torneio.
+        const Galeria = {
+            list: null,
+            error: null,
+            async open() {
+                enablePullToRefresh(() => Galeria.refresh());
+                Galeria.render();
+                await Galeria.refresh();
+                hideBoot();
+            },
+            async refresh() {
+                try { Galeria.list = await fetchTorneios(); Galeria.error = null; } catch (e) { Galeria.error = e.message || 'Erro ao carregar a galeria.'; }
+                Galeria.render();
+            },
+            render() {
+                if (location.hash !== '#/torneios/galeria') return;
+                const list = Galeria.list;
+                let body;
+                if (!list) {
+                    body = Galeria.error
+                        ? `<div class="center-msg" style="color:var(--orange)">${esc(Galeria.error)}<button class="btn btn-green" onclick="App.galeriaRefresh()">Tentar novamente</button></div>`
+                        : '<div class="stack">' + '<div class="shimmer"></div>'.repeat(4) + '</div>';
+                } else {
+                    const anos = new Map();
+                    for (const t of list) {
+                        const titulos = sortTitulos(t.titulos);
+                        if (!titulos.length) continue;
+                        const ano = Number(titulos[0].ano) || Number(String(t.data || '').slice(0, 4)) || 0;
+                        if (!anos.has(ano)) anos.set(ano, []);
+                        anos.get(ano).push({ t, titulos });
+                    }
+                    const anosOrd = [...anos.keys()].sort((a, b) => b - a);
+                    body = anosOrd.length ? `<div class="stack">${anosOrd.map(ano => `
+                        <div class="year-label">${ano || '—'}</div>
+                        ${anos.get(ano)
+                            .sort((a, b) => (`${b.t.data} ${b.t.horaInicio}` > `${a.t.data} ${a.t.horaInicio}` ? 1 : -1))
+                            .map(({ t, titulos }) => `<div class="gal-tour"><div>${esc(t.nome)}</div><span>${esc(torneioData(t))}</span></div>
+                                <div class="trophies">${titulos.map(trophyCard).join('')}</div>`).join('')}`).join('')}
+                        <div style="height:8px"></div></div>`
+                        : '<div class="center-msg"><div style="font-size:48px">🏛️</div><div>Nenhum troféu ainda.<br>Os títulos aparecem aqui quando um torneio é encerrado.</div></div>';
+                }
+                $('#app').innerHTML = `<div class="view">${topbar('Galeria de Troféus', { serif: true })}${ptrIndicator}${body}</div>`;
+            }
+        };
 
         // ─── API pública para os handlers inline ────────────────────────────────────
         window.App = {
@@ -2006,7 +2533,12 @@
             dailyAwards: () => Jogar.dailyAwards(),
             finFilter: f => { Financas.filter = f; Financas.render(); },
             pix: pagarComPix, sendReceipt, entryDetails,
-            playerDetails
+            playerDetails,
+            torneiosRefresh: () => Torneios.refresh(), galeriaRefresh: () => Galeria.refresh(), torneioRefresh: () => TorneioDetalhe.refresh(),
+            torneioNovo: () => { if (isAdmin()) torneioForm(null, () => Torneios.refresh()); },
+            torneioEditar: () => TorneioDetalhe.editar(), torneioExcluir: () => TorneioDetalhe.excluir(),
+            torneioEncerrar: r => TorneioDetalhe.encerrar(r), torneioReabrir: () => TorneioDetalhe.reabrir(),
+            torneioExcluirPartida: id => TorneioDetalhe.excluirPartida(id)
         };
 
         // ─── Inicialização ──────────────────────────────────────────────────────────
@@ -2018,9 +2550,13 @@
             if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
             if (!S.user || Date.now() - hiddenAt < 30000) return;
             activeCheckCache.at = 0;
+            torneioAtivoCache.at = 0;
             await syncTime();
             const h = location.hash.replace(/^#/, '') || '/';
             if (h.startsWith('/jogar')) return; // não sobrescreve uma partida sendo marcada
+            if (h === '/torneios') return Torneios.refresh();
+            if (h === '/torneios/galeria') return Galeria.refresh();
+            if (h.startsWith('/torneios/')) return TorneioDetalhe.refresh();
             await loadData();
             if (h === '/') Dashboard.render();
             else if (h === '/financas') Financas.render();

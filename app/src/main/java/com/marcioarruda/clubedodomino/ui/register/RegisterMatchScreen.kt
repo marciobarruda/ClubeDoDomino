@@ -233,6 +233,32 @@ fun RegisterMatchScreen(
                 val isEditing = state.editingMatchId != null
                 val isGameplayEnabled = isEditing || state.isActiveMatchStarted
 
+                // Banner de torneio: a partida aberta (ou a próxima a ser aberta) vai para o torneio.
+                val isTorneioMatch = !isEditing && (
+                    state.activeMatchTorneioId != null || (!state.isActiveMatchStarted && state.torneioAtivo != null)
+                )
+                if (isTorneioMatch) {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = DominoGreen),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp).fillMaxWidth()) {
+                            Text(
+                                text = "🏆 MODO TORNEIO: ${state.torneioAtivo?.nome ?: "torneio em andamento"}",
+                                color = DominoYellow,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Partidas não geram cobrança e não contam no ranking do clube.",
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+
                 PlayerSelectionCard(state, viewModel, isEditing || !state.isActiveMatchStarted)
                 Spacer(Modifier.height(16.dp))
                 ScoreInputCard(state, viewModel, isGameplayEnabled)

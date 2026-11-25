@@ -757,7 +757,8 @@ class ClubRepository {
         score1 = this.score1,
         score2 = this.score2,
         fechas = this.fechas,
-        createdAt = parseAnyDate(this.dataCriacao) ?: Date()
+        createdAt = parseAnyDate(this.dataCriacao) ?: Date(),
+        torneioId = this.torneioId
     )
 
     private fun ActiveMatch.toDto(): ActiveMatchDto = ActiveMatchDto(
@@ -767,8 +768,64 @@ class ClubRepository {
         jogador3 = this.player3,
         jogador4 = this.player4,
         cadastrador = this.cadastrador,
-        dataCriacao = null
+        dataCriacao = null,
+        torneioId = this.torneioId
     )
+
+    // ─── Torneios ─────────────────────────────────────────────────────────
+    // Partidas de torneio ficam numa tabela própria no servidor: não geram bucho e não entram
+    // no ranking do clube (ver server/torneios.js).
+
+    suspend fun getTorneios(): List<TorneioDto> = withContext(Dispatchers.IO) { api.getTorneios() }
+
+    suspend fun getTorneio(id: Int): TorneioDto = withContext(Dispatchers.IO) { api.getTorneio(id) }
+
+    // Torneio acontecendo agora pelo relógio do servidor; null se nenhum ou em falha de rede.
+    suspend fun getTorneioAtivo(): TorneioDto? = withContext(Dispatchers.IO) {
+        try { api.getTorneioAtivo().torneio } catch (t: Throwable) { null }
+    }
+
+    suspend fun salvarTorneio(id: Int?, request: SalvarTorneioRequest): Unit = withContext(Dispatchers.IO) {
+        try {
+            if (id == null) api.createTorneio(request) else api.updateTorneio(id, request)
+        } catch (e: retrofit2.HttpException) {
+            throw Exception(extrairMensagemDeErro(e) ?: "Erro ao salvar torneio.")
+        }
+        Unit
+    }
+
+    suspend fun deleteTorneio(id: Int): Unit = withContext(Dispatchers.IO) { api.deleteTorneio(id); Unit }
+
+    suspend fun encerrarTorneio(id: Int): Unit = withContext(Dispatchers.IO) {
+        try { api.encerrarTorneio(id) } catch (e: retrofit2.HttpException) {
+            throw Exception(extrairMensagemDeErro(e) ?: "Erro ao encerrar torneio.")
+        }
+        Unit
+    }
+
+    suspend fun reabrirTorneio(id: Int): Unit = withContext(Dispatchers.IO) { api.reabrirTorneio(id); Unit }
+
+    suspend fun deleteTorneioMatch(torneioId: Int, partidaId: Long): Unit = withContext(Dispatchers.IO) {
+        try { api.deleteTorneioMatch(torneioId, partidaId) } catch (e: retrofit2.HttpException) {
+            throw Exception(extrairMensagemDeErro(e) ?: "Erro ao excluir partida do torneio.")
+        }
+        Unit
+    }
+
+    suspend fun registerTorneioMatch(torneioId: Int, match: Match): Unit = withContext(Dispatchers.IO) {
+        try { api.registerTorneioMatch(torneioId, match.toDTO()) } catch (e: retrofit2.HttpException) {
+            throw Exception(extrairMensagemDeErro(e) ?: "Erro ao salvar partida do torneio.")
+        }
+        Unit
+    }
+
+    // Total de partidas normais do clube no ano corrente (exibido no topo do Ranking).
+    suspend fun countMatchesInCurrentYear(): Int {
+        val matches = if (allMatchDTOs.isEmpty()) getMatchDTOsFromDb() else allMatchDTOs
+        val tz = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
+        val ano = SimpleDateFormat("yyyy", Locale.US).apply { timeZone = tz }.format(Date())
+        return matches.count { it.data?.startsWith(ano) == true }
+    }
 }
 
 private val brDateParseFormats = listOf(

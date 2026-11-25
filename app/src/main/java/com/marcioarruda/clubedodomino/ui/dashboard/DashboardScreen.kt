@@ -376,6 +376,9 @@ private fun ShortcutsGrid(navController: NavController, userId: String) {
         ShortcutItem("Finanças", "💳") {
             navController.navigate("finance/$userId")
         },
+        ShortcutItem("Torneios", "🏆") {
+            navController.navigate("torneios")
+        },
         ShortcutItem("Admin", "⚙️") {
             navController.navigate("admin")
         }

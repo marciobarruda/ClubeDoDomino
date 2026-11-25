@@ -18,6 +18,8 @@ import java.util.Locale
 data class RankingUiState(
     val isLoading: Boolean = false,
     val rankingList: List<RankingPlayer> = emptyList(),
+    // Total de partidas normais do clube no ano corrente (torneios não entram).
+    val totalPartidasAno: Int = 0,
     val error: String? = null
 )
 
@@ -80,8 +82,10 @@ class RankingViewModel(private val repository: ClubRepository) : ViewModel() {
                         .map { it.copy(yearlyRankPosition = yearlyRankPositions[it.playerName] ?: 0) }
                         .sortedWith(compareByDescending<RankingPlayer> { it.monthlyPoints }.thenByDescending { it.yearlyPoints })
 
+                    val totalPartidasAno = try { repository.countMatchesInCurrentYear() } catch (_: Exception) { 0 }
+
                     _uiState.update {
-                        it.copy(isLoading = false, rankingList = rankingList)
+                        it.copy(isLoading = false, rankingList = rankingList, totalPartidasAno = totalPartidasAno)
                     }
 
                 }.onFailure { e ->

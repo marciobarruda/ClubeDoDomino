@@ -96,6 +96,33 @@ object MatchAvailabilityManager {
         return prefs.getBoolean("bypass_time_limit_marcio", false)
     }
 
+    // ─── Torneio ativo ──────────────────────────────────────────────────────
+    // Um torneio cadastrado libera o cadastro de partidas na data/horário dele, mesmo fora da
+    // janela normal. Quem decide se o torneio está acontecendo é o relógio do SERVIDOR (não o do
+    // aparelho). Como isModuleAvailable roda a cada segundo na tela de registro, a resposta fica
+    // em cache por 30s.
+    private const val TORNEIO_CACHE_MS = 30_000L
+    private var torneioAtivoCache: com.marcioarruda.clubedodomino.data.network.TorneioDto? = null
+    private var torneioAtivoCacheAt: Long = 0L
+
+    suspend fun getTorneioAtivo(forceRefresh: Boolean = false): com.marcioarruda.clubedodomino.data.network.TorneioDto? {
+        val agora = SystemClock.elapsedRealtime()
+        if (!forceRefresh && torneioAtivoCacheAt != 0L && agora - torneioAtivoCacheAt < TORNEIO_CACHE_MS) {
+            return torneioAtivoCache
+        }
+        val torneio = withContext(Dispatchers.IO) {
+            try {
+                RetrofitClient.instance.getTorneioAtivo().torneio
+            } catch (t: Throwable) {
+                // Falha de rede: mantém o último valor conhecido em vez de fechar o módulo no meio do torneio.
+                torneioAtivoCache
+            }
+        }
+        torneioAtivoCache = torneio
+        torneioAtivoCacheAt = agora
+        return torneio
+    }
+
     suspend fun isModuleAvailable(context: Context, username: String? = null): Boolean {
         // Se for o Márcio e o bypass estiver ativo, libera sem nenhuma validação!
         if (username != null && isBypassEnabled(context, username)) {
@@ -131,6 +158,11 @@ object MatchAvailabilityManager {
         val isWithinTimeWindow = !currentTime.isBefore(startTime) && currentTime.isBefore(currentEndTime)
  
         var result = isWorkingDay && isWithinTimeWindow && !isHoliday
+
+        if (!result && getTorneioAtivo() != null) {
+            result = true
+            Log.d("MatchAvailability", "Torneio ativo - cadastro de partidas liberado.")
+        }
  
         if (!result && username != null) {
             val hasActive = withContext(Dispatchers.IO) {

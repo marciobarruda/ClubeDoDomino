@@ -102,5 +102,6 @@ data class ActiveMatch(
     val score1: Int = 0,
     val score2: Int = 0,
     val fechas: Int = 0,
-    val createdAt: Date = Date()
+    val createdAt: Date = Date(),
+    val torneioId: Int? = null
 )

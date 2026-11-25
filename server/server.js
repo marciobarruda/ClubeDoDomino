@@ -46,6 +46,8 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+const registrarRotasDeTorneio = require('./torneios');
+
 let currentDbPassword = readPersistedDbPassword() || process.env.DB_PASS;
 
 // Pool de conexão com o MySQL — mutável para permitir troca de senha em runtime (ver /webhook/admin/atualizar-senha-db)
@@ -59,6 +61,10 @@ let pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0
 });
+
+// Módulo de torneios (server/torneios.js). Recebe um getter do pool porque `pool` é recriado
+// quando a senha do banco é trocada em runtime.
+const { encerrarTorneiosVencidos } = registrarRotasDeTorneio(app, () => pool);
 
 // Testar conexão inicial com o banco de dados e garantir tabelas auxiliares
 (async () => {
@@ -1822,7 +1828,7 @@ app.get('/webhook/partidas-em-andamento', async (req, res) => {
     let rows;
     if (jogador) {
       [rows] = await pool.query(
-        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, score1, score2, fechas, data_criacao
+        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, score1, score2, fechas, torneio_id, data_criacao
          FROM partidas_em_andamento
          WHERE (jogador1 = ? OR jogador2 = ? OR jogador3 = ? OR jogador4 = ?)
          AND DATE(data_criacao) = CURDATE() LIMIT 1`,
@@ -1830,7 +1836,7 @@ app.get('/webhook/partidas-em-andamento', async (req, res) => {
       );
     } else {
       [rows] = await pool.query(
-        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, score1, score2, fechas, data_criacao
+        `SELECT id, jogador1, jogador2, jogador3, jogador4, cadastrador, score1, score2, fechas, torneio_id, data_criacao
          FROM partidas_em_andamento WHERE DATE(data_criacao) = CURDATE()`
       );
     }
@@ -1845,6 +1851,7 @@ app.get('/webhook/partidas-em-andamento', async (req, res) => {
       score1: r.score1 || 0,
       score2: r.score2 || 0,
       fechas: r.fechas || 0,
+      torneio_id: r.torneio_id || null,
       data_criacao: r.data_criacao
     }));
 
@@ -1857,15 +1864,16 @@ app.get('/webhook/partidas-em-andamento', async (req, res) => {
 
 // 13. POST /webhook/partidas-em-andamento
 app.post('/webhook/partidas-em-andamento', async (req, res) => {
-  const { id, jogador1, jogador2, jogador3, jogador4, cadastrador } = req.body;
+  // torneio_id: preenchido quando a partida é aberta durante um torneio (ver server/torneios.js).
+  const { id, jogador1, jogador2, jogador3, jogador4, cadastrador, torneio_id } = req.body;
   if (!id) {
     return res.status(400).json({ status: 'error', message: 'id é obrigatório.' });
   }
   try {
     await pool.query(
-      `INSERT INTO partidas_em_andamento (id, jogador1, jogador2, jogador3, jogador4, cadastrador, data_criacao, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [id, jogador1, jogador2, jogador3, jogador4, cadastrador]
+      `INSERT INTO partidas_em_andamento (id, jogador1, jogador2, jogador3, jogador4, cadastrador, torneio_id, data_criacao, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [id, jogador1, jogador2, jogador3, jogador4, cadastrador, torneio_id || null]
     );
     res.status(201).json({ status: 'success' });
   } catch (error) {
@@ -2194,6 +2202,11 @@ cron.schedule('5 0 1 * *', gerarMensalidadesDoMesAtual, {
 // Cron: todo dia 1º às 00:10 (horário de Recife/São Paulo), gera a taxa extra de
 // buchos do mês que acabou de fechar, para jogadores que jogaram abaixo da média.
 cron.schedule('10 0 1 * *', gerarTaxaExtraBuchosMesAnterior, {
+  timezone: 'America/Sao_Paulo'
+});
+
+// Cron: a cada 5 minutos, encerra (e grava os títulos de) torneios cujo horário já acabou.
+cron.schedule('*/5 * * * *', encerrarTorneiosVencidos, {
   timezone: 'America/Sao_Paulo'
 });
 

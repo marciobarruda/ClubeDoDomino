@@ -120,6 +120,13 @@ fun AppNavHost(
         composable("ranking") {
             RankingScreen(navController = navController, rankingViewModel = viewModel(factory = viewModelFactory))
         }
+        composable("torneios") {
+            com.marcioarruda.clubedodomino.ui.torneio.TorneioScreen(
+                navController = navController,
+                viewModel = viewModel(factory = viewModelFactory),
+                session = session
+            )
+        }
         composable(
             route = "finance/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })

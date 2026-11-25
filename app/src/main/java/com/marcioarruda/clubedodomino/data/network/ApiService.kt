@@ -70,7 +70,85 @@ data class ActiveMatchDto(
     val score1: Int = 0,
     val score2: Int = 0,
     val fechas: Int = 0,
-    @SerializedName("data_criacao") val dataCriacao: String?
+    @SerializedName("data_criacao") val dataCriacao: String?,
+    // Preenchido quando a partida foi aberta durante um torneio — ao salvar, ela vai para o torneio.
+    @SerializedName("torneio_id") val torneioId: Int? = null
+)
+
+// --- Torneios (ver server/torneios.js) ---
+
+data class TorneioTituloDto(
+    val tipo: String,
+    val titulo: String,
+    val jogador: String,
+    val valor: String? = null,
+    val detalhe: String? = null,
+    val ano: Int? = null
+)
+
+// Indicados a um título do ano: 3 jogadores em ordem alfabética, sem pontuação (antes da revelação).
+data class TorneioIndicadoDto(
+    val tipo: String,
+    val titulo: String,
+    val jogadores: List<String> = emptyList()
+)
+
+data class TorneioRankingDto(
+    val jogador: String,
+    val partidas: Int = 0,
+    val vitorias: Int = 0,
+    val derrotas: Int = 0,
+    val pontos: Int = 0,
+    val buchosAplicados: Int = 0,
+    val buchosSofridos: Int = 0
+)
+
+data class TorneioPartidaDto(
+    val id: Long,
+    val data: String?,
+    val jogador1: String?,
+    val jogador2: String?,
+    val jogador3: String?,
+    val jogador4: String?,
+    val scored1: Int = 0,
+    val scored2: Int = 0,
+    val buchore: Boolean = false,
+    val pts: Int = 0,
+    val dupla_vencedora: String? = null,
+    val cadastrado_por: String? = null
+)
+
+data class TorneioDto(
+    val id: Int,
+    val nome: String,
+    val data: String,          // yyyy-MM-dd
+    val horaInicio: String,    // HH:mm
+    val horaFim: String,       // HH:mm
+    val status: String,        // agendado | em_andamento | aguardando_encerramento | encerrado
+    val corteTitulos: String? = null, // yyyy-MM-dd — último dia de partidas normais nos títulos anuais
+    // Títulos do ano só são revelados (vencedor + pontuação) no fim do horário do torneio.
+    val revelado: Boolean = true,
+    val revelacaoEm: String? = null,  // yyyy-MM-dd HH:mm
+    val criadoPor: String? = null,
+    val finalizadoEm: String? = null,
+    val totalPartidas: Int = 0,
+    val titulos: List<TorneioTituloDto> = emptyList(),
+    // Só no detalhe (GET webhook/torneios/{id}):
+    val ranking: List<TorneioRankingDto>? = null,
+    val partidas: List<TorneioPartidaDto>? = null,
+    val titulosParciais: List<TorneioTituloDto>? = null,
+    val indicados: List<TorneioIndicadoDto>? = null
+)
+
+data class TorneioAtivoResponse(val torneio: TorneioDto?, val agora: String? = null)
+
+data class SalvarTorneioRequest(
+    val nome: String,
+    val data: String,
+    val horaInicio: String,
+    val horaFim: String,
+    val corteTitulos: String? = null,
+    val criadoPor: String? = null
 )
 
 data class ActiveMatchScoreUpdate(
@@ -411,6 +489,37 @@ interface ApiService {
 
     @DELETE("webhook/bancos-pix/{id}")
     suspend fun deleteBancoPix(@Path("id") id: Int): SimpleStatusResponse
+
+    // --- Torneios ---
+    @GET("webhook/torneios")
+    suspend fun getTorneios(): List<TorneioDto>
+
+    @GET("webhook/torneios/ativo")
+    suspend fun getTorneioAtivo(): TorneioAtivoResponse
+
+    @GET("webhook/torneios/{id}")
+    suspend fun getTorneio(@Path("id") id: Int): TorneioDto
+
+    @POST("webhook/torneios")
+    suspend fun createTorneio(@Body request: SalvarTorneioRequest): SimpleStatusResponse
+
+    @PUT("webhook/torneios/{id}")
+    suspend fun updateTorneio(@Path("id") id: Int, @Body request: SalvarTorneioRequest): SimpleStatusResponse
+
+    @DELETE("webhook/torneios/{id}")
+    suspend fun deleteTorneio(@Path("id") id: Int): SimpleStatusResponse
+
+    @POST("webhook/torneios/{id}/partidas")
+    suspend fun registerTorneioMatch(@Path("id") id: Int, @Body match: MatchDTO): SimpleStatusResponse
+
+    @DELETE("webhook/torneios/{id}/partidas/{partidaId}")
+    suspend fun deleteTorneioMatch(@Path("id") id: Int, @Path("partidaId") partidaId: Long): SimpleStatusResponse
+
+    @POST("webhook/torneios/{id}/encerrar")
+    suspend fun encerrarTorneio(@Path("id") id: Int): SimpleStatusResponse
+
+    @POST("webhook/torneios/{id}/reabrir")
+    suspend fun reabrirTorneio(@Path("id") id: Int): SimpleStatusResponse
 
     @GET("webhook/pix-copia-cola")
     suspend fun getPixCopiaCola(@Query("valor") valor: String? = null, @Query("txid") txid: String? = null): PixCopiaColaResponse

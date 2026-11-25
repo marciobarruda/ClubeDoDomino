@@ -125,6 +125,23 @@ fun RankingScreen(
                         contentPadding = PaddingValues(bottom = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
+                        item {
+                            val ano = remember { java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) }
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "🎲 ${uiState.totalPartidasAno} partidas jogadas em $ano",
+                                    color = DominoGreen,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier
+                                        .background(DominoYellow.copy(alpha = 0.18f), RoundedCornerShape(50))
+                                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
                         if (podium.isNotEmpty()) {
                             item {
                                 PodiumSection(
@@ -363,6 +380,8 @@ fun PlayerDetailsCard(player: RankingPlayer, onClose: (() -> Unit)? = null) {
                 LeaderMetric(label = "PONTOS NO ANO", value = "${leader.yearlyPoints}")
                 VerticalDivider()
                 LeaderMetric(label = "POSIÇÃO NO ANO", value = "${leader.yearlyRankPosition}º")
+                VerticalDivider()
+                LeaderMetric(label = "PARTIDAS NO ANO", value = "${leader.yearlyMatches}")
             }
             Spacer(modifier = Modifier.height(16.dp))
             Box(
@@ -506,7 +525,7 @@ fun RankingRow(player: RankingPlayer, position: Int, onClick: (() -> Unit)? = nu
                     fontSize = 11.sp
                 )
                 Text(
-                    text = "${player.yearlyPoints} pts no ano · ${player.yearlyRankPosition}º no ano",
+                    text = "No ano: ${player.yearlyPoints} pts · ${player.yearlyRankPosition}º · ${player.yearlyMatches} partidas",
                     color = DominoMuted,
                     fontSize = 11.sp
                 )

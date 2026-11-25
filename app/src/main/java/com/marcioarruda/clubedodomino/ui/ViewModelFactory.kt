@@ -27,6 +27,8 @@ class ViewModelFactory(private val repository: ClubRepository) : ViewModelProvid
                     repository,
                     com.marcioarruda.clubedodomino.data.AdminRepository(DominoClubApplication.instance)
                 ) as T
+            modelClass.isAssignableFrom(com.marcioarruda.clubedodomino.ui.torneio.TorneioViewModel::class.java) ->
+                com.marcioarruda.clubedodomino.ui.torneio.TorneioViewModel(repository) as T
             modelClass.isAssignableFrom(RankingViewModel::class.java) ->
                 RankingViewModel(repository) as T
             modelClass.isAssignableFrom(FinanceViewModel::class.java) ->

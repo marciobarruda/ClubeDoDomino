@@ -1,6 +1,6 @@
 // Trocar a versão a cada release do PWA: o navegador detecta o sw.js alterado, instala a nova
 // versão, apaga os caches antigos e a página recarrega sozinha (ver controllerchange em index.html).
-const CACHE_NAME = 'domino-v101';
+const CACHE_NAME = 'domino-v102';
 const SHELL = [
   './',
   './index.html',

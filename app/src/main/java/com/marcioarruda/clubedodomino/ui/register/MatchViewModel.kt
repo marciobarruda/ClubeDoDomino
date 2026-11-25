@@ -53,7 +53,12 @@ data class MatchRegistrationState(
     val isActiveMatchStarted: Boolean = false,
     val activeMatchId: String? = null,
     val dailyAwards: com.marcioarruda.clubedodomino.domain.DailyAwards? = null,
-    val isLoadingDailyAwards: Boolean = false
+    val isLoadingDailyAwards: Boolean = false,
+    // Torneio acontecendo agora (relógio do servidor) — exibido como banner na tela.
+    val torneioAtivo: com.marcioarruda.clubedodomino.data.network.TorneioDto? = null,
+    // Torneio ao qual a partida em andamento pertence (definido ao abrir a partida). Quando não
+    // nulo, a partida é salva no torneio: sem bucho/cobrança e fora do ranking do clube.
+    val activeMatchTorneioId: Int? = null
 )
 
 class MatchViewModel(
@@ -131,7 +136,8 @@ class MatchViewModel(
                         activeMatchId = activeMatch.id,
                         score1 = activeMatch.score1,
                         score2 = activeMatch.score2,
-                        fechas = activeMatch.fechas
+                        fechas = activeMatch.fechas,
+                        activeMatchTorneioId = activeMatch.torneioId
                     )
                 }
             } catch (_: Exception) {}
@@ -176,7 +182,11 @@ class MatchViewModel(
                     // Partida já confirmada como ativa localmente: libera sem depender de nova consulta ao banco.
                     val available = currentState.isActiveMatchStarted ||
                         matchAvailabilityManager.isModuleAvailable(context, currentUserName)
-                    val remainingSeconds = matchAvailabilityManager.getRemainingSecondsToClose(context, currentUserName)
+                    val torneio = matchAvailabilityManager.getTorneioAtivo()
+                    // Durante um torneio a contagem regressiva da janela normal (14h) não se aplica.
+                    val remainingSeconds = if (torneio != null) null
+                        else matchAvailabilityManager.getRemainingSecondsToClose(context, currentUserName)
+                    _uiState.update { it.copy(torneioAtivo = torneio) }
 
                     if (!available) {
                         val diagInfo = matchAvailabilityManager.getExtendedDiagnosticInfo(context)
@@ -498,10 +508,16 @@ class MatchViewModel(
                     pts = points // Passando pontos calculados explicitamente
                 )
                 
-                repository.registerMatch(match)
+                val torneioId = state.activeMatchTorneioId
+                if (torneioId != null) {
+                    // Partida de torneio: tabela própria no servidor, sem bucho/cobrança.
+                    repository.registerTorneioMatch(torneioId, match)
+                } else {
+                    repository.registerMatch(match)
+                }
 
-                // Regra 2 e 4: Registrar Débito (Bucho)
-                if (debitValue > 0.0) {
+                // Regra 2 e 4: Registrar Débito (Bucho) — nunca em partida de torneio.
+                if (torneioId == null && debitValue > 0.0) {
                     val dateStr = dateFormat.format(Date())
                     val placarStr = "${state.score1}x${state.score2}"
 
@@ -578,6 +594,7 @@ class MatchViewModel(
                         fechas = 0,
                         isBuchoRe = false,
                         isBuchoReEnabled = false,
+                        activeMatchTorneioId = null,
                         success = true
                     )
                 }
@@ -598,6 +615,9 @@ class MatchViewModel(
             // Registra a partida repetida como uma nova partida ativa, com a dupla já sorteada acima
             // (garantidamente diferente da anterior), em vez de deixá-la só em memória local até o
             // usuário clicar em "Confirmar Abertura" de novo — o que exigiria um segundo sorteio.
+            // A partida repetida pertence ao torneio que estiver acontecendo AGORA (se o torneio
+            // acabou e a janela normal está aberta, vira partida normal).
+            val torneioId = matchAvailabilityManager.getTorneioAtivo(forceRefresh = true)?.id
             val matchId = UUID.randomUUID().toString()
             val newActiveMatch = ActiveMatch(
                 id = matchId,
@@ -605,7 +625,8 @@ class MatchViewModel(
                 player2 = reshuffledPlayers[1].name,
                 player3 = reshuffledPlayers[2].name,
                 player4 = reshuffledPlayers[3].name,
-                cadastrador = currentUserName ?: "Desconhecido"
+                cadastrador = currentUserName ?: "Desconhecido",
+                torneioId = torneioId
             )
             val success = repository.startActiveMatch(newActiveMatch)
 
@@ -615,6 +636,7 @@ class MatchViewModel(
                     selectedPlayers = reshuffledPlayers,
                     isActiveMatchStarted = success,
                     activeMatchId = if (success) matchId else null,
+                    activeMatchTorneioId = if (success) torneioId else null,
                     score1 = 0,
                     score2 = 0,
                     fechas = 0,
@@ -673,6 +695,8 @@ class MatchViewModel(
                 val shouldShuffle = chosenPlayers.none { isNonMemberPlayer(it) }
                 val orderedPlayers = if (shouldShuffle) shuffleAvoidingSamePairing(chosenPlayers) else chosenPlayers
 
+                // Partida aberta durante um torneio fica vinculada a ele até ser salva.
+                val torneioId = matchAvailabilityManager.getTorneioAtivo(forceRefresh = true)?.id
                 val matchId = UUID.randomUUID().toString()
                 val newActiveMatch = ActiveMatch(
                     id = matchId,
@@ -680,7 +704,8 @@ class MatchViewModel(
                     player2 = orderedPlayers[1].name,
                     player3 = orderedPlayers[2].name,
                     player4 = orderedPlayers[3].name,
-                    cadastrador = currentUserName ?: "Desconhecido"
+                    cadastrador = currentUserName ?: "Desconhecido",
+                    torneioId = torneioId
                 )
 
                 val success = repository.startActiveMatch(newActiveMatch)
@@ -690,6 +715,7 @@ class MatchViewModel(
                             isLoading = false,
                             isActiveMatchStarted = true,
                             activeMatchId = matchId,
+                            activeMatchTorneioId = torneioId,
                             selectedPlayers = orderedPlayers,
                             error = null
                         )
@@ -719,6 +745,7 @@ class MatchViewModel(
                             isLoading = false,
                             isActiveMatchStarted = false,
                             activeMatchId = null,
+                            activeMatchTorneioId = null,
                             score1 = 0,
                             score2 = 0,
                             fechas = 0,
