@@ -2150,8 +2150,9 @@
         };
         const ORDEM_TITULOS = Object.keys(TITULOS_INFO);
         const STATUS_TORNEIO = { agendado: 'Agendado', em_andamento: 'Em andamento', aguardando_encerramento: 'Aguardando encerramento', encerrado: 'Encerrado' };
-        // Mesma regra de edição do Admin no app (AdminScreen.kt: canEdit).
-        const isAdmin = () => !!S.user && (eqi(S.user.name, 'MÁRCIO') || eqi(S.user.name, 'CALÁBRIA'));
+        // Mesma regra de edição do Admin no app (AdminScreen.kt: canEdit). O Calábria está cadastrado
+        // como "CALABRIA" (sem acento) — aceita as duas grafias.
+        const isAdmin = () => !!S.user && ['MÁRCIO', 'CALÁBRIA', 'CALABRIA'].some(n => eqi(S.user.name, n));
         // Nomes vêm em MAIÚSCULAS do servidor; o casamento com o cadastro é sem diferenciar caixa.
         const userByName = n => S.users.find(u => eqi(u.name, n) || eqi(u.displayName, n));
         const torneioData = t => { const d = parseAnyDate(t.data); return d ? dmy(d) : String(t.data || ''); };
